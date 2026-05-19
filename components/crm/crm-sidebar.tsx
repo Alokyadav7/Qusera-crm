@@ -24,7 +24,8 @@ import {
   Satellite,
   Smartphone,
   Globe,
-  Plug
+  Plug,
+  HeartHandshake
 } from 'lucide-react'
 import {
   Sidebar,
@@ -78,6 +79,12 @@ const mainNavItems = [
     href: '/dashboard/tasks',
     icon: Calendar,
     badge: null
+  },
+  {
+    title: 'Customer Success',
+    href: '/dashboard/customer-success',
+    icon: HeartHandshake,
+    badge: 'Live'
   }
 ]
 

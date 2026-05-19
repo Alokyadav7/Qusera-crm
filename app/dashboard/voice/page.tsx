@@ -93,56 +93,6 @@ export default function VoiceToCRMPage() {
     if (!SR) setBrowserSupport(false)
   }, [])
 
-  // ── Start real microphone recording ───────────────────────────────────
-  const handleStart = useCallback(() => {
-    const SR = getSpeechRecognitionConstructor()
-    if (!SR) { toast.error('Your browser does not support voice recognition. Use Chrome.'); return }
-
-    const recognition = new SR()
-    recognition.lang = LANG_MAP[language] || 'hi-IN'
-    recognition.continuous = true
-    recognition.interimResults = true
-    recognition.maxAlternatives = 1
-
-    let finalTranscript = ''
-
-    recognition.onresult = (event: CRMRecognitionEvent) => {
-      let interim = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript
-        if (event.results[i].isFinal) finalTranscript += t + ' '
-        else interim += t
-      }
-      setLiveText(finalTranscript + interim)
-    }
-
-    recognition.onerror = (e: CRMRecognitionErrorEvent) => {
-      toast.error('Microphone error: ' + e.error)
-      setRecState('idle')
-    }
-
-    recognition.onend = () => {
-      setTranscript(finalTranscript.trim())
-      if (finalTranscript.trim()) {
-        setRecState('processing')
-        extractWithGemini(finalTranscript.trim())
-      } else {
-        setRecState('idle')
-        toast.error('No speech detected. Try again.')
-      }
-    }
-
-    recognition.start()
-    recogRef.current = recognition
-    setLiveText('')
-    setRecState('recording')
-    toast.success('Listening… speak now')
-  }, [language])
-
-  const handleStop = useCallback(() => {
-    recogRef.current?.stop()
-  }, [])
-
   // ── Send transcript to Gemini for CRM data extraction ─────────────────
   const extractWithGemini = useCallback(async (text: string) => {
     try {
@@ -198,6 +148,56 @@ Return ONLY a JSON object with these fields (omit if not found):
       setExtractedData({ summary: text, sentiment: 'Neutral', sentimentScore: 0.5 })
       setRecState('complete')
     }
+  }, [])
+
+  // ── Start real microphone recording ───────────────────────────────────
+  const handleStart = useCallback(() => {
+    const SR = getSpeechRecognitionConstructor()
+    if (!SR) { toast.error('Your browser does not support voice recognition. Use Chrome.'); return }
+
+    const recognition = new SR()
+    recognition.lang = LANG_MAP[language] || 'hi-IN'
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.maxAlternatives = 1
+
+    let finalTranscript = ''
+
+    recognition.onresult = (event: CRMRecognitionEvent) => {
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript
+        if (event.results[i].isFinal) finalTranscript += t + ' '
+        else interim += t
+      }
+      setLiveText(finalTranscript + interim)
+    }
+
+    recognition.onerror = (e: CRMRecognitionErrorEvent) => {
+      toast.error('Microphone error: ' + e.error)
+      setRecState('idle')
+    }
+
+    recognition.onend = () => {
+      setTranscript(finalTranscript.trim())
+      if (finalTranscript.trim()) {
+        setRecState('processing')
+        extractWithGemini(finalTranscript.trim())
+      } else {
+        setRecState('idle')
+        toast.error('No speech detected. Try again.')
+      }
+    }
+
+    recognition.start()
+    recogRef.current = recognition
+    setLiveText('')
+    setRecState('recording')
+    toast.success('Listening… speak now')
+  }, [extractWithGemini, language])
+
+  const handleStop = useCallback(() => {
+    recogRef.current?.stop()
   }, [])
 
   // ── Save to Supabase interactions table ───────────────────────────────

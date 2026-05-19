@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Plus, Filter, Download, Upload, Search, LayoutGrid, List, Users, RefreshCw } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, Filter, Download, Upload, Search, LayoutGrid, List, Users } from 'lucide-react'
 import { CRMHeader } from '@/components/crm/crm-header'
 import { LeadsTable } from '@/components/crm/leads-table'
 import { LeadDetailPanel } from '@/components/crm/lead-detail-panel'
