@@ -29,31 +29,36 @@ interface ExtractedData {
   summary?: string
 }
 
-// ── Self-contained Speech Recognition types ───────────────────────────────────
-interface SpeechRecognitionEvent {
+// ── Page-scoped Speech Recognition types ──────────────────────────────────────
+interface CRMRecognitionEvent {
   resultIndex: number
   results: SpeechRecognitionResultList
 }
-interface SpeechRecognitionErrorEvent {
+interface CRMRecognitionErrorEvent {
   error: string
   message?: string
 }
-interface ISpeechRecognition {
+interface CRMRecognition {
   lang: string
   continuous: boolean
   interimResults: boolean
   maxAlternatives: number
-  onresult: ((event: SpeechRecognitionEvent) => void) | null
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null
+  onresult: ((event: CRMRecognitionEvent) => void) | null
+  onerror: ((event: CRMRecognitionErrorEvent) => void) | null
   onend: (() => void) | null
   start(): void
   stop(): void
 }
-declare global {
-  interface Window {
-    SpeechRecognition: new () => ISpeechRecognition
-    webkitSpeechRecognition: new () => ISpeechRecognition
+
+type CRMRecognitionConstructor = new () => CRMRecognition
+
+function getSpeechRecognitionConstructor(): CRMRecognitionConstructor | undefined {
+  const speechWindow = window as unknown as {
+    SpeechRecognition?: CRMRecognitionConstructor
+    webkitSpeechRecognition?: CRMRecognitionConstructor
   }
+
+  return speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
 }
 
 const LANG_MAP: Record<string, string> = {
@@ -73,7 +78,7 @@ export default function VoiceToCRMPage() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [browserSupport, setBrowserSupport] = useState(true)
 
-  const recogRef = useRef<ISpeechRecognition | null>(null)
+  const recogRef = useRef<CRMRecognition | null>(null)
   const { interactions, isLoading: intLoading, refetch } = useRealtimeInteractions()
   const { leads } = useRealtimeLeads()
 
@@ -84,13 +89,13 @@ export default function VoiceToCRMPage() {
     .slice(0, 8)
 
   useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    const SR = getSpeechRecognitionConstructor()
     if (!SR) setBrowserSupport(false)
   }, [])
 
   // ── Start real microphone recording ───────────────────────────────────
   const handleStart = useCallback(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    const SR = getSpeechRecognitionConstructor()
     if (!SR) { toast.error('Your browser does not support voice recognition. Use Chrome.'); return }
 
     const recognition = new SR()
@@ -101,7 +106,7 @@ export default function VoiceToCRMPage() {
 
     let finalTranscript = ''
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: CRMRecognitionEvent) => {
       let interim = ''
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const t = event.results[i][0].transcript
@@ -111,7 +116,7 @@ export default function VoiceToCRMPage() {
       setLiveText(finalTranscript + interim)
     }
 
-    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (e: CRMRecognitionErrorEvent) => {
       toast.error('Microphone error: ' + e.error)
       setRecState('idle')
     }

@@ -75,11 +75,12 @@ export function useRealtimeStats(): { stats: Stats; isLoading: boolean } {
   useEffect(() => {
     fetchStats()
     const supabase = createClient()
+    const channelId = crypto.randomUUID()
 
     // Subscribe to all table changes to update stats in real time
     const channels = [
-      supabase.channel('stats-leads').on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, fetchStats).subscribe(),
-      supabase.channel('stats-tasks').on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchStats).subscribe(),
+      supabase.channel(`stats-leads-${channelId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, fetchStats).subscribe(),
+      supabase.channel(`stats-tasks-${channelId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchStats).subscribe(),
     ]
 
     return () => {

@@ -7,6 +7,7 @@ import { RecentInteractions } from '@/components/crm/recent-interactions'
 import { VoiceRecorderWidget } from '@/components/crm/voice-recorder-widget'
 import { PipelineChart } from '@/components/crm/pipeline-chart'
 import { RoutePlannerWidget } from '@/components/crm/route-planner-widget'
+import { LiveRevenueCommandCenter } from '@/components/crm/live-revenue-command-center'
 import Link from 'next/link'
 
 async function getDashboardData() {
@@ -22,6 +23,7 @@ async function getDashboardData() {
     { data: profile },
     { count: pendingTasks },
     { data: leads },
+    { data: pipelineLeads },
     { data: tasks },
     { data: interactions },
     { count: totalLeads },
@@ -35,6 +37,7 @@ async function getDashboardData() {
       .gte('due_date', today.toISOString())
       .lt('due_date', tomorrow.toISOString()),
     supabase.from('leads').select('*').order('sentiment_score', { ascending: false }).limit(10),
+    supabase.from('leads').select('status'),
     supabase.from('tasks').select('*, lead:leads(full_name, company)')
       .eq('is_completed', false)
       .order('due_date', { ascending: true })
@@ -56,11 +59,11 @@ async function getDashboardData() {
   const conversionRate = totalLeads && totalLeads > 0 ? (closedWonCount / totalLeads) * 100 : 0
   
   const pipelineData = {
-    new: leads?.filter(l => l.status === 'new').length || 0,
-    contacted: leads?.filter(l => l.status === 'contacted').length || 0,
-    interested: leads?.filter(l => l.status === 'interested').length || 0,
-    verified: leads?.filter(l => l.status === 'verified').length || 0,
-    negotiation: leads?.filter(l => l.status === 'negotiation').length || 0,
+    new: pipelineLeads?.filter(l => l.status === 'new').length || 0,
+    contacted: pipelineLeads?.filter(l => l.status === 'contacted').length || 0,
+    interested: pipelineLeads?.filter(l => l.status === 'interested').length || 0,
+    verified: pipelineLeads?.filter(l => l.status === 'verified').length || 0,
+    negotiation: pipelineLeads?.filter(l => l.status === 'negotiation').length || 0,
     closed_won: closedWonCount,
     closed_lost: 0
   }
@@ -160,25 +163,29 @@ export default async function DashboardPage() {
         {!hasData ? (
           <EmptyStateOnboarding userName={data.userName} />
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {/* Left Column - Priority Leads */}
-            <div className="animate-fade-in-up delay-100">
-              <LeadPriorityList leads={data.leads} />
+          <>
+            <LiveRevenueCommandCenter initialLeads={data.leads} initialTasks={data.tasks} />
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {/* Left Column - Priority Leads */}
+              <div className="animate-fade-in-up delay-100">
+                <LeadPriorityList leads={data.leads} />
+              </div>
+              
+              {/* Middle Column - Tasks & Interactions */}
+              <div className="space-y-6 animate-fade-in-up delay-200">
+                <TasksWidget tasks={data.tasks} />
+                <RecentInteractions interactions={data.interactions} />
+              </div>
+              
+              {/* Right Column - Voice, Pipeline, Route */}
+              <div className="space-y-6 md:col-span-2 lg:col-span-1 animate-fade-in-up delay-300">
+                <VoiceRecorderWidget />
+                <PipelineChart data={data.pipelineData} />
+                <RoutePlannerWidget />
+              </div>
             </div>
-            
-            {/* Middle Column - Tasks & Interactions */}
-            <div className="space-y-6 animate-fade-in-up delay-200">
-              <TasksWidget tasks={data.tasks} />
-              <RecentInteractions interactions={data.interactions} />
-            </div>
-            
-            {/* Right Column - Voice, Pipeline, Route */}
-            <div className="space-y-6 md:col-span-2 lg:col-span-1 animate-fade-in-up delay-300">
-              <VoiceRecorderWidget />
-              <PipelineChart data={data.pipelineData} />
-              <RoutePlannerWidget />
-            </div>
-          </div>
+          </>
         )}
       </main>
     </div>

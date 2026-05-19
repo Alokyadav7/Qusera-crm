@@ -67,9 +67,10 @@ export function useRealtimeInteractions(typeFilter?: string) {
   useEffect(() => {
     fetchInteractions()
     const supabase = createClient()
+    const channelName = `realtime-interactions-${crypto.randomUUID()}`
 
     const channel = supabase
-      .channel('realtime-interactions')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'interactions' },

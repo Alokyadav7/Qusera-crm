@@ -38,8 +38,8 @@ export interface Lead {
   updated_at: string
 }
 
-export function useRealtimeLeads() {
-  const [leads, setLeads] = useState<Lead[]>([])
+export function useRealtimeLeads(initialLeads: Lead[] = []) {
+  const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,6 +53,7 @@ export function useRealtimeLeads() {
       setError(error.message)
     } else {
       setLeads((data as Lead[]) || [])
+      setError(null)
     }
     setIsLoading(false)
   }, [])
@@ -74,9 +75,10 @@ export function useRealtimeLeads() {
   useEffect(() => {
     fetchLeads()
     const supabase = createClient()
+    const channelName = `realtime-leads-${crypto.randomUUID()}`
 
     const channel = supabase
-      .channel('realtime-leads')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads' },

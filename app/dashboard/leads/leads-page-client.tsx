@@ -36,8 +36,8 @@ interface LeadsPageClientProps {
 }
 
 export function LeadsPageClient({ initialLeads }: LeadsPageClientProps) {
-  const { leads, isLoading, refetch } = useRealtimeLeads()
-  const displayLeads = leads.length > 0 ? leads : initialLeads
+  const { leads, refetch } = useRealtimeLeads(initialLeads)
+  const displayLeads = leads
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table')
   const [searchQuery, setSearchQuery] = useState('')

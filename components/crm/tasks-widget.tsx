@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { format, isToday, isTomorrow, isPast } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useRealtimeTasks } from '@/hooks/use-realtime-tasks'
 
 interface Task {
   id: string
@@ -55,6 +56,8 @@ function formatDueDate(dateString: string) {
 }
 
 export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
+  const { tasks: liveTasks, refetch } = useRealtimeTasks(tasks)
+  const visibleTasks = liveTasks
   const [completing, setCompleting] = useState<string | null>(null)
 
   const handleComplete = async (taskId: string) => {
@@ -65,11 +68,15 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
       .update({ is_completed: true, updated_at: new Date().toISOString() })
       .eq('id', taskId)
     if (error) toast.error('Failed to complete task')
-    else { toast.success('Task completed! ✅'); onTaskCompleted?.() }
+    else {
+      toast.success('Task completed! ✅')
+      refetch()
+      onTaskCompleted?.()
+    }
     setCompleting(null)
   }
 
-  const sortedTasks = [...tasks]
+  const sortedTasks = [...visibleTasks]
     .filter(t => !t.is_completed)
     .sort((a, b) => {
       const o = { critical: 0, high: 1, medium: 2, low: 3 }
