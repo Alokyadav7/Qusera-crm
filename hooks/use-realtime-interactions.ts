@@ -74,14 +74,24 @@ export function useRealtimeInteractions(typeFilter?: string) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'interactions' },
-        () => {
-          // Re-fetch to get joined lead data on any change
+        (payload) => {
+          console.log('🔔 [Realtime Interactions] Event received:', payload.eventType, payload)
           fetchInteractions()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log(`🔌 [Realtime Interactions] Subscription status for ${channelName}:`, status)
+      })
 
-    return () => { supabase.removeChannel(channel) }
+    // Fallback polling interval every 6 seconds to ensure data remains fresh
+    const interval = setInterval(() => {
+      fetchInteractions()
+    }, 6000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+    }
   }, [fetchInteractions])
 
   return { interactions, isLoading, error, refetch: fetchInteractions, createInteraction }

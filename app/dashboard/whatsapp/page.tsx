@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { CRMHeader } from '@/components/crm/crm-header'
+import { toast } from 'sonner'
 import {
   Phone,
   Send,
@@ -117,25 +119,26 @@ export default function WhatsAppPage() {
   const [showMobileChat, setShowMobileChat] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // ── Fetch all whatsapp interactions joined with leads ──
+  // ── Fetch WhatsApp interactions joined with leads ──
   const fetchInteractions = useCallback(async () => {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('interactions')
       .select('*, lead:leads(id, full_name, company, phone_number)')
-      .in('type', ['whatsapp', 'text', 'voice', 'call', 'email'])
+      .eq('type', 'whatsapp')   // WhatsApp only
       .order('created_at', { ascending: false })
       .limit(500)
     if (!error && data) {
       setInteractions(data as Interaction[])
-      // Auto-select first conversation
-      const firstWithLead = (data as Interaction[]).find(i => i.lead_id)
-      if (firstWithLead?.lead_id && !selectedLeadId) {
-        setSelectedLeadId(firstWithLead.lead_id)
-      }
+      // Auto-select first conversation (only on initial load)
+      setSelectedLeadId(prev => {
+        if (prev) return prev
+        const first = (data as Interaction[]).find(i => i.lead_id)
+        return first?.lead_id ?? null
+      })
     }
     setIsLoading(false)
-  }, [selectedLeadId])
+  }, [])  // No selectedLeadId dep — prevents infinite loop
 
   useEffect(() => {
     fetchInteractions()
@@ -182,50 +185,50 @@ export default function WhatsAppPage() {
   const selectedConversation = conversations.find(c => c.lead.id === selectedLeadId) || null
   const selectedMessages = selectedConversation?.allInteractions || []
 
-  // ── Send a new interaction ──
+  // ── Send via real Meta API (mock-safe) ──
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedLeadId || isSending) return
     setIsSending(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setIsSending(false); return }
-
-    await supabase.from('interactions').insert({
-      user_id: user.id,
-      lead_id: selectedLeadId,
-      type: 'whatsapp',
-      direction: 'outbound',
-      content_raw: messageInput.trim(),
-      created_at: new Date().toISOString(),
-    })
-    setMessageInput('')
+    const conv = conversations.find(c => c.lead.id === selectedLeadId)
+    const phone = conv?.lead.phone_number || ''
+    try {
+      const res = await fetch('/api/whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: phone, message: messageInput.trim(), leadId: selectedLeadId }),
+      })
+      const json = await res.json()
+      if (!res.ok) { toast.error(json.error || 'Send failed'); setIsSending(false); return }
+      if (json.mock) toast.info('Logged to CRM (WhatsApp API not configured — add META_WHATSAPP_TOKEN)')
+      setMessageInput('')
+    } catch (e) {
+      toast.error('Network error sending message')
+    }
     setIsSending(false)
-    fetchInteractions()
   }
 
+  const isConfigured = typeof window !== 'undefined'
+    ? (process.env.NEXT_PUBLIC_META_CONFIGURED === 'true')
+    : false
+
   return (
-    <div className="flex-1 flex flex-col h-[calc(100vh-4rem)]">
-      {/* Header */}
-      <div className="border-b px-4 md:px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight">WhatsApp Business</h1>
-            <p className="text-sm text-muted-foreground hidden sm:block">
-              {isLoading ? 'Loading…' : `${conversations.length} conversations · real-time from Supabase`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="size-8" onClick={fetchInteractions}>
-              <RefreshCw className="size-3.5" />
-            </Button>
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700">
-              <span className="size-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />
-              <span className="hidden sm:inline">Connected</span>
-              <span className="sm:hidden">Live</span>
-            </Badge>
-          </div>
+    <div className="flex flex-col min-h-screen">
+      <CRMHeader
+        title="WhatsApp Business"
+        subtitle={isLoading ? 'Loading…' : `${conversations.length} conversations · real-time`}
+      />
+      {/* Connection status banner */}
+      {!isConfigured && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 md:px-6 py-2.5 flex items-center gap-3">
+          <span className="text-amber-600 text-sm font-medium">⚠️ WhatsApp API not configured</span>
+          <span className="text-amber-700 dark:text-amber-400 text-xs">Messages are logged to CRM only. Add META_WHATSAPP_TOKEN to .env to send real messages.</span>
+          <a href="/dashboard/integrations" className="text-xs underline text-amber-700 dark:text-amber-400 ml-auto">Configure →</a>
         </div>
-      </div>
+      )}
+      <div className={cn(
+        "flex-1 flex flex-col",
+        isConfigured ? "h-[calc(100vh-4rem)]" : "h-[calc(100vh-6.5rem)]"
+      )}>
 
       <div className="flex-1 flex overflow-hidden">
         {/* ── Conversations List ── */}
@@ -547,6 +550,7 @@ export default function WhatsAppPage() {
           </Tabs>
         </div>
       </div>
+    </div>
     </div>
   )
 }

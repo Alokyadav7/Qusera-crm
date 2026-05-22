@@ -18,6 +18,7 @@ import {
 import { useRealtimeLeads } from '@/hooks/use-realtime-leads'
 import type { Lead } from '@/hooks/use-realtime-leads'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 // ── Stage config ──────────────────────────────────────────────────────────────
 type StageId = Lead['status']
@@ -32,13 +33,13 @@ interface Stage {
 }
 
 const STAGES: Stage[] = [
-  { id: 'new',         label: 'New',         textColor: 'text-slate-700',   bgColor: 'bg-slate-50',   borderColor: 'border-slate-200',  icon: <Target className="size-3.5" /> },
-  { id: 'contacted',   label: 'Contacted',   textColor: 'text-blue-700',    bgColor: 'bg-blue-50',    borderColor: 'border-blue-200',   icon: <Phone className="size-3.5" /> },
-  { id: 'interested',  label: 'Interested',  textColor: 'text-violet-700',  bgColor: 'bg-violet-50',  borderColor: 'border-violet-200', icon: <Star className="size-3.5" /> },
-  { id: 'verified',    label: 'Verified',    textColor: 'text-cyan-700',    bgColor: 'bg-cyan-50',    borderColor: 'border-cyan-200',   icon: <Sparkles className="size-3.5" /> },
-  { id: 'negotiation', label: 'Negotiation', textColor: 'text-amber-700',   bgColor: 'bg-amber-50',   borderColor: 'border-amber-200',  icon: <TrendingUp className="size-3.5" /> },
-  { id: 'closed_won',  label: 'Won ✓',       textColor: 'text-emerald-700', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200',icon: <Trophy className="size-3.5" /> },
-  { id: 'closed_lost', label: 'Lost',        textColor: 'text-red-700',     bgColor: 'bg-red-50',     borderColor: 'border-red-200',    icon: <AlertCircle className="size-3.5" /> },
+  { id: 'new',         label: 'New',         textColor: 'text-slate-700 dark:text-slate-355',   bgColor: 'bg-slate-50/80 dark:bg-slate-900/30',   borderColor: 'border-slate-200 dark:border-slate-800/80',  icon: <Target className="size-3.5" /> },
+  { id: 'contacted',   label: 'Contacted',   textColor: 'text-blue-755 dark:text-blue-300',    bgColor: 'bg-blue-50/70 dark:bg-blue-950/20',    borderColor: 'border-blue-200 dark:border-blue-900/60',   icon: <Phone className="size-3.5" /> },
+  { id: 'interested',  label: 'Interested',  textColor: 'text-violet-755 dark:text-violet-300',  bgColor: 'bg-violet-50/70 dark:bg-violet-950/20',  borderColor: 'border-violet-200 dark:border-violet-900/60', icon: <Star className="size-3.5" /> },
+  { id: 'verified',    label: 'Verified',    textColor: 'text-cyan-755 dark:text-cyan-300',    bgColor: 'bg-cyan-50/70 dark:bg-cyan-950/20',    borderColor: 'border-cyan-200 dark:border-cyan-900/60',   icon: <Sparkles className="size-3.5" /> },
+  { id: 'negotiation', label: 'Negotiation', textColor: 'text-amber-755 dark:text-amber-300',   bgColor: 'bg-amber-50/70 dark:bg-amber-950/20',   borderColor: 'border-amber-200 dark:border-amber-900/60',  icon: <TrendingUp className="size-3.5" /> },
+  { id: 'closed_won',  label: 'Won ✓',       textColor: 'text-emerald-755 dark:text-emerald-300', bgColor: 'bg-emerald-50/70 dark:bg-emerald-950/20', borderColor: 'border-emerald-200 dark:border-emerald-900/60',icon: <Trophy className="size-3.5" /> },
+  { id: 'closed_lost', label: 'Lost',        textColor: 'text-red-755 dark:text-red-300',     bgColor: 'bg-red-50/70 dark:bg-red-950/20',     borderColor: 'border-red-200 dark:border-red-900/60',    icon: <AlertCircle className="size-3.5" /> },
 ]
 
 function fmt(n: number) {
@@ -48,9 +49,9 @@ function fmt(n: number) {
 }
 
 function intentBadgeClass(intent: Lead['buying_intent']) {
-  return intent === 'high' ? 'bg-red-100 text-red-700 border-red-200' :
-         intent === 'medium' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-         'bg-slate-100 text-slate-600 border-slate-200'
+  return intent === 'high' ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-200/50 dark:border-red-955/30' :
+         intent === 'medium' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-955/30' :
+         'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200/50 dark:border-slate-800'
 }
 
 function intentEmoji(intent: Lead['buying_intent']) {
@@ -72,7 +73,7 @@ function DealCard({ lead, onDragStart }: { lead: Lead; onDragStart: (e: React.Dr
     <div
       draggable
       onDragStart={e => onDragStart(e, lead.id)}
-      className="group bg-white dark:bg-card border border-border rounded-xl p-3.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-grab active:cursor-grabbing select-none"
+      className="group bg-white dark:bg-zinc-900/90 border border-border/80 dark:border-border/40 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-primary/40 dark:hover:border-primary/30 transition-all cursor-grab active:cursor-grabbing select-none"
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -80,48 +81,48 @@ function DealCard({ lead, onDragStart }: { lead: Lead; onDragStart: (e: React.Dr
             {lead.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold truncate leading-tight">{lead.full_name}</p>
+            <p className="text-sm font-semibold truncate leading-tight text-foreground">{lead.full_name}</p>
             <p className="text-xs text-muted-foreground truncate">{lead.company || lead.city || '—'}</p>
           </div>
         </div>
         <GripVertical className="size-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 shrink-0 mt-0.5 transition-colors" />
       </div>
 
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-base font-bold">{value > 0 ? fmt(value) : '—'}</span>
-        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${intentBadgeClass(lead.buying_intent)}`}>
-          {intentEmoji(lead.buying_intent)} {lead.buying_intent}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-base font-bold text-foreground">{value > 0 ? fmt(value) : '—'}</span>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${intentBadgeClass(lead.buying_intent)}`}>
+          {intentEmoji(lead.buying_intent)} {lead.buying_intent.toUpperCase()}
         </span>
       </div>
 
       {/* Win probability bar */}
-      <div className="mb-2.5">
-        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+      <div className="mb-3">
+        <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
           <span>Win probability</span>
-          <span className="font-medium">{winProb}%</span>
+          <span className="font-semibold">{winProb}%</span>
         </div>
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className="h-1.5 bg-muted dark:bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full ${winProb >= 70 ? 'bg-emerald-500' : winProb >= 40 ? 'bg-amber-500' : 'bg-red-400'}`}
+            className={`h-full rounded-full transition-all duration-500 ${winProb >= 70 ? 'bg-emerald-500' : winProb >= 40 ? 'bg-amber-500' : 'bg-red-400'}`}
             style={{ width: `${winProb}%` }}
           />
         </div>
       </div>
 
       {lead.ai_summary && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded-lg px-2 py-1.5 mb-2">
-          <ArrowRight className="size-3 text-primary shrink-0" />
-          <span className="truncate">{lead.ai_summary}</span>
+        <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground bg-primary/5 dark:bg-primary/10 border border-primary/10 dark:border-primary/5 rounded-xl p-2 mb-2">
+          <Sparkles className="size-3 text-primary shrink-0 mt-0.5" />
+          <span className="line-clamp-2 leading-tight">{lead.ai_summary}</span>
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between mt-2 pt-2.5 border-t border-border/50">
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
           <Clock className="size-3" />
           <span>{days !== null ? `${days}d ago` : 'Never'}</span>
         </div>
         {lead.source && (
-          <span className="text-xs text-muted-foreground">{lead.source}</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/75">{lead.source}</span>
         )}
       </div>
     </div>
@@ -143,18 +144,18 @@ function StageColumn({
   const total = leads.reduce((s, d) => s + (d.deal_value || d.estimated_budget || 0), 0)
 
   return (
-    <div className="flex flex-col min-w-[260px] w-[260px]">
-      <div className={`flex items-center justify-between px-3 py-2.5 rounded-t-xl border-b-2 ${stage.bgColor} ${stage.borderColor}`}>
+    <div className="flex flex-col min-w-[290px] w-[290px] md:min-w-[310px] md:w-[310px]">
+      <div className={`flex items-center justify-between px-3.5 py-3 rounded-t-2xl border border-b-2 ${stage.bgColor} ${stage.borderColor}`}>
         <div className="flex items-center gap-2">
           <span className={stage.textColor}>{stage.icon}</span>
-          <span className={`text-sm font-semibold ${stage.textColor}`}>{stage.label}</span>
-          <span className={`text-xs px-1.5 py-0.5 rounded-full bg-white/70 font-medium ${stage.textColor}`}>{leads.length}</span>
+          <span className={`text-sm font-bold tracking-tight ${stage.textColor}`}>{stage.label}</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-black/40 font-bold border border-border/10 ${stage.textColor}`}>{leads.length}</span>
         </div>
         {total > 0 && <span className={`text-xs font-bold ${stage.textColor}`}>{fmt(total)}</span>}
       </div>
 
       <div
-        className={`flex-1 min-h-[400px] p-2 space-y-2.5 rounded-b-xl border border-t-0 transition-colors ${stage.borderColor} ${isDragOver ? `${stage.bgColor} ring-2 ring-offset-0` : 'bg-muted/20'}`}
+        className={`flex-1 min-h-[500px] p-3 space-y-3 rounded-b-2xl border border-t-0 transition-all duration-300 ${stage.borderColor} ${isDragOver ? `${stage.bgColor} ring-2 ring-primary/20 dark:ring-primary/10 ring-offset-0` : 'bg-muted/10 dark:bg-black/10'}`}
         onDrop={e => { setIsDragOver(false); onDrop(e, stage.id) }}
         onDragOver={e => { onDragOver(e); setIsDragOver(true) }}
         onDragLeave={() => setIsDragOver(false)}
@@ -164,7 +165,7 @@ function StageColumn({
         ))}
         <button
           onClick={() => onAddDeal(stage.id)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/50 rounded-lg transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/50 dark:hover:border-primary/40 rounded-xl transition-all bg-background/40 hover:bg-background/80"
         >
           <Plus className="size-3.5" /> Add lead
         </button>
@@ -183,7 +184,7 @@ export default function PipelinePage() {
 
   const activeLeads = leads.filter(l => !['closed_won', 'closed_lost'].includes(l.status))
   const totalPipeline = activeLeads.reduce((s, l) => s + (l.deal_value || l.estimated_budget || 0), 0)
-  const wonValue = leads.filter(l => l.status === 'closed_won').reduce((s, l) => s + (l.deal_value || 0), 0)
+  const wonValue = leads.filter(l => l.status === 'closed_won').reduce((s, l) => s + (l.deal_value || l.estimated_budget || 0), 0)
   const weightedValue = activeLeads.reduce((s, l) => {
     const prob = l.buying_intent === 'high' ? 0.8 : l.buying_intent === 'medium' ? 0.5 : 0.25
     return s + (l.deal_value || l.estimated_budget || 0) * prob
@@ -209,7 +210,8 @@ export default function PipelinePage() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-    await supabase.from('leads').insert({
+
+    const { data: inserted, error } = await supabase.from('leads').insert({
       user_id: user.id,
       full_name: form.full_name,
       company: form.company || null,
@@ -220,11 +222,19 @@ export default function PipelinePage() {
       sentiment_score: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    })
+    }).select().single()
+
+    if (error) {
+      toast.error('Failed to add lead: ' + error.message)
+    } else if (inserted) {
+      // Instantly add the new card to the kanban without waiting for refetch
+      refetch()
+      toast.success(`Lead "${form.full_name}" added successfully`)
+    }
+
     setAddModal(null)
     setForm({ full_name: '', company: '', phone_number: '', deal_value: '' })
     setSaving(false)
-    refetch()
   }, [addModal, form, refetch])
 
   if (isLoading) {
@@ -237,48 +247,49 @@ export default function PipelinePage() {
       </div>
     )
   }
-
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen w-full max-w-full overflow-hidden">
       <CRMHeader
         title="Sales Pipeline"
         subtitle={`${activeLeads.length} active leads · Weighted: ${fmt(weightedValue)} · Live from Supabase`}
       />
 
-      <main className="flex-1 p-4 md:p-6 space-y-6 overflow-hidden">
+      <main className="flex-1 p-4 md:p-6 space-y-6 overflow-hidden w-full max-w-full flex flex-col min-h-0">
         {/* Summary stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
           {[
-            { label: 'Total Pipeline', value: fmt(totalPipeline), icon: <TrendingUp className="size-4" />, color: 'text-primary' },
-            { label: 'Weighted Value',  value: fmt(weightedValue),  icon: <Target className="size-4" />,    color: 'text-violet-600' },
-            { label: 'Won This Month',  value: fmt(wonValue),       icon: <Trophy className="size-4" />,    color: 'text-emerald-600' },
-            { label: 'Active Deals',    value: String(activeLeads.length), icon: <IndianRupee className="size-4" />, color: 'text-amber-600' },
+            { label: 'Total Pipeline', value: fmt(totalPipeline), icon: <TrendingUp className="size-4 text-primary" />, bg: 'from-primary/5 to-transparent border-primary/20 dark:border-primary/10' },
+            { label: 'Weighted Value',  value: fmt(weightedValue),  icon: <Target className="size-4 text-violet-500" />,     bg: 'from-violet-500/5 to-transparent border-violet-500/20 dark:border-violet-500/10' },
+            { label: 'Won This Month',  value: fmt(wonValue),       icon: <Trophy className="size-4 text-emerald-500" />,    bg: 'from-emerald-500/5 to-transparent border-emerald-500/20 dark:border-emerald-500/10' },
+            { label: 'Active Deals',    value: String(activeLeads.length), icon: <IndianRupee className="size-4 text-amber-500" />, bg: 'from-amber-500/5 to-transparent border-amber-500/20 dark:border-amber-500/10' },
           ].map(s => (
-            <Card key={s.label}>
-              <CardContent className="p-4">
-                <div className={`flex items-center gap-2 mb-1 ${s.color}`}>
-                  {s.icon}
-                  <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+            <Card key={s.label} className={`bg-gradient-to-br ${s.bg} border shadow-sm transition-all hover:shadow-md`}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{s.label}</span>
+                  <p className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">{s.value}</p>
                 </div>
-                <p className="text-2xl font-bold">{s.value}</p>
+                <div className="size-10 rounded-xl bg-background border flex items-center justify-center shadow-inner shrink-0">
+                  {s.icon}
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <div className="flex items-center justify-between">
-          <Badge variant="outline" className="text-emerald-600 bg-emerald-50 border-emerald-200">
+        <div className="flex items-center justify-between shrink-0">
+          <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 border-emerald-500/20 dark:border-emerald-500/10 px-3 py-1 rounded-full text-xs font-semibold">
             <span className="size-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />
             Real-time · Drag to update status in Supabase
           </Badge>
-          <Button size="sm" variant="outline" onClick={refetch}>
+          <Button size="sm" variant="outline" onClick={refetch} className="shadow-sm rounded-xl">
             <RefreshCw className="size-4 mr-2" />Refresh
           </Button>
         </div>
 
         {/* Kanban board */}
-        <div className="overflow-x-auto pb-4">
-          <div className="flex gap-4 min-w-max">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 min-w-0 w-full">
+          <div className="flex gap-4 min-w-max h-full">
             {STAGES.map(stage => (
               <StageColumn
                 key={stage.id}

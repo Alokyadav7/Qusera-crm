@@ -38,6 +38,11 @@ function timeAgo(dateStr: string | null) {
   return `${Math.floor(days/7)}w ago`
 }
 
+function getDisplayScore(score: number): number {
+  if (score > 1) return Math.round(score)
+  return Math.round(((score + 1) / 2) * 100)
+}
+
 interface ContactsTableProps {
   leads: Lead[]
   isLoading: boolean
@@ -58,11 +63,12 @@ export function ContactsTable({ leads, isLoading, onRefresh, onAIAction }: Conta
   })
 
   function triggerAI(lead: Lead, action: string) {
-    const ctx = `Contact: ${lead.full_name} | Company: ${lead.company || 'N/A'} | Score: ${lead.sentiment_score}/100 | Intent: ${lead.buying_intent} | Deal Value: ${formatValue(lead.deal_value || lead.estimated_budget)} | Status: ${lead.status} | Source: ${lead.source || 'N/A'}`
+    const scoreVal = getDisplayScore(lead.sentiment_score)
+    const ctx = `Contact: ${lead.full_name} | Company: ${lead.company || 'N/A'} | Score: ${scoreVal}/100 | Intent: ${lead.buying_intent} | Deal Value: ${formatValue(lead.deal_value || lead.estimated_budget)} | Status: ${lead.status} | Source: ${lead.source || 'N/A'}`
     const prompts: Record<string, string> = {
       email: `Draft a personalized follow-up email for ${lead.full_name} at ${lead.company || 'their company'}. Deal value: ${formatValue(lead.deal_value || lead.estimated_budget)}. Their current status is ${lead.status}.`,
-      call: `Give me a 30-second call opener for ${lead.full_name} at ${lead.company || 'their company'}. Sentiment score: ${lead.sentiment_score}/100, buying intent: ${lead.buying_intent}.`,
-      score: `Analyze the lead score of ${lead.sentiment_score}/100 for ${lead.full_name} at ${lead.company || 'their company'} with ${lead.buying_intent} buying intent. Provide 3 specific actions to improve conversion.`,
+      call: `Give me a 30-second call opener for ${lead.full_name} at ${lead.company || 'their company'}. Sentiment score: ${scoreVal}/100, buying intent: ${lead.buying_intent}.`,
+      score: `Analyze the lead score of ${scoreVal}/100 for ${lead.full_name} at ${lead.company || 'their company'} with ${lead.buying_intent} buying intent. Provide 3 specific actions to improve conversion.`,
     }
     onAIAction?.(prompts[action], ctx)
   }
@@ -120,6 +126,7 @@ export function ContactsTable({ leads, isLoading, onRefresh, onAIAction }: Conta
                 {filtered.map((c, i) => {
                   const cfg = STATUS_TAGS[c.buying_intent] || STATUS_TAGS.low
                   const StatusIcon = cfg.icon
+                  const displayScoreVal = getDisplayScore(c.sentiment_score)
                   return (
                     <tr key={c.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${i%2===0?'':'bg-muted/10'}`}>
                       <td className="px-4 py-3">
@@ -139,9 +146,9 @@ export function ContactsTable({ leads, isLoading, onRefresh, onAIAction }: Conta
                         <div className="flex items-center gap-2 min-w-[80px]">
                           <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                             <div className={`h-full rounded-full ${cfg.bar} transition-all`}
-                              style={{ width:`${Math.min(100, c.sentiment_score)}%` }} />
+                              style={{ width:`${Math.min(100, displayScoreVal)}%` }} />
                           </div>
-                          <span className="text-xs font-medium w-7 text-right">{c.sentiment_score}</span>
+                          <span className="text-xs font-medium w-7 text-right">{displayScoreVal}</span>
                         </div>
                       </td>
                       <td className="px-3 py-3">

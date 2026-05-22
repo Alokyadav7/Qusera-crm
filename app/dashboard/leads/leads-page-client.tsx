@@ -142,8 +142,7 @@ export function LeadsPageClient({ initialLeads }: LeadsPageClientProps) {
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <Plus className="size-4 mr-1" />
-                    <span className="hidden xs:inline">Add Lead</span>
-                    <span className="xs:hidden">Add</span>
+                    Add Lead
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
@@ -282,28 +281,31 @@ export function LeadsPageClient({ initialLeads }: LeadsPageClientProps) {
             </Badge>
             <Badge 
               variant="outline" 
-              className="cursor-pointer hover:bg-muted bg-red-50 text-red-700 border-red-200"
-              onClick={() => setIntentFilter('high')}
+              className={`cursor-pointer hover:bg-muted bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 ${intentFilter === 'high' ? 'ring-2 ring-red-400' : ''}`}
+              onClick={() => setIntentFilter(intentFilter === 'high' ? 'all' : 'high')}
             >
-              Hot / High Intent ({hotLeads})
+              🔥 Hot / High Intent ({hotLeads})
             </Badge>
             <Badge 
               variant="outline" 
-              className="cursor-pointer hover:bg-muted bg-amber-50 text-amber-700 border-amber-200"
+              className={`cursor-pointer hover:bg-muted bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 ${statusFilter === 'new' && intentFilter === 'all' ? 'ring-2 ring-amber-400' : ''}`}
+              onClick={() => { setStatusFilter(statusFilter === 'new' ? 'all' : 'new'); setIntentFilter('all') }}
             >
-              Pending Verification ({pendingVerification})
+              ⚠️ Pending Verification ({pendingVerification})
             </Badge>
             <Badge 
               variant="outline" 
-              className="cursor-pointer hover:bg-muted bg-blue-50 text-blue-700 border-blue-200"
+              className="cursor-pointer hover:bg-muted bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+              onClick={() => { setStatusFilter('all'); setIntentFilter('all'); setSearchQuery(new Date().toLocaleDateString()) }}
             >
-              New Today ({newToday})
+              🆕 New Today ({newToday})
             </Badge>
             <Badge 
               variant="outline" 
-              className="cursor-pointer hover:bg-muted bg-emerald-50 text-emerald-700 border-emerald-200"
+              className="cursor-pointer hover:bg-muted bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+              onClick={() => { setStatusFilter('all'); setIntentFilter('all'); setSearchQuery('') }}
             >
-              High Value ({highValue})
+              💎 High Value ({highValue})
             </Badge>
           </div>
         )}

@@ -74,7 +74,7 @@ export default function VoiceToCRMPage() {
   const [transcript, setTranscript] = useState<string>('')
   const [liveText, setLiveText] = useState<string>('')
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
-  const [language, setLanguage] = useState('hinglish')
+  const [language, setLanguage] = useState('english')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [browserSupport, setBrowserSupport] = useState(true)
 
@@ -268,7 +268,7 @@ Return ONLY a JSON object with these fields (omit if not found):
     <div className="flex flex-col min-h-screen">
       <CRMHeader
         title="Voice to CRM"
-        subtitle="Record voice notes in Hindi, English or Hinglish — AI extracts & saves data"
+        subtitle="Record voice notes in English — AI extracts & saves data"
       />
 
       <main className="flex-1 p-4 md:p-6">

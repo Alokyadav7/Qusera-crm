@@ -180,8 +180,7 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/')
-    router.refresh()
+    router.push('/login')
   }
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
@@ -197,7 +196,7 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
     <Sidebar className="border-r border-border/50 glass-dark">
       <SidebarHeader className="border-b border-sidebar-border/50 bg-background/5 p-4">
         <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-lg shadow-primary/20">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background shadow-lg ring-2 ring-foreground/10">
             <Zap className="size-5" />
           </div>
           <div className="flex flex-col">

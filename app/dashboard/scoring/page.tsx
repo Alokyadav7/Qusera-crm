@@ -66,11 +66,12 @@ function scoreLead(lead: Lead, interactions: Interaction[]): {
     signals.push({ label: 'No Interactions', impact: 'negative', weight: pts, detail: 'No recorded interactions yet' })
   }
 
-  // Deal value
-  if ((lead.deal_value || 0) > 300000) {
+  // Deal value — use deal_value, fall back to estimated_budget
+  const dealVal = lead.deal_value || lead.estimated_budget || 0
+  if (dealVal > 300000) {
     const pts = 15
     score += pts
-    signals.push({ label: 'High Deal Value', impact: 'positive', weight: pts, detail: `₹${((lead.deal_value || 0) / 100000).toFixed(1)}L estimated deal` })
+    signals.push({ label: 'High Deal Value', impact: 'positive', weight: pts, detail: `₹${(dealVal / 100000).toFixed(1)}L estimated deal` })
   }
 
   // Recency of last contact

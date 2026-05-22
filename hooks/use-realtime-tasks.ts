@@ -51,8 +51,14 @@ export function useRealtimeTasks(initialTasks: RealtimeTask[] = []) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchTasks)
       .subscribe()
 
+    // Fallback polling interval every 6 seconds to ensure data remains fresh
+    const interval = setInterval(() => {
+      fetchTasks()
+    }, 6000)
+
     return () => {
       supabase.removeChannel(channel)
+      clearInterval(interval)
     }
   }, [fetchTasks])
 

@@ -47,21 +47,21 @@ function getSentimentLabel(score: number): string {
 }
 
 function getSentimentColor(score: number): string {
-  if (score >= 0.6) return 'text-emerald-600 bg-emerald-50'
-  if (score >= 0.3) return 'text-green-600 bg-green-50'
-  if (score >= -0.3) return 'text-slate-600 bg-slate-50'
-  if (score >= -0.6) return 'text-orange-600 bg-orange-50'
-  return 'text-red-600 bg-red-50'
+  if (score >= 0.6) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/40'
+  if (score >= 0.3) return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border border-green-200/50 dark:border-green-800/30'
+  if (score >= -0.3) return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+  if (score >= -0.6) return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-800/30'
+  return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200/50 dark:border-red-800/40'
 }
 
 function getIntentBadge(intent: string) {
   switch (intent) {
     case 'high':
-      return <Badge className="bg-orange-100 text-orange-700 border-orange-200">High Intent</Badge>
+      return <Badge className="bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200/50 dark:border-orange-900/40 font-medium">High Intent</Badge>
     case 'medium':
-      return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Med Intent</Badge>
+      return <Badge className="bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30 font-medium">Med Intent</Badge>
     case 'low':
-      return <Badge className="bg-slate-100 text-slate-700 border-slate-200">Low Intent</Badge>
+      return <Badge className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 font-medium">Low Intent</Badge>
     default:
       return null
   }

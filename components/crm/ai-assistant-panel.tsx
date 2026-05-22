@@ -78,6 +78,17 @@ export function AIAssistantPanel({ context, pendingPrompt, onPromptConsumed, for
   useEffect(() => { scrollToBottom() }, [messages, streamingText, scrollToBottom])
   useEffect(() => { if (actualOpen) setTimeout(() => inputRef.current?.focus(), 300) }, [actualOpen])
 
+  useEffect(() => {
+    if (actualOpen) {
+      document.body.classList.add('ai-assistant-open')
+    } else {
+      document.body.classList.remove('ai-assistant-open')
+    }
+    return () => {
+      document.body.classList.remove('ai-assistant-open')
+    }
+  }, [actualOpen])
+
   // Auto-send pending prompt when panel opens
   useEffect(() => {
     if (pendingPrompt && actualOpen) {

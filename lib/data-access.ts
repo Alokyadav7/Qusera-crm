@@ -1,5 +1,3 @@
-"use server"
-
 import { createClient } from '@/lib/supabase/server'
 
 // Types
@@ -360,10 +358,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   // Get total revenue from closed deals
   const { data: closedDeals } = await supabase
     .from('leads')
-    .select('deal_value')
+    .select('deal_value, estimated_budget')
     .eq('status', 'closed_won')
   
-  const totalRevenue = closedDeals?.reduce((sum, deal) => sum + (deal.deal_value || 0), 0) || 0
+  // Use deal_value if set, otherwise fall back to estimated_budget
+  const totalRevenue = closedDeals?.reduce((sum, deal) => sum + (Number(deal.deal_value) || Number(deal.estimated_budget) || 0), 0) || 0
   
   // Calculate conversion rate
   const { count: closedWon } = await supabase

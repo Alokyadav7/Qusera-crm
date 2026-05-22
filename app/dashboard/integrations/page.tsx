@@ -70,13 +70,30 @@ export default function IntegrationsPage() {
   useEffect(() => {
     setDomain(window.location.origin)
     const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
+
+    const loadIntegrations = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
       setUserId(user.id)
       const { data: intg } = await supabase.from('integrations').select('*').eq('user_id', user.id).single()
       if (intg) setData({ ...EMPTY, ...intg })
       setLoading(false)
-    })
+    }
+
+    loadIntegrations()
+
+    // ── Real-time: update when settings saved from another tab/device ──
+    const channel = supabase
+      .channel('integrations-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'integrations' }, payload => {
+        if (payload.new) {
+          setData(d => ({ ...d, ...(payload.new as Partial<Integration>) }))
+          toast.info('Integration settings synced in real-time ⚡')
+        }
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   const save = useCallback(async (section: string, fields: Partial<Integration>) => {

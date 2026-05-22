@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { CRMHeader } from '@/components/crm/crm-header'
 import {
   FileCheck, CheckCircle2, XCircle, Clock, Search,
   Download, RefreshCw, AlertTriangle, Building2, CreditCard,
@@ -269,7 +270,12 @@ export default function CompliancePage() {
   }
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-6">
+    <div className="flex flex-col min-h-screen">
+      <CRMHeader
+        title="Compliance Verification"
+        subtitle={`GST & PAN verification · ${leads.length} leads · real-time`}
+      />
+      <div className="flex-1 space-y-6 p-4 md:p-6">
       {/* Edit Dialog */}
       <EditComplianceDialog
         lead={editLead}
@@ -277,23 +283,6 @@ export default function CompliancePage() {
         onSaved={() => { refetch(); setEditLead(null) }}
       />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Compliance Verification</h1>
-          <p className="text-muted-foreground">
-            GST, PAN verification · {leads.length} leads · Click ✏️ on any lead to add numbers
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-emerald-600 bg-emerald-50 border-emerald-200">
-            <span className="size-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />Live
-          </Badge>
-          <Button variant="outline" size="sm" onClick={refetch}>
-            <RefreshCw className="size-4 mr-2" />Refresh
-          </Button>
-        </div>
-      </div>
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
@@ -548,6 +537,7 @@ export default function CompliancePage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   )
 }

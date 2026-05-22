@@ -41,15 +41,15 @@ export function AnalyticsDashboard({ leads, interactions, isLoading, onRefresh, 
       return d.getMonth() === lastMonth && d.getFullYear() === lastYear
     })
 
-    const mrr = thisMonthWon.reduce((s,l)=>s+(l.deal_value||0),0)
-    const lastMrr = lastMonthWon.reduce((s,l)=>s+(l.deal_value||0),0)
+    const mrr = thisMonthWon.reduce((s,l)=>s+(l.deal_value||l.estimated_budget||0),0)
+    const lastMrr = lastMonthWon.reduce((s,l)=>s+(l.deal_value||l.estimated_budget||0),0)
     const mrrChange = lastMrr>0?Math.round(((mrr-lastMrr)/lastMrr)*100):0
 
     const wonCount = thisMonthWon.length
     const lastWonCount = lastMonthWon.length
     const wonChange = lastWonCount>0?Math.round(((wonCount-lastWonCount)/lastWonCount)*100):0
 
-    const allDealValues = wonLeads.map(l=>l.deal_value||0).filter(v=>v>0)
+    const allDealValues = wonLeads.map(l=>l.deal_value||l.estimated_budget||0).filter(v=>v>0)
     const avgDeal = allDealValues.length>0?Math.round(allDealValues.reduce((s,v)=>s+v,0)/allDealValues.length):0
 
     // Sales cycle = avg days from created_at to updated_at for closed_won
@@ -68,7 +68,7 @@ export function AnalyticsDashboard({ leads, interactions, isLoading, onRefresh, 
       const revenue = leads
         .filter(l=>l.status==='closed_won')
         .filter(l=>{ const ld=new Date(l.updated_at); return ld.getMonth()===m&&ld.getFullYear()===y })
-        .reduce((s,l)=>s+(l.deal_value||0),0)
+        .reduce((s,l)=>s+(l.deal_value||l.estimated_budget||0),0)
       return { month: MONTHS[m], revenue }
     })
   }, [leads])

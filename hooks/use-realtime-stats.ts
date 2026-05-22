@@ -49,12 +49,13 @@ export function useRealtimeStats(): { stats: Stats; isLoading: boolean } {
         .lt('due_date', tomorrow.toISOString()),
       supabase.from('tasks').select('*', { count: 'exact', head: true })
         .eq('is_completed', true),
-      supabase.from('leads').select('deal_value').eq('status', 'closed_won'),
+      supabase.from('leads').select('deal_value, estimated_budget').eq('status', 'closed_won'),
       supabase.from('leads').select('*', { count: 'exact', head: true })
-        .not('status', 'in', '("closed_won","closed_lost")'),
+        .not('status', 'in', '(closed_won,closed_lost)'),
     ])
 
-    const totalRevenue = closedDeals?.reduce((s, d) => s + (Number(d.deal_value) || 0), 0) || 0
+    // Use deal_value if set, otherwise fall back to estimated_budget (same logic as Live Revenue panel)
+    const totalRevenue = closedDeals?.reduce((s, d) => s + (Number(d.deal_value) || Number(d.estimated_budget) || 0), 0) || 0
     const closedWon = closedDeals?.length || 0
     const conversionRate = totalLeads && totalLeads > 0
       ? Math.round((closedWon / totalLeads) * 1000) / 10
@@ -83,8 +84,14 @@ export function useRealtimeStats(): { stats: Stats; isLoading: boolean } {
       supabase.channel(`stats-tasks-${channelId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, fetchStats).subscribe(),
     ]
 
+    // Fallback polling interval every 6 seconds to ensure data remains fresh
+    const interval = setInterval(() => {
+      fetchStats()
+    }, 6000)
+
     return () => {
       channels.forEach(ch => supabase.removeChannel(ch))
+      clearInterval(interval)
     }
   }, [fetchStats])
 

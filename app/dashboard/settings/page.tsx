@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { CRMHeader } from '@/components/crm/crm-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import {
   Building2, Users, Bell, Shield, CreditCard, Mail, Phone,
-  Globe, Loader2, CheckCircle2, Trash2, UserPlus, Key, Zap, Crown
+  Globe, Loader2, CheckCircle2, Trash2, UserPlus, Key, Crown
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -29,7 +30,7 @@ interface TeamMember {
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('member')
   const [inviting, setInviting] = useState(false)
@@ -75,7 +76,7 @@ export default function SettingsPage() {
   const saveProfile = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
-    if (!user) return
+    if (!user) { setLoading(false); return }
     const { error } = await supabase.from('profiles').upsert({
       id: user.id,
       email: user.email,
@@ -113,7 +114,7 @@ export default function SettingsPage() {
 
   const changePassword = useCallback(async () => {
     const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(user?.email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(user?.email || '', {
       redirectTo: `${window.location.origin}/auth/callback`,
     })
     if (error) toast.error(error.message)
@@ -132,7 +133,6 @@ export default function SettingsPage() {
             <TabsTrigger value="notifications" className="gap-1.5"><Bell className="size-4" />Notifications</TabsTrigger>
             <TabsTrigger value="security" className="gap-1.5"><Shield className="size-4" />Security</TabsTrigger>
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="size-4" />Billing</TabsTrigger>
-            <TabsTrigger value="integrations" className="gap-1.5"><Zap className="size-4" />Integrations</TabsTrigger>
           </TabsList>
 
           {/* ── COMPANY PROFILE ── */}
@@ -304,7 +304,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <Switch
-                      checked={(profile as any)[item.key]}
+                      checked={(profile as any)[item.key] ?? false}
                       onCheckedChange={v => setProfile(p => ({ ...p, [item.key]: v }))}
                     />
                   </div>
@@ -406,40 +406,7 @@ export default function SettingsPage() {
             </div>
           </TabsContent>
 
-          {/* ── INTEGRATIONS ── */}
-          <TabsContent value="integrations">
-            <div className="grid gap-4 md:grid-cols-2">
-              {[
-                { name: 'WhatsApp Business API', icon: '💬', status: process.env.NEXT_PUBLIC_META_CONFIGURED === 'true' ? 'connected' : 'not_configured', desc: 'Send & receive real WhatsApp messages. Add META_WHATSAPP_TOKEN to .env', action: 'Configure', href: 'https://developers.facebook.com/docs/whatsapp' },
-                { name: 'Resend Email', icon: '✉️', status: 'not_configured', desc: 'Send real emails from CRM. Add RESEND_API_KEY to .env', action: 'Get Free Key', href: 'https://resend.com' },
-                { name: 'Razorpay Payments', icon: '💳', status: 'not_configured', desc: 'Accept subscription payments. Add RAZORPAY_KEY_ID to .env', action: 'Get Keys', href: 'https://razorpay.com' },
-                { name: 'Google Gemini AI', icon: '🤖', status: 'connected', desc: 'AI lead scoring, voice extraction, and chat. Powered by Gemini Pro', action: 'Manage', href: 'https://aistudio.google.com' },
-                { name: 'Supabase', icon: '⚡', status: 'connected', desc: 'Real-time database, auth, and file storage', action: 'View Dashboard', href: 'https://supabase.com/dashboard' },
-                { name: 'Google Sheets', icon: '📊', status: 'coming_soon', desc: 'Sync leads automatically from your spreadsheet', action: 'Coming Soon', href: '#' },
-              ].map(int => (
-                <Card key={int.name}>
-                  <CardContent className="flex items-start justify-between gap-4 pt-6">
-                    <div className="flex items-start gap-3">
-                      <div className="text-2xl">{int.icon}</div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-sm">{int.name}</p>
-                          {int.status === 'connected' && <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">Connected</Badge>}
-                          {int.status === 'not_configured' && <Badge variant="outline" className="text-amber-600 text-xs">Not configured</Badge>}
-                          {int.status === 'coming_soon' && <Badge variant="secondary" className="text-xs">Soon</Badge>}
-                        </div>
-                        <p className="text-xs text-muted-foreground">{int.desc}</p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="outline" disabled={int.status === 'coming_soon'}
-                      onClick={() => int.href !== '#' && window.open(int.href, '_blank')}>
-                      {int.action}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+          {/* Integrations moved to /dashboard/integrations */}
         </Tabs>
       </main>
     </div>

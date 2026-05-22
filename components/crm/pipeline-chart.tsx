@@ -29,7 +29,7 @@ const stages = [
 export function PipelineChart({ data }: PipelineChartProps) {
   const total = Object.values(data).reduce((sum, count) => sum + count, 0)
   const maxCount = Math.max(...Object.values(data), 1)
-  
+
   const winRate = total > 0 ? Math.round((data.closed_won / total) * 100) : 0
   const activeLeads = data.new + data.contacted + data.interested + data.verified + data.negotiation
 
@@ -38,7 +38,7 @@ export function PipelineChart({ data }: PipelineChartProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Sales Pipeline</CardTitle>
         <CardDescription>
-          {total > 0 
+          {total > 0
             ? `${total} total leads across all stages`
             : 'No leads in pipeline yet'
           }
@@ -57,7 +57,7 @@ export function PipelineChart({ data }: PipelineChartProps) {
                   <span className="font-medium">{count}</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div 
+                  <div
                     className={`h-full rounded-full transition-all duration-500 ${stage.color}`}
                     style={{ width: `${percentage}%` }}
                   />

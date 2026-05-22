@@ -8,6 +8,7 @@ import { VoiceRecorderWidget } from '@/components/crm/voice-recorder-widget'
 import { PipelineChart } from '@/components/crm/pipeline-chart'
 import { RoutePlannerWidget } from '@/components/crm/route-planner-widget'
 import { LiveRevenueCommandCenter } from '@/components/crm/live-revenue-command-center'
+import { PersonalNotesWidget } from '@/components/crm/personal-notes-widget'
 import Link from 'next/link'
 
 async function getDashboardData() {
@@ -29,7 +30,8 @@ async function getDashboardData() {
     { count: totalLeads },
     { count: newLeadsToday },
     { count: completedTasks },
-    { data: closedDeals }
+    { data: closedDeals },
+    { count: closedLostCount }
   ] = await Promise.all([
     supabase.from('profiles').select('full_name').single(),
     supabase.from('tasks').select('*', { count: 'exact', head: true })
@@ -50,11 +52,13 @@ async function getDashboardData() {
       .gte('created_at', today.toISOString()),
     supabase.from('tasks').select('*', { count: 'exact', head: true })
       .eq('is_completed', true),
-    supabase.from('leads').select('deal_value, status')
-      .eq('status', 'closed_won')
+    supabase.from('leads').select('deal_value, estimated_budget, status')
+      .eq('status', 'closed_won'),
+    supabase.from('leads').select('*', { count: 'exact', head: true })
+      .eq('status', 'closed_lost'),
   ])
   
-  const totalRevenue = closedDeals?.reduce((sum, deal) => sum + (Number(deal.deal_value) || 0), 0) || 0
+  const totalRevenue = closedDeals?.reduce((sum, deal) => sum + (Number(deal.deal_value) || Number(deal.estimated_budget) || 0), 0) || 0
   const closedWonCount = closedDeals?.length || 0
   const conversionRate = totalLeads && totalLeads > 0 ? (closedWonCount / totalLeads) * 100 : 0
   
@@ -65,7 +69,7 @@ async function getDashboardData() {
     verified: pipelineLeads?.filter(l => l.status === 'verified').length || 0,
     negotiation: pipelineLeads?.filter(l => l.status === 'negotiation').length || 0,
     closed_won: closedWonCount,
-    closed_lost: 0
+    closed_lost: closedLostCount || 0
   }
   
   return {
@@ -164,25 +168,35 @@ export default async function DashboardPage() {
           <EmptyStateOnboarding userName={data.userName} />
         ) : (
           <>
-            <LiveRevenueCommandCenter initialLeads={data.leads} initialTasks={data.tasks} />
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {/* Left Column - Priority Leads */}
-              <div className="animate-fade-in-up delay-100">
-                <LeadPriorityList leads={data.leads} />
+            <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
+              {/* Row 1: Live Revenue (8 cols) + Voice Recorder (4 cols) */}
+              <div className="lg:col-span-8 animate-fade-in-up delay-75">
+                <LiveRevenueCommandCenter initialLeads={data.leads} initialTasks={data.tasks} />
+              </div>
+              <div className="lg:col-span-4 animate-fade-in-up delay-100">
+                <VoiceRecorderWidget />
               </div>
               
-              {/* Middle Column - Tasks & Interactions */}
-              <div className="space-y-6 animate-fade-in-up delay-200">
+              {/* Row 2: Priority Leads (4 cols) + Tasks (4 cols) + Recent Interactions (4 cols) */}
+              <div className="lg:col-span-4 animate-fade-in-up delay-150">
+                <LeadPriorityList leads={data.leads} />
+              </div>
+              <div className="lg:col-span-4 animate-fade-in-up delay-200">
                 <TasksWidget tasks={data.tasks} />
+              </div>
+              <div className="lg:col-span-4 animate-fade-in-up delay-250">
                 <RecentInteractions interactions={data.interactions} />
               </div>
               
-              {/* Right Column - Voice, Pipeline, Route */}
-              <div className="space-y-6 md:col-span-2 lg:col-span-1 animate-fade-in-up delay-300">
-                <VoiceRecorderWidget />
+              {/* Row 3: Pipeline Chart (5 cols) + Route Planner (4 cols) + Personal Notes (3 cols) */}
+              <div className="lg:col-span-5 animate-fade-in-up delay-300">
                 <PipelineChart data={data.pipelineData} />
+              </div>
+              <div className="lg:col-span-4 animate-fade-in-up delay-350">
                 <RoutePlannerWidget />
+              </div>
+              <div className="lg:col-span-3 animate-fade-in-up delay-400">
+                <PersonalNotesWidget />
               </div>
             </div>
           </>

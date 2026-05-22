@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -45,6 +45,104 @@ function StatCard({ title, value, sub, icon: Icon, trend, color = 'primary' }: {
             {Math.abs(trend)}% vs last 7 days
           </div>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// Interactive ROI Calculator Component for CRM Dashboard Analytics
+function DashboardSalesCalculator() {
+  const [callsPerDay, setCallsPerDay] = useState(20)
+  const [teamSize, setTeamSize] = useState(10)
+
+  // Math calculations: 9 mins (0.15h) saved per call compared to manual data entry
+  const hoursSavedPerMonth = Math.round(teamSize * (callsPerDay * 0.15) * 22)
+  const extraCallsPerMonth = Math.round(hoursSavedPerMonth * 4)
+  const estRevenueGain = Math.round(extraCallsPerMonth * 0.015 * 40000)
+
+  return (
+    <Card className="col-span-full">
+      <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-secondary/5">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Zap className="size-5 text-primary animate-pulse" />
+          Interactive Sales Team ROI & Savings Calculator
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Estimate how much time and money your sales reps save by speaking instead of typing updates.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* Sliders Control Panel */}
+          <div className="lg:col-span-6 space-y-4">
+            {/* Slider 1: Calls per Rep */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-foreground">
+                  Daily Calls / Rep
+                </label>
+                <span className="text-xs font-extrabold text-primary font-mono bg-primary/10 px-2 py-0.5 rounded">{callsPerDay} calls</span>
+              </div>
+              <input 
+                type="range" 
+                min="5" 
+                max="60" 
+                value={callsPerDay} 
+                onChange={(e) => setCallsPerDay(parseInt(e.target.value))}
+                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
+                <span>5 calls</span>
+                <span>30 calls</span>
+                <span>60 calls</span>
+              </div>
+            </div>
+
+            {/* Slider 2: Team Size */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-foreground">
+                  Sales Team Size
+                </label>
+                <span className="text-xs font-extrabold text-primary font-mono bg-primary/10 px-2 py-0.5 rounded">{teamSize} reps</span>
+              </div>
+              <input 
+                type="range" 
+                min="1" 
+                max="100" 
+                value={teamSize} 
+                onChange={(e) => setTeamSize(parseInt(e.target.value))}
+                className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
+                <span>1 rep</span>
+                <span>50 reps</span>
+                <span>100 reps</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Results Panel */}
+          <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Result 1 */}
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 text-center flex flex-col justify-center items-center h-full hover:scale-102 transition-transform">
+              <div className="text-2xl font-extrabold text-primary font-mono">{hoursSavedPerMonth} hrs</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-1.5 leading-tight">Time Saved / Mo</div>
+            </div>
+
+            {/* Result 2 */}
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 text-center flex flex-col justify-center items-center h-full hover:scale-102 transition-transform">
+              <div className="text-2xl font-extrabold text-primary font-mono">+{extraCallsPerMonth}</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-1.5 leading-tight">Extra Sales Calls</div>
+            </div>
+
+            {/* Result 3 */}
+            <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-center flex flex-col justify-center items-center h-full hover:scale-102 transition-transform">
+              <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">₹{estRevenueGain.toLocaleString('en-IN')}</div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-1.5 leading-tight">Est. Revenue Gain</div>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
@@ -276,6 +374,8 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <DashboardSalesCalculator />
 
         {/* Row 3: Revenue Forecast + Interaction Types */}
         <div className="grid lg:grid-cols-2 gap-4">

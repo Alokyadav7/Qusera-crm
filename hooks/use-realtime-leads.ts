@@ -44,33 +44,50 @@ export function useRealtimeLeads(initialLeads: Lead[] = []) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchLeads = useCallback(async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('leads')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (error) {
-      setError(error.message)
-    } else {
-      setLeads((data as Lead[]) || [])
-      setError(null)
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (error) {
+        setError(error.message)
+      } else {
+        setLeads((data as Lead[]) || [])
+        setError(null)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch leads')
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [])
 
   const updateLeadStatus = useCallback(async (id: string, status: Lead['status']) => {
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('leads')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', id)
-    if (error) {
-      toast.error('Failed to move lead: ' + error.message)
-    } else {
-      const label = status.replace('_', ' ')
-      toast.success(`Lead moved to ${label.charAt(0).toUpperCase() + label.slice(1)} ✓`)
+    // Optimistically update local state immediately — instant kanban response
+    setLeads(prev => prev.map(l =>
+      l.id === id ? { ...l, status, updated_at: new Date().toISOString() } : l
+    ))
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('leads')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) {
+        // Roll back the optimistic update on failure
+        fetchLeads()
+        toast.error('Failed to move lead: ' + error.message)
+      } else {
+        const label = status.replace('_', ' ')
+        toast.success(`Lead moved to ${label.charAt(0).toUpperCase() + label.slice(1)} ✓`)
+      }
+    } catch (err: any) {
+      fetchLeads()
+      toast.error('Failed to update lead: ' + (err.message || err))
     }
-  }, [])
+  }, [fetchLeads])
 
   useEffect(() => {
     fetchLeads()
@@ -83,6 +100,7 @@ export function useRealtimeLeads(initialLeads: Lead[] = []) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads' },
         (payload) => {
+          console.log('🔔 [Realtime Leads] Event received:', payload.eventType, payload)
           if (payload.eventType === 'INSERT') {
             setLeads(prev => [payload.new as Lead, ...prev])
           } else if (payload.eventType === 'UPDATE') {
@@ -92,9 +110,19 @@ export function useRealtimeLeads(initialLeads: Lead[] = []) {
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log(`🔌 [Realtime Leads] Subscription status for ${channelName}:`, status)
+      })
 
-    return () => { supabase.removeChannel(channel) }
+    // Fallback polling interval every 6 seconds to ensure data remains fresh
+    const interval = setInterval(() => {
+      fetchLeads()
+    }, 6000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+    }
   }, [fetchLeads])
 
   return { leads, isLoading, error, refetch: fetchLeads, updateLeadStatus }

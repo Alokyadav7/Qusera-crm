@@ -227,10 +227,13 @@ function NotificationBell() {
     const supabase = createClient()
 
     const fetchCount = async () => {
+      // Use interactions table (inbound in last 48h) — consistent with sidebar badge
+      const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
       const { count: c } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('read', false)
+        .from('interactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('direction', 'inbound')
+        .gte('created_at', since)
       setCount(c || 0)
     }
 
@@ -238,7 +241,7 @@ function NotificationBell() {
 
     const channel = supabase
       .channel('header-notif-count')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, fetchCount)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'interactions' }, fetchCount)
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }

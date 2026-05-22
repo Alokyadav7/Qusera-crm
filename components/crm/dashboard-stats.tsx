@@ -88,11 +88,14 @@ export function DashboardStats({ stats: initialStats }: StatsProps) {
       iconColor: 'text-cyan-600'
     },
     {
-      label: 'Active',
-      value: (data as typeof data & { activeInPipeline?: number }).activeInPipeline !== undefined
-        ? String((data as typeof data & { activeInPipeline: number }).activeInPipeline)
-        : data.totalLeads > 0 ? Math.round(data.totalLeads * 0.7).toString() : '0',
-      change: 'In pipeline',
+      label: 'Avg Score',
+      value: data.totalLeads > 0
+        ? `${Math.min(100, Math.round(
+            (data as typeof data & { avgScore?: number }).avgScore ??
+            data.conversionRate
+          ))}/100`
+        : '—',
+      change: 'Lead quality',
       changeType: 'positive' as const,
       icon: Zap,
       iconBg: 'bg-amber-50 dark:bg-amber-950',
@@ -101,31 +104,32 @@ export function DashboardStats({ stats: initialStats }: StatsProps) {
   ]
 
   return (
-    <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 animate-fade-in-up">
+    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 animate-fade-in-up">
       {statItems.map((stat, i) => (
         <Card key={stat.label} className="glass-card card-hover overflow-hidden border-border/50 shadow-sm shadow-primary/5 animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  {stat.label}
-                  {isLoading && <Loader2 className="size-2.5 animate-spin" />}
-                </span>
-                <span className="text-2xl font-bold tracking-tight">{stat.value}</span>
-                <span className={`text-xs ${
-                  stat.changeType === 'positive' ? 'text-emerald-600' :
-                  stat.changeType === 'warning' ? 'text-amber-600' :
-                  stat.changeType === 'negative' ? 'text-red-600' :
-                  'text-muted-foreground'
-                }`}>
-                  {stat.changeType === 'positive' && <TrendingUp className="inline size-3 mr-1" />}
-                  {stat.changeType === 'negative' && <TrendingDown className="inline size-3 mr-1" />}
-                  {stat.change}
-                </span>
+          <CardContent className="p-3.5 flex flex-col justify-between h-full">
+            <div className="flex items-start justify-between gap-1.5">
+              <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1 uppercase tracking-wider">
+                {stat.label}
+                {isLoading && <Loader2 className="size-2.5 animate-spin" />}
+              </span>
+              <div className={`flex size-8 items-center justify-center rounded-lg shrink-0 ${stat.iconBg}`}>
+                <stat.icon className={`size-4.5 ${stat.iconColor}`} />
               </div>
-              <div className={`flex size-10 items-center justify-center rounded-lg ${stat.iconBg}`}>
-                <stat.icon className={`size-5 ${stat.iconColor}`} />
-              </div>
+            </div>
+            
+            <div className="mt-2.5">
+              <span className="text-xl font-extrabold tracking-tight block text-foreground leading-none">{stat.value}</span>
+              <span className={`text-[10px] mt-1.5 block font-medium ${
+                stat.changeType === 'positive' ? 'text-emerald-500' :
+                stat.changeType === 'warning' ? 'text-amber-500' :
+                stat.changeType === 'negative' ? 'text-red-500' :
+                'text-muted-foreground'
+              }`}>
+                {stat.changeType === 'positive' && <TrendingUp className="inline size-2.5 mr-0.5" />}
+                {stat.changeType === 'negative' && <TrendingDown className="inline size-2.5 mr-0.5" />}
+                {stat.change}
+              </span>
             </div>
           </CardContent>
         </Card>
