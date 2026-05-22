@@ -287,7 +287,7 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
+            <SidebarMenuButton size="lg" asChild>
               <div className="w-full flex items-center">
                 <Avatar className="size-7">
                   <AvatarImage src={user?.user_metadata?.avatar_url || ''} alt={userName} />

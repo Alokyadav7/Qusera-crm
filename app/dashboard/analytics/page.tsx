@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -51,9 +51,52 @@ function StatCard({ title, value, sub, icon: Icon, trend, color = 'primary' }: {
 }
 
 // Interactive ROI Calculator Component for CRM Dashboard Analytics
-function DashboardSalesCalculator() {
+function DashboardSalesCalculator({ leads, interactions }: { leads: any[]; interactions: any[] }) {
+  // Compute telemetry values
+  const telemetry = useMemo(() => {
+    const uniqueUserIds = new Set<string>()
+    interactions.forEach(i => {
+      if (i.user_id) uniqueUserIds.add(i.user_id)
+    })
+    leads.forEach(l => {
+      if (l.user_id) uniqueUserIds.add(l.user_id)
+    })
+    const computedTeamSize = Math.max(1, uniqueUserIds.size)
+
+    // Calculate daily calls/rep from live interactions
+    // Find calls/voice interactions in the last 14 days
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+    const callInteractions = interactions.filter(i => {
+      const isCall = i.type === 'call' || i.type === 'voice'
+      const isRecent = new Date(i.created_at) >= fourteenDaysAgo
+      return isCall && isRecent
+    })
+
+    // Average calls per rep per day (assuming 10 working days in a 14-day window)
+    const activeReps = computedTeamSize
+    const dailyCalls = callInteractions.length > 0 
+      ? Math.max(5, Math.min(60, Math.round(callInteractions.length / (activeReps * 10))))
+      : 5 // Default fallback to 5 calls per day if no recent data
+
+    return {
+      computedTeamSize,
+      dailyCalls,
+      totalRecentCalls: callInteractions.length,
+      isRealData: callInteractions.length > 0 || uniqueUserIds.size > 0
+    }
+  }, [leads, interactions])
+
   const [callsPerDay, setCallsPerDay] = useState(20)
   const [teamSize, setTeamSize] = useState(10)
+  const [hasInitialized, setHasInitialized] = useState(false)
+
+  useEffect(() => {
+    if (!hasInitialized && (leads.length > 0 || interactions.length > 0)) {
+      setCallsPerDay(telemetry.dailyCalls)
+      setTeamSize(telemetry.computedTeamSize)
+      setHasInitialized(true)
+    }
+  }, [telemetry, hasInitialized, leads.length, interactions.length])
 
   // Math calculations: 9 mins (0.15h) saved per call compared to manual data entry
   const hoursSavedPerMonth = Math.round(teamSize * (callsPerDay * 0.15) * 22)
@@ -62,20 +105,32 @@ function DashboardSalesCalculator() {
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-secondary/5">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Zap className="size-5 text-primary animate-pulse" />
-          Interactive Sales Team ROI & Savings Calculator
-        </CardTitle>
-        <CardDescription className="text-xs">
-          Estimate how much time and money your sales reps save by speaking instead of typing updates.
-        </CardDescription>
+      <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-secondary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Zap className="size-5 text-primary animate-pulse" />
+            Interactive Sales Team ROI & Savings Calculator
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Estimate how much time and money your sales reps save by speaking instead of typing updates.
+          </CardDescription>
+        </div>
+        {telemetry.isRealData ? (
+          <Badge variant="outline" className="text-[10px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/30 w-fit shrink-0">
+            <span className="size-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+            Live CRM Telemetry Active: {telemetry.computedTeamSize} rep{telemetry.computedTeamSize > 1 ? 's' : ''} (averaging {telemetry.dailyCalls} calls/day)
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px] font-medium text-muted-foreground bg-muted/10 border-border w-fit shrink-0">
+            Using default benchmarks (no recent call activity detected)
+          </Badge>
+        )}
       </CardHeader>
       <CardContent className="pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           {/* Sliders Control Panel */}
           <div className="lg:col-span-6 space-y-4">
-            {/* Slider 1: Calls per Rep */}
+            {/* Slider 1: Daily Calls / Rep */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-foreground">
@@ -104,7 +159,7 @@ function DashboardSalesCalculator() {
                 <label className="text-xs font-semibold text-foreground">
                   Sales Team Size
                 </label>
-                <span className="text-xs font-extrabold text-primary font-mono bg-primary/10 px-2 py-0.5 rounded">{teamSize} reps</span>
+                <span className="text-xs font-extrabold text-primary font-mono bg-primary/10 px-2 py-0.5 rounded">{teamSize} rep{teamSize > 1 ? 's' : ''}</span>
               </div>
               <input 
                 type="range" 
@@ -141,6 +196,26 @@ function DashboardSalesCalculator() {
               <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">₹{estRevenueGain.toLocaleString('en-IN')}</div>
               <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-1.5 leading-tight">Est. Revenue Gain</div>
             </div>
+          </div>
+        </div>
+
+        {/* Math & Logic Breakdown ("How it Works") */}
+        <div className="mt-6 pt-4 border-t border-border/40 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-[11px] text-muted-foreground">
+          <div className="space-y-1">
+            <span className="font-semibold text-foreground flex items-center gap-1">🎙️ Speaking vs Typing</span>
+            <p>Reps speak updates in 15 seconds instead of spending 10 minutes typing. Saving 9 minutes (0.15 hrs) per call.</p>
+          </div>
+          <div className="space-y-1">
+            <span className="font-semibold text-foreground flex items-center gap-1">📈 Extra Outreach</span>
+            <p>Each hour saved from administrative data entry translates to 4 additional outreach calls to prospects.</p>
+          </div>
+          <div className="space-y-1">
+            <span className="font-semibold text-foreground flex items-center gap-1">🎯 Conversion Model</span>
+            <p>Assumes a baseline 1.5% conversion rate on extra calls made using voice note speedouts.</p>
+          </div>
+          <div className="space-y-1">
+            <span className="font-semibold text-foreground flex items-center gap-1">💰 Revenue Baseline</span>
+            <p>Revenue gain estimated from an average deal size of ₹40,000 per closed won lead in India.</p>
           </div>
         </div>
       </CardContent>
@@ -375,7 +450,7 @@ export default function AnalyticsPage() {
           </Card>
         </div>
 
-        <DashboardSalesCalculator />
+        <DashboardSalesCalculator leads={leads} interactions={interactions} />
 
         {/* Row 3: Revenue Forecast + Interaction Types */}
         <div className="grid lg:grid-cols-2 gap-4">

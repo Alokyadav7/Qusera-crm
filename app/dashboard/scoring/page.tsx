@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress'
 import {
   BrainCircuit, TrendingUp, TrendingDown, Minus,
   Phone, MessageSquare, Clock, Star,
-  Sparkles, RefreshCw, ChevronUp, ChevronDown, Zap, Loader2
+  RefreshCw, ChevronUp, ChevronDown, Zap, Loader2
 } from 'lucide-react'
 import type { Lead } from '@/hooks/use-realtime-leads'
 import type { Interaction } from '@/hooks/use-realtime-interactions'
@@ -285,7 +285,7 @@ export default function AILeadScoringPage() {
               <CardContent className="space-y-5">
                 {/* AI Recommendation */}
                 <div className="flex items-start gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4">
-                  <Sparkles className="size-5 text-primary shrink-0 mt-0.5" />
+                  <BrainCircuit className="size-5 text-primary shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-primary mb-0.5">AI Recommendation</p>
                     <p className="text-sm">{selected.recommendation}</p>

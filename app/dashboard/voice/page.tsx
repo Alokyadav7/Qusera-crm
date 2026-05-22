@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
-  Mic, MicOff, Loader2, Sparkles, Languages, Volume2,
+  Mic, MicOff, Loader2, Bot, Lightbulb, Languages, Volume2,
   CheckCircle2, Calendar, User, IndianRupee, FileText,
   ArrowRight, History, AlertTriangle, RefreshCw
 } from 'lucide-react'
@@ -392,7 +392,7 @@ Return ONLY a JSON object with these fields (omit if not found):
                     {/* Extracted Data */}
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="size-4 text-primary" />
+                        <Bot className="size-4 text-primary" />
                         <span className="text-sm font-medium">AI Extracted Data</span>
                         <Badge variant="default" className="ml-auto">Ready to Save</Badge>
                       </div>
@@ -458,7 +458,7 @@ Return ONLY a JSON object with these fields (omit if not found):
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="size-5 text-primary" />Tips for Best Results
+                  <Lightbulb className="size-5 text-primary" />Tips for Best Results
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">

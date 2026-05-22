@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
-  Mic, MicOff, Loader2, Sparkles, CheckCircle2, Activity,
+  Mic, MicOff, Loader2, Smile, CheckCircle2, Activity,
   RotateCcw, User, Building2, IndianRupee, Phone, Target,
   Calendar, FileText, Languages, Save, ArrowRight, AlertCircle
 } from 'lucide-react'
@@ -295,7 +295,7 @@ Sales note: "${text}"`,
     { key: 'value',     label: 'Deal Value',   icon: <IndianRupee className="size-3.5 text-muted-foreground" /> },
     { key: 'phone',     label: 'Phone',        icon: <Phone className="size-3.5 text-muted-foreground" /> },
     { key: 'intent',    label: 'Intent',       icon: <Target className="size-3.5 text-muted-foreground" />, isBadge: true },
-    { key: 'sentiment', label: 'Sentiment',    icon: <Sparkles className="size-3.5 text-muted-foreground" />, isBadge: true },
+    { key: 'sentiment', label: 'Sentiment',    icon: <Smile className="size-3.5 text-muted-foreground" />, isBadge: true },
   ]
 
   return (

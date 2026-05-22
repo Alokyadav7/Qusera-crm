@@ -11,7 +11,6 @@ import {
   MessageSquareWarning,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
 } from 'lucide-react'
 import { CRMHeader } from '@/components/crm/crm-header'
@@ -184,7 +183,7 @@ export default function CustomerSuccessPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Sparkles className="size-5 text-amber-500" />
+                  <TrendingUp className="size-5 text-amber-500" />
                   Expansion Queue
                 </CardTitle>
                 <CardDescription>Healthy customers ready for renewal or upsell.</CardDescription>

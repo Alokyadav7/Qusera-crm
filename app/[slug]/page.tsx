@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { 
   Building2, Briefcase, ShoppingBag, Factory, Shield, 
-  Terminal, Code2, Sparkles, BookOpen, User, Calendar, Clock,
+  Terminal, Code2, BookOpen, User, Calendar, Clock,
   ArrowRight, Search, CheckCircle2, MessageSquare, Phone, HelpCircle,
   PlayCircle, Users, ExternalLink, ShieldCheck, FileText, Lock
 } from 'lucide-react'

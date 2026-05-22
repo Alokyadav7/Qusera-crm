@@ -33,7 +33,6 @@ import {
   Brain,
   Languages,
   FileText,
-  Sparkles,
   Building2,
   Briefcase,
   ShoppingBag,
@@ -49,7 +48,10 @@ import {
   Activity,
   Sun,
   Moon,
-  Coins
+  Coins,
+  User,
+  Smile,
+  Bot
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
@@ -63,7 +65,7 @@ import { createClient } from '@/lib/supabase/client'
 const DEMO_SCENARIOS = [
   {
     title: "Reliance Retail Deal",
-    icon: "🛍️",
+    icon: ShoppingBag,
     leadName: "Sanjay Gupta",
     company: "Reliance Retail",
     value: "₹40,000",
@@ -76,7 +78,7 @@ const DEMO_SCENARIOS = [
   },
   {
     title: "Tata Motors Fleet",
-    icon: "🚗",
+    icon: Briefcase,
     leadName: "Kavita Sharma",
     company: "Tata Motors",
     value: "₹1,20,000",
@@ -89,7 +91,7 @@ const DEMO_SCENARIOS = [
   },
   {
     title: "HDFC Life Account",
-    icon: "🏦",
+    icon: Coins,
     leadName: "Rajesh Mehta",
     company: "HDFC Life",
     value: "₹75,000",
@@ -254,12 +256,14 @@ function VoiceCRMPlayground() {
                 }
               }}
               disabled={stage !== 'idle' && stage !== 'completed'}
-              className={`group flex items-start gap-3 p-3.5 rounded-2xl border text-left transition-all ${selectedDemoIndex === idx
+              className={`group flex items-center gap-3.5 p-3 rounded-2xl border text-left transition-all ${selectedDemoIndex === idx
                 ? "bg-primary/5 dark:bg-primary/10 border-primary shadow-[0_4px_20px_rgba(var(--primary),0.05)]"
                 : "bg-muted/10 border-border/40 hover:bg-muted/30 hover:border-border/80"
                 } ${stage !== 'idle' && stage !== 'completed' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              <span className="text-2xl mt-0.5 filter drop-shadow-sm group-hover:scale-110 transition-transform">{sc.icon}</span>
+              <div className={`p-2.5 rounded-xl transition-all duration-300 ${selectedDemoIndex === idx ? 'bg-primary/10 text-primary' : 'bg-muted/50 text-muted-foreground group-hover:bg-muted/80 group-hover:text-foreground'}`}>
+                <sc.icon className="size-5 transition-transform group-hover:scale-110" />
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-foreground truncate">{sc.title}</p>
                 <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{sc.script}</p>
@@ -358,7 +362,7 @@ function VoiceCRMPlayground() {
             { label: "Value Estimate", value: extractedFields.value, icon: <BarChart3 className="size-4 text-muted-foreground" /> },
             { label: "Phone Number", value: extractedFields.phone, icon: <Phone className="size-4 text-muted-foreground" /> },
             { label: "Intent Tier", value: extractedFields.intent, icon: <Target className="size-4 text-muted-foreground" />, isBadge: true },
-            { label: "Customer Sentiment", value: extractedFields.sentiment, icon: <Sparkles className="size-4 text-muted-foreground" />, isBadge: true }
+            { label: "Customer Sentiment", value: extractedFields.sentiment, icon: <Smile className="size-4 text-muted-foreground" />, isBadge: true }
           ].map((field, fIdx) => (
             <div
               key={fIdx}
@@ -552,111 +556,209 @@ function HeroSection() {
           {/* Laptop Spotlight glow */}
           <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-accent/5 to-transparent blur-3xl opacity-50 -z-10 rounded-full" />
 
-          {/* Left Floating Overlay Card */}
-          <div className="absolute -left-12 top-1/4 z-30 hidden md:block w-48 p-4 rounded-2xl glass-card border border-border/40 shadow-xl hover:-translate-y-1 hover:shadow-primary/10 transition-all duration-300 animate-float">
-            <div className="flex gap-1 mb-1.5">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="size-3 fill-amber-400 text-amber-400" />
-              ))}
-            </div>
-            <p className="text-[10px] font-bold text-foreground">Over {stats.totalLeads}+ sales leads</p>
-            <p className="text-[9px] text-muted-foreground mt-0.5">dynamically indexed by AI voice</p>
-
-            <div className="mt-2.5 pt-2.5 border-t border-border/40 flex items-center gap-1.5">
-              <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[8px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live Syncing</span>
-            </div>
-          </div>
-
           {/* Right Floating Overlay Card */}
-          <div className="absolute -right-12 bottom-1/4 z-30 hidden md:block w-48 p-5 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-2xl hover:-translate-y-1 hover:shadow-violet-500/20 transition-all duration-300 animate-float delay-200">
-            <span className="text-[9px] uppercase tracking-wider font-mono opacity-85 block">Sales Win Rate</span>
-            <span className="text-2xl font-extrabold tracking-tight mt-0.5 block">{stats.winRate}%</span>
-            <p className="text-[9px] opacity-80 mt-0.5">Average closed-won deal score</p>
-            <div className="mt-3 flex items-center gap-1 text-[9px] font-bold bg-white/10 w-fit px-2 py-0.5 rounded-full">
-              <TrendingUp className="size-3.5" />
+          <div className="absolute -right-8 bottom-6 z-30 hidden md:block w-44 p-4 rounded-2xl glass-card border border-border/40 shadow-2xl hover:-translate-y-1 hover:shadow-violet-500/10 transition-all duration-300 animate-float delay-200">
+            <span className="text-[8px] uppercase tracking-wider font-mono text-muted-foreground block">Sales Win Rate</span>
+            <span className="text-xl font-extrabold tracking-tight mt-0.5 block text-foreground">{stats.winRate}%</span>
+            <p className="text-[8px] text-muted-foreground mt-0.5">Avg closed-won deal score</p>
+            <div className="mt-2.5 flex items-center gap-1 text-[8px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 w-fit px-2.5 py-0.5 rounded-full">
+              <TrendingUp className="size-3" />
               <span>₹{(stats.revenue / 100000).toFixed(1)}L Won</span>
             </div>
           </div>
 
           {/* Laptop Screen Body Bezel */}
-          <div className="relative border-[8px] border-slate-950 rounded-t-xl bg-slate-900 shadow-2xl overflow-hidden aspect-[16/10] w-full border-b-0 shadow-violet-500/10">
-            {/* Screen Reflective Sheen effect */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 z-10 pointer-events-none" />
+          <div className="relative border-[10px] border-slate-900 rounded-t-2xl bg-slate-950 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden aspect-[16/10] w-full border-b-0">
+            {/* Camera notch / lens indicator */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 h-3.5 w-20 bg-slate-900 rounded-b-md z-30 flex items-center justify-center gap-1.5 px-2">
+              <div className="size-1 rounded-full bg-slate-950 border border-slate-800" /> {/* Camera lens */}
+              <div className="size-0.5 rounded-full bg-emerald-500/80 animate-pulse" /> {/* LED */}
+            </div>
+
+            {/* Screen Reflective Sheen effect (glassmorphism diagonal shine) */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.01] to-white/[0.04] z-20 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-white/[0.015] to-transparent transform -skew-x-12 origin-top-right z-20 pointer-events-none" />
 
             {/* Mock Dashboard App inside Screen */}
-            <div className="size-full bg-background flex flex-col text-left select-none text-[11px] font-medium">
+            <div className="size-full bg-slate-950 flex flex-col text-left select-none text-[10px] font-medium text-slate-300">
               {/* Top Mock Window Bar */}
-              <div className="h-7 border-b border-border/30 px-3 bg-muted/40 flex items-center justify-between shrink-0">
-                <div className="flex gap-1">
-                  <div className="size-1.5 rounded-full bg-red-400/80" />
-                  <div className="size-1.5 rounded-full bg-yellow-400/80" />
-                  <div className="size-1.5 rounded-full bg-green-400/80" />
+              <div className="h-10 border-b border-slate-800/60 px-3.5 bg-slate-900/90 flex items-end pb-2 justify-between shrink-0">
+                <div className="flex gap-1.5 mb-1">
+                  <div className="size-1.5 rounded-full bg-[#ff5f56]" />
+                  <div className="size-1.5 rounded-full bg-[#ffbd2e]" />
+                  <div className="size-1.5 rounded-full bg-[#27c93f]" />
                 </div>
-                <div className="rounded bg-background/50 border border-border/20 px-4 py-0.5 text-[8px] font-mono text-muted-foreground w-1/3 text-center">
-                  dashboard.orbitcrm.in/overview
+                <div className="rounded bg-slate-950/80 border border-slate-800/60 px-4 h-5 text-[8px] font-mono text-slate-400 w-[240px] flex items-center justify-center truncate">
+                  <span className="text-slate-500 font-semibold">https://</span>
+                  <span className="text-slate-200">dashboard.orbitcrm.in/overview</span>
                 </div>
-                <div className="size-3.5 rounded-full bg-muted flex items-center justify-center text-[7px]">👤</div>
+                <div className="size-5 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-[8px] font-bold text-slate-300">
+                  <User className="size-3 text-slate-400" />
+                </div>
               </div>
 
               {/* Mock Dashboard Layout */}
-              <div className="flex-1 flex min-h-0">
+              <div className="flex-1 flex min-h-0 bg-slate-950">
                 {/* Sidebar */}
-                <div className="w-14 border-r border-border/30 bg-muted/20 p-2 flex flex-col gap-1.5 shrink-0">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className={`h-3.5 rounded ${i === 0 ? 'bg-primary/20 w-full' : 'bg-muted/40 w-3/4'}`} />
-                  ))}
+                <div className="w-24 border-r border-slate-800/40 bg-slate-900/40 p-2 flex flex-col gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-primary/10 text-primary font-bold">
+                    <Activity className="size-3" />
+                    <span className="text-[9px]">Overview</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-md text-slate-400 hover:bg-slate-800/40 hover:text-slate-200">
+                    <Users className="size-3" />
+                    <span className="text-[9px]">Leads</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-md text-slate-400 hover:bg-slate-800/40 hover:text-slate-200">
+                    <MessageSquare className="size-3" />
+                    <span className="text-[9px]">Inbox</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-md text-slate-400 hover:bg-slate-800/40 hover:text-slate-200">
+                    <Target className="size-3" />
+                    <span className="text-[9px]">Campaigns</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-md text-slate-400 hover:bg-slate-800/40 hover:text-slate-200">
+                    <Brain className="size-3" />
+                    <span className="text-[9px]">AI Agent</span>
+                  </div>
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex-1 p-2 overflow-hidden flex flex-col gap-2">
+                <div className="flex-1 p-3 overflow-hidden flex flex-col gap-3 bg-slate-950">
                   {/* Top Stats Cards */}
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <div className="p-1.5 border border-border/30 bg-card rounded-lg flex flex-col gap-0.5">
-                      <span className="text-[7px] text-muted-foreground">TOTAL LEADS</span>
-                      <span className="text-xs font-bold text-foreground font-mono">{stats.totalLeads}</span>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="p-2 border border-slate-800/60 bg-slate-900/60 rounded-xl flex flex-col justify-between">
+                      <span className="text-[8px] text-slate-400 font-mono tracking-wider">TOTAL LEADS</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-sm font-bold text-slate-100 font-mono">{stats.totalLeads}</span>
+                        <span className="text-[7px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded">+8.4%</span>
+                      </div>
                     </div>
-                    <div className="p-1.5 border border-border/30 bg-card rounded-lg flex flex-col gap-0.5">
-                      <span className="text-[7px] text-muted-foreground">WIN RATE</span>
-                      <span className="text-xs font-bold text-foreground font-mono">{stats.winRate}%</span>
+                    <div className="p-2 border border-slate-800/60 bg-slate-900/60 rounded-xl flex flex-col justify-between">
+                      <span className="text-[8px] text-slate-400 font-mono tracking-wider">WIN RATE</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-sm font-bold text-slate-100 font-mono">{stats.winRate}%</span>
+                        <span className="text-[7px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded">+2.1%</span>
+                      </div>
                     </div>
-                    <div className="p-1.5 border border-border/30 bg-card rounded-lg flex flex-col gap-0.5">
-                      <span className="text-[7px] text-muted-foreground">REVENUE</span>
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">₹{(stats.revenue / 100000).toFixed(1)}L</span>
+                    <div className="p-2 border border-slate-800/60 bg-slate-900/60 rounded-xl flex flex-col justify-between">
+                      <span className="text-[8px] text-slate-400 font-mono tracking-wider">REVENUE</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-sm font-bold text-emerald-400 font-mono">₹{(stats.revenue / 100000).toFixed(1)}L</span>
+                        <span className="text-[7px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded">+14%</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Main Chart Area */}
-                  <div className="flex-1 border border-border/30 bg-card rounded-lg p-2 flex flex-col justify-between">
-                    <div className="flex items-center justify-between text-[8px] text-muted-foreground">
-                      <span>MONTHLY SALES FORECAST</span>
-                      <span className="text-emerald-500 font-bold flex items-center gap-0.5">
-                        <TrendingUp className="size-2.5" /> +12%
-                      </span>
+                  {/* Main Grid: Data Table and Live Voice Stream */}
+                  <div className="flex-1 grid grid-cols-12 gap-2.5 min-h-0">
+                    {/* Left Column: Recent Deals Table */}
+                    <div className="col-span-7 border border-slate-800/60 bg-slate-900/30 rounded-xl p-2.5 flex flex-col justify-between min-h-0">
+                      <span className="text-[8px] text-slate-400 font-mono tracking-wider uppercase mb-1.5 block">Recent Active Deals</span>
+                      <div className="flex-1 flex flex-col gap-1.5 overflow-hidden">
+                        {[
+                          { name: "Sanjay Gupta", co: "Reliance Retail", val: "₹40k", status: "Won", statusColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+                          { name: "Kavita Sharma", co: "Tata Motors", val: "₹1.2L", status: "Pending", statusColor: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+                          { name: "Rajesh Mehta", co: "HDFC Life", val: "₹75k", status: "Won", statusColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+                        ].map((row, rIdx) => (
+                          <div key={rIdx} className="flex items-center justify-between p-1.5 border border-slate-800/50 bg-slate-900/80 rounded-lg text-[8px]">
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-200 truncate">{row.name}</p>
+                              <p className="text-[7px] text-slate-500 truncate">{row.co}</p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="font-mono font-semibold text-slate-300">{row.val}</span>
+                              <span className={`px-1.5 py-0.5 rounded-full border text-[7px] font-bold ${row.statusColor}`}>{row.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    {/* Simulated Wave Chart SVG */}
-                    <svg className="w-full h-12 text-primary mt-1" viewBox="0 0 100 30" preserveAspectRatio="none">
-                      <path
-                        d="M0 25 Q15 15, 30 20 T60 8 T90 12 T100 5 L100 30 L0 30 Z"
-                        fill="currentColor"
-                        fillOpacity="0.08"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                      />
-                    </svg>
+
+                    {/* Right Column: Live Voice Stream Feed */}
+                    <div className="col-span-5 border border-slate-800/60 bg-slate-900/50 rounded-xl p-2.5 flex flex-col justify-between overflow-hidden">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[8px] text-slate-400 font-mono tracking-wider uppercase block">Voice Agent Stream</span>
+                        <div className="flex items-center gap-1">
+                          <span className="size-1 rounded-full bg-emerald-500 animate-ping" />
+                          <span className="text-[6px] text-emerald-400 font-mono">LIVE</span>
+                        </div>
+                      </div>
+
+                      {/* Pulse soundwave SVG */}
+                      <div className="h-10 flex items-center justify-center gap-0.5">
+                        <div className="w-[2px] h-3 bg-primary rounded animate-[pulse_1s_infinite_0.1s]" />
+                        <div className="w-[2px] h-5 bg-primary rounded animate-[pulse_1s_infinite_0.2s]" />
+                        <div className="w-[2px] h-8 bg-accent rounded animate-[pulse_1s_infinite_0.3s]" />
+                        <div className="w-[2px] h-6 bg-primary rounded animate-[pulse_1s_infinite_0.4s]" />
+                        <div className="w-[2px] h-4 bg-primary rounded animate-[pulse_1s_infinite_0.5s]" />
+                        <div className="w-[2px] h-7 bg-accent rounded animate-[pulse_1s_infinite_0.6s]" />
+                        <div className="w-[2px] h-5 bg-primary rounded animate-[pulse_1s_infinite_0.7s]" />
+                        <div className="w-[2px] h-2 bg-primary rounded animate-[pulse_1s_infinite_0.8s]" />
+                      </div>
+
+                      {/* Transcribed Speech Snippet */}
+                      <div className="bg-slate-950 p-1.5 rounded-lg border border-slate-850 text-[7px] leading-relaxed text-slate-400 select-none">
+                        <span className="text-primary font-bold">Transcription: </span>
+                        <span className="italic">&quot;Schedule a demo call for Reliance Retail...&quot;</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Laptop Base Stand keyboard chassis */}
-          <div className="relative mx-auto w-[106%] -left-[3%] h-[10px] bg-slate-800 rounded-b-xl border-t border-slate-700/80 shadow-md flex justify-center">
-            {/* Display Center open notch */}
-            <div className="w-14 h-1 bg-slate-900 rounded-b-sm border-t border-slate-950" />
+          {/* Laptop Keyboard Deck Chassis (Perspective metal plate) */}
+          <div className="relative mx-auto w-[108%] -left-[4%] z-20 transition-all duration-300">
+            {/* Main Deck Face (slanted downward for 3D look) */}
+            <div className="bg-gradient-to-b from-slate-800 via-slate-850 to-slate-900 border-t border-slate-700/50 px-8 py-2.5 rounded-t-sm shadow-inner flex flex-col gap-1.5 relative overflow-hidden [clip-path:polygon(4%_0%,_96%_0%,_100%_100%,_0%_100%)] h-[36px] justify-center">
+              {/* Brushed metal sheen */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent pointer-events-none" />
+
+              {/* Keyboard Inset Key Area */}
+              <div className="mx-auto w-[90%] bg-slate-950/80 rounded-sm p-1 border border-slate-900/60 flex flex-col gap-0.5 shadow-inner">
+                {/* Simulated Key Rows */}
+                <div className="flex gap-[1px] justify-between">
+                  {[...Array(14)].map((_, i) => (
+                    <div key={i} className="h-1 bg-slate-800/80 rounded-[1px] flex-1 border-[0.5px] border-slate-700/30" />
+                  ))}
+                </div>
+                <div className="flex gap-[1px] justify-between">
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] w-4 border-[0.5px] border-slate-700/30" />
+                  {[...Array(12)].map((_, i) => (
+                    <div key={i} className="h-1 bg-slate-800/80 rounded-[1px] flex-1 border-[0.5px] border-slate-700/30" />
+                  ))}
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] w-4 border-[0.5px] border-slate-700/30" />
+                </div>
+                <div className="flex gap-[1px] justify-between">
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] w-6 border-[0.5px] border-slate-700/30" />
+                  {[...Array(10)].map((_, i) => (
+                    <div key={i} className="h-1 bg-slate-800/80 rounded-[1px] flex-1 border-[0.5px] border-slate-700/30" />
+                  ))}
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] w-6 border-[0.5px] border-slate-700/30" />
+                </div>
+                {/* Spacebar Row */}
+                <div className="flex gap-[1px] justify-between">
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] w-8 border-[0.5px] border-slate-700/30" />
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] w-4 border-[0.5px] border-slate-700/30" />
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] flex-1 border-[0.5px] border-slate-700/30 mx-2" /> {/* Spacebar */}
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] w-4 border-[0.5px] border-slate-700/30" />
+                  <div className="h-1 bg-slate-800/80 rounded-[1px] w-8 border-[0.5px] border-slate-700/30" />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Lip profile & trackpad */}
+            <div className="h-[14px] bg-gradient-to-b from-slate-900 to-slate-950 border-b border-slate-950 rounded-b-2xl shadow-2xl flex justify-center relative z-25">
+              {/* Display Center open notch */}
+              <div className="w-16 h-2 bg-slate-950 rounded-b-md border-t border-slate-900 z-30" />
+              {/* Realistic trackpad with subtle metal border */}
+              <div className="absolute top-0 w-32 h-[8px] border-x border-b border-slate-800 rounded-b-md bg-slate-900/60 shadow-inner z-20" />
+            </div>
           </div>
-          {/* Laptop Base Shadow */}
-          <div className="mx-auto w-[98%] h-[6px] bg-black/10 dark:bg-black/50 blur-md rounded-full mt-0.5" />
+          {/* Laptop Ambient Under-chassis Shadow */}
+          <div className="mx-auto w-[102%] h-[12px] bg-black/60 blur-md rounded-full -mt-1" />
         </div>
 
         {/* Dynamic Interactive Dashboard Preview Playground */}
@@ -816,7 +918,7 @@ function FeaturesSection() {
         {
           title: 'Smart Templates',
           description: 'AI-suggested responses based on conversation context. Send personalized messages in one click.',
-          icon: Sparkles
+          icon: FileText
         },
         {
           title: 'Broadcast Campaigns',

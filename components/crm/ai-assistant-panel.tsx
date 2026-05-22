@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Bot, X, Send, Sparkles, Loader2, RotateCcw } from 'lucide-react'
+import { Bot, X, Send, Loader2, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -162,7 +162,7 @@ export function AIAssistantPanel({ context, pendingPrompt, onPromptConsumed, for
       <button id="ai-assistant-toggle" onClick={() => setActualOpen(!actualOpen)}
         className="fixed bottom-20 right-6 z-50 flex items-center gap-2 bg-gradient-to-br from-violet-600 to-indigo-600 text-white pl-4 pr-5 py-3 rounded-full shadow-2xl hover:shadow-violet-500/40 hover:scale-105 active:scale-95 transition-all duration-200 font-semibold text-sm"
         style={{ boxShadow:'0 8px 32px rgba(124,58,237,0.4)' }}>
-        <Sparkles className="size-4" />
+        <Bot className="size-4" />
         AI Assistant
       </button>
 
@@ -172,7 +172,7 @@ export function AIAssistantPanel({ context, pendingPrompt, onPromptConsumed, for
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-gradient-to-r from-primary/10 to-indigo-500/10 shrink-0">
           <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-md">
-            <Sparkles className="size-4 text-white" />
+            <Bot className="size-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

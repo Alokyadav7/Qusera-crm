@@ -10,7 +10,7 @@ import {
   MessageSquare,
   Radio,
   ShieldCheck,
-  Sparkles,
+  Bot,
   Timer,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -150,7 +150,7 @@ export function LiveRevenueCommandCenter({ initialLeads, initialTasks }: LiveRev
 
             <div className="rounded-lg border p-4">
               <p className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                <Sparkles className="size-4 text-amber-500" />
+                <Bot className="size-4 text-primary" />
                 Next Best Actions
               </p>
               <div className="space-y-3">

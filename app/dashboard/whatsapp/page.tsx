@@ -19,8 +19,7 @@ import {
   Image,
   ArrowLeft,
   Loader2,
-  RefreshCw,
-  Sparkles
+  RefreshCw
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -199,7 +198,12 @@ export default function WhatsAppPage() {
       })
       const json = await res.json()
       if (!res.ok) { toast.error(json.error || 'Send failed'); setIsSending(false); return }
-      if (json.mock) toast.info('Logged to CRM (WhatsApp API not configured — add META_WHATSAPP_TOKEN)')
+      if (json.mock && json.metaError) {
+        // Token exists but is expired/invalid — still logged to CRM
+        toast.warning(`⚠️ ${json.metaError} — message logged to CRM only. Refresh your Meta token.`)
+      } else if (json.mock) {
+        toast.info('Logged to CRM (WhatsApp API not configured — add META_WHATSAPP_TOKEN)')
+      }
       setMessageInput('')
     } catch (e) {
       toast.error('Network error sending message')
@@ -212,23 +216,19 @@ export default function WhatsAppPage() {
     : false
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-screen overflow-hidden">
       <CRMHeader
         title="WhatsApp Business"
         subtitle={isLoading ? 'Loading…' : `${conversations.length} conversations · real-time`}
       />
       {/* Connection status banner */}
       {!isConfigured && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 md:px-6 py-2.5 flex items-center gap-3">
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 md:px-6 py-2.5 flex items-center gap-3 shrink-0">
           <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">⚠️ WhatsApp API not configured</span>
           <span className="text-amber-700 dark:text-amber-400 text-xs">Messages are logged to CRM only. Add META_WHATSAPP_TOKEN to .env to send real messages.</span>
           <a href="/dashboard/integrations" className="text-xs underline text-amber-700 dark:text-amber-400 ml-auto">Configure →</a>
         </div>
       )}
-      <div className={cn(
-        "flex-1 flex flex-col",
-        isConfigured ? "h-[calc(100vh-4rem)]" : "h-[calc(100vh-6.5rem)]"
-      )}>
 
       <div className="flex-1 flex overflow-hidden">
         {/* ── Conversations List ── */}
@@ -285,7 +285,11 @@ export default function WhatsAppPage() {
                             <span className="font-medium truncate">{conv.lead.full_name}</span>
                             <span className="text-xs text-muted-foreground">{timeAgo(conv.lastInteraction.created_at)}</span>
                           </div>
-                          <div className="text-xs text-muted-foreground truncate">{conv.lead.company || conv.lead.phone_number || '—'}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {(conv.lead.company && conv.lead.company !== 'N/A' && conv.lead.company.toLowerCase() !== 'na') 
+                              ? conv.lead.company 
+                              : (conv.lead.phone_number || '—')}
+                          </div>
                           <div className="flex items-center justify-between mt-1">
                             <span className="text-sm text-muted-foreground truncate pr-2">
                               {conv.lastInteraction.direction === 'outbound' ? '✓ ' : ''}{getMessageText(conv.lastInteraction).slice(0, 40)}
@@ -550,7 +554,6 @@ export default function WhatsAppPage() {
           </Tabs>
         </div>
       </div>
-    </div>
     </div>
   )
 }

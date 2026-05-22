@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { TrendingUp, TrendingDown, IndianRupee, Target, Calendar, Trophy, Sparkles, Loader2, RefreshCw } from 'lucide-react'
+import { TrendingUp, TrendingDown, IndianRupee, Target, Calendar, Trophy, Bot, Loader2, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -130,7 +130,7 @@ export function AnalyticsDashboard({ leads, interactions, isLoading, onRefresh, 
                   </div>
                 </div>
                 <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[10px] text-primary">
-                  <Sparkles className="size-2.5"/> Click for AI insight
+                  <Bot className="size-2.5"/> Click for AI insight
                 </div>
               </CardContent>
             </Card>

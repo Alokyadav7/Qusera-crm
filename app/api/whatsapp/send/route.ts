@@ -15,28 +15,37 @@ export async function POST(req: NextRequest) {
     const TOKEN = process.env.META_WHATSAPP_TOKEN
     const PHONE_ID = process.env.META_WHATSAPP_PHONE_NUMBER_ID
 
-    if (!TOKEN || TOKEN.startsWith('replace') || !PHONE_ID || PHONE_ID.startsWith('replace')) {
-      // Mock mode — log to Supabase but don't actually send
+    // Helper: log to Supabase CRM interactions
+    async function logToCRM(userId: string) {
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
       if (leadId) {
-        const { createClient } = await import('@/lib/supabase/server')
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          await supabase.from('interactions').insert({
-            user_id: user.id, lead_id: leadId, type: 'whatsapp',
-            direction: 'outbound', content_raw: message,
-            created_at: new Date().toISOString(),
-          })
-          await supabase.from('leads').update({ last_contacted_at: new Date().toISOString() }).eq('id', leadId)
-        }
+        await supabase.from('interactions').insert({
+          user_id: userId, lead_id: leadId, type: 'whatsapp',
+          direction: 'outbound', content_raw: message,
+          created_at: new Date().toISOString(),
+        })
+        await supabase.from('leads').update({ last_contacted_at: new Date().toISOString() }).eq('id', leadId)
       }
+    }
+
+    // Determine if Meta WhatsApp is actually configured (non-empty, non-placeholder values)
+    const isMetaConfigured = TOKEN && TOKEN.length > 10 && !TOKEN.startsWith('replace') &&
+      PHONE_ID && PHONE_ID.length > 5 && !PHONE_ID.startsWith('replace')
+
+    if (!isMetaConfigured) {
+      // Mock/sandbox mode — log to CRM only
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) await logToCRM(user.id)
       return NextResponse.json({
         success: true, mock: true,
-        message: 'WhatsApp logged to CRM (Meta API not configured — add META_WHATSAPP_TOKEN to .env)',
+        message: 'WhatsApp message logged to CRM (Meta API not configured — add META_WHATSAPP_TOKEN to .env)',
       })
     }
 
-    // Send real WhatsApp via Meta API
+    // Attempt to send via real Meta WhatsApp API
     const res = await fetch(`https://graph.facebook.com/v19.0/${PHONE_ID}/messages`, {
       method: 'POST',
       headers: {
@@ -52,22 +61,33 @@ export async function POST(req: NextRequest) {
     })
 
     const data = await res.json()
-    if (!res.ok) return NextResponse.json({ error: data.error?.message || 'WhatsApp send failed' }, { status: res.status })
 
-    // Log to Supabase
-    if (leadId) {
+    // Meta API auth failure (401) — token is invalid or expired
+    // Fall back to CRM-only logging so the user's workflow isn't broken
+    if (res.status === 401) {
       const { createClient } = await import('@/lib/supabase/server')
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('interactions').insert({
-          user_id: user.id, lead_id: leadId, type: 'whatsapp',
-          direction: 'outbound', content_raw: message,
-          created_at: new Date().toISOString(),
-        })
-        await supabase.from('leads').update({ last_contacted_at: new Date().toISOString() }).eq('id', leadId)
-      }
+      if (user) await logToCRM(user.id)
+      return NextResponse.json({
+        success: true,
+        mock: true,
+        metaError: data.error?.message || 'Meta token expired or invalid',
+        message: 'Message logged to CRM — Meta token is invalid or expired. Refresh your token at developers.facebook.com.',
+      })
     }
+
+    if (!res.ok) {
+      return NextResponse.json({
+        error: `Meta API error (${res.status}): ${data.error?.message || 'WhatsApp send failed'}`,
+      }, { status: 502 })
+    }
+
+    // Success — log to CRM
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) await logToCRM(user.id)
 
     return NextResponse.json({ success: true, messageId: data.messages?.[0]?.id })
   } catch (err: any) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { Mail, Phone, DollarSign, Bell, Star, MessageSquare, Sparkles, Loader2, RefreshCw } from 'lucide-react'
+import { Mail, Phone, DollarSign, Bell, Star, MessageSquare, Bot, Loader2, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -88,7 +88,7 @@ export function ActivityFeed({ interactions, isLoading, onAIAction }: ActivityFe
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={summarizeAll} disabled={isLoading}>
-            <Sparkles className="size-3 text-primary" />
+            <Bot className="size-3 text-primary" />
             AI Summary
           </Button>
         </div>
@@ -146,7 +146,7 @@ export function ActivityFeed({ interactions, isLoading, onAIAction }: ActivityFe
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-[11px] text-muted-foreground">👤 {contact}</span>
                         <span className="text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
-                          <Sparkles className="size-2.5" /> AI advice
+                          <Bot className="size-2.5" /> AI advice
                         </span>
                       </div>
                     </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sparkles, AlertCircle, Loader2, ChevronRight } from 'lucide-react'
+import { Bot, AlertCircle, Loader2, ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import type { Lead } from '@/hooks/use-realtime-leads'
@@ -103,7 +103,7 @@ function DealCard({ lead, onAIClick, onDragStart, onMoveNext, stages }: DealCard
             className="flex items-center gap-1 text-[10px] text-foreground hover:underline font-medium"
             onClick={e => { e.stopPropagation(); onAIClick(lead) }}
           >
-            <Sparkles className="size-2.5" /> AI
+            <Bot className="size-2.5" /> AI
           </button>
           {nextStage && (
             <button

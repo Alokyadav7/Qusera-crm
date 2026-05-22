@@ -13,7 +13,7 @@ import {
 import {
   Plus, GripVertical, IndianRupee, Calendar,
   TrendingUp, ArrowRight, Trophy, AlertCircle, Clock, Target,
-  Sparkles, Phone, Star, Loader2, RefreshCw
+  Bot, ShieldCheck, Phone, Star, Loader2, RefreshCw
 } from 'lucide-react'
 import { useRealtimeLeads } from '@/hooks/use-realtime-leads'
 import type { Lead } from '@/hooks/use-realtime-leads'
@@ -36,7 +36,7 @@ const STAGES: Stage[] = [
   { id: 'new', label: 'New', textColor: 'text-slate-700 dark:text-slate-355', bgColor: 'bg-slate-50/80 dark:bg-slate-900/30', borderColor: 'border-slate-200 dark:border-slate-800/80', icon: <Target className="size-3.5" /> },
   { id: 'contacted', label: 'Contacted', textColor: 'text-blue-755 dark:text-blue-300', bgColor: 'bg-blue-50/70 dark:bg-blue-950/20', borderColor: 'border-blue-200 dark:border-blue-900/60', icon: <Phone className="size-3.5" /> },
   { id: 'interested', label: 'Interested', textColor: 'text-violet-755 dark:text-violet-300', bgColor: 'bg-violet-50/70 dark:bg-violet-950/20', borderColor: 'border-violet-200 dark:border-violet-900/60', icon: <Star className="size-3.5" /> },
-  { id: 'verified', label: 'Verified', textColor: 'text-cyan-755 dark:text-cyan-300', bgColor: 'bg-cyan-50/70 dark:bg-cyan-950/20', borderColor: 'border-cyan-200 dark:border-cyan-900/60', icon: <Sparkles className="size-3.5" /> },
+  { id: 'verified', label: 'Verified', textColor: 'text-cyan-755 dark:text-cyan-300', bgColor: 'bg-cyan-50/70 dark:bg-cyan-950/20', borderColor: 'border-cyan-200 dark:border-cyan-900/60', icon: <ShieldCheck className="size-3.5" /> },
   { id: 'negotiation', label: 'Negotiation', textColor: 'text-amber-755 dark:text-amber-300', bgColor: 'bg-amber-50/70 dark:bg-amber-950/20', borderColor: 'border-amber-200 dark:border-amber-900/60', icon: <TrendingUp className="size-3.5" /> },
   { id: 'closed_won', label: 'Won ✓', textColor: 'text-emerald-755 dark:text-emerald-300', bgColor: 'bg-emerald-50/70 dark:bg-emerald-950/20', borderColor: 'border-emerald-200 dark:border-emerald-900/60', icon: <Trophy className="size-3.5" /> },
   { id: 'closed_lost', label: 'Lost', textColor: 'text-red-755 dark:text-red-300', bgColor: 'bg-red-50/70 dark:bg-red-950/20', borderColor: 'border-red-200 dark:border-red-900/60', icon: <AlertCircle className="size-3.5" /> },
@@ -111,7 +111,7 @@ function DealCard({ lead, onDragStart }: { lead: Lead; onDragStart: (e: React.Dr
 
       {lead.ai_summary && (
         <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground bg-primary/5 dark:bg-primary/10 border border-primary/10 dark:border-primary/5 rounded-xl p-2 mb-2">
-          <Sparkles className="size-3 text-primary shrink-0 mt-0.5" />
+          <Bot className="size-3 text-primary shrink-0 mt-0.5" />
           <span className="line-clamp-2 leading-tight">{lead.ai_summary}</span>
         </div>
       )}

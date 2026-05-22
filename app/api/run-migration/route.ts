@@ -18,6 +18,22 @@ export async function GET() {
       ALTER TABLE interactions
         ADD COLUMN IF NOT EXISTS ai_summary text;
     `)
+
+    // Allow selecting any profile and enable realtime for profiles
+    await client.query(`
+      DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+      CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (true);
+      
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_publication_tables 
+          WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'profiles'
+        ) THEN
+          ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+        END IF;
+      END $$;
+    `)
     
     // Reload PostgREST schema cache
     await client.query(`SELECT pg_notify('pgrst', 'reload schema');`)

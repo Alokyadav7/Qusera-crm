@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Bell, BellOff, CheckCheck, Mic, MessageSquare, Phone,
   TrendingUp, Calendar, AlertTriangle, Info, Star,
-  Sparkles, Trophy, Clock, ArrowRight, Trash2, Check, Loader2, RefreshCw
+  Bot, Trophy, Clock, ArrowRight, Trash2, Check, Loader2, RefreshCw
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
@@ -33,7 +33,7 @@ interface Notification {
 }
 
 const TYPE_CONFIG: Record<NotifType, { icon: React.ReactNode; color: string; bg: string }> = {
-  ai:       { icon: <Sparkles className="size-4" />,    color: 'text-violet-600', bg: 'bg-violet-50' },
+  ai:       { icon: <Bot className="size-4" />,    color: 'text-violet-600', bg: 'bg-violet-50' },
   task:     { icon: <Calendar className="size-4" />,    color: 'text-blue-600',   bg: 'bg-blue-50' },
   lead:     { icon: <Star className="size-4" />,        color: 'text-amber-600',  bg: 'bg-amber-50' },
   call:     { icon: <Phone className="size-4" />,       color: 'text-green-600',  bg: 'bg-green-50' },

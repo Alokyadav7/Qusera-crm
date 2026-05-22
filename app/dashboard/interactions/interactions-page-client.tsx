@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Mic, MessageSquare, Phone, Mail, Image, Filter, Search,
-  ArrowUpRight, ArrowDownLeft, Play, Pause, Sparkles, Loader2,
+  ArrowUpRight, ArrowDownLeft, Play, Pause, Bot, Loader2,
   RefreshCw, Plus, X
 } from 'lucide-react'
 import { CRMHeader } from '@/components/crm/crm-header'
@@ -329,7 +329,7 @@ export default function InteractionsPage() {
                         {interaction.ai_extracted_data && Object.keys(interaction.ai_extracted_data).length > 0 && (
                           <div className="border rounded-lg p-2.5 bg-primary/5">
                             <div className="flex items-center gap-1.5 mb-1.5">
-                              <Sparkles className="size-3.5 text-primary" />
+                              <Bot className="size-3.5 text-primary" />
                               <span className="text-xs font-medium text-primary">AI Insights</span>
                             </div>
                             <div className="space-y-1">

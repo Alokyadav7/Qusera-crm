@@ -531,7 +531,7 @@ function LanguageSelector() {
 // ── Main Header ────────────────────────────────────────────────────────────────
 export function CRMHeader({ title, subtitle }: CRMHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-border/50 glass-ultra px-4 md:px-6 shadow-sm shadow-foreground/5 transition-all">
+    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-4 border-b border-border/50 glass-ultra px-4 md:px-6 shadow-sm shadow-foreground/5 transition-all">
       <SidebarTrigger className="-ml-2 hover:bg-muted/50 rounded-lg" />
 
       <div className="flex-1 min-w-0">
