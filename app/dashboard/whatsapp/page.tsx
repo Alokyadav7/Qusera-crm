@@ -60,12 +60,12 @@ function getSentimentLabel(score: number | null): string {
 }
 
 function getSentimentColor(score: number | null): string {
-  if (score === null) return 'text-slate-600 bg-slate-50 border-slate-200'
-  if (score >= 0.6) return 'text-emerald-600 bg-emerald-50 border-emerald-200'
-  if (score >= 0.3) return 'text-green-600 bg-green-50 border-green-200'
-  if (score >= -0.3) return 'text-slate-600 bg-slate-50 border-slate-200'
-  if (score >= -0.6) return 'text-orange-600 bg-orange-50 border-orange-200'
-  return 'text-red-600 bg-red-50 border-red-200'
+  if (score === null) return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+  if (score >= 0.6) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/30'
+  if (score >= 0.3) return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/30'
+  if (score >= -0.3) return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+  if (score >= -0.6) return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/30'
+  return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/30'
 }
 
 function timeAgo(dateStr: string) {
@@ -220,7 +220,7 @@ export default function WhatsAppPage() {
       {/* Connection status banner */}
       {!isConfigured && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 md:px-6 py-2.5 flex items-center gap-3">
-          <span className="text-amber-600 text-sm font-medium">⚠️ WhatsApp API not configured</span>
+          <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">⚠️ WhatsApp API not configured</span>
           <span className="text-amber-700 dark:text-amber-400 text-xs">Messages are logged to CRM only. Add META_WHATSAPP_TOKEN to .env to send real messages.</span>
           <a href="/dashboard/integrations" className="text-xs underline text-amber-700 dark:text-amber-400 ml-auto">Configure →</a>
         </div>

@@ -61,11 +61,11 @@ interface TasksPageClientProps {
 
 function getPriorityColor(priority: string): string {
   switch (priority) {
-    case 'critical': return 'bg-red-100 text-red-700 border-red-200'
-    case 'high': return 'bg-orange-100 text-orange-700 border-orange-200'
-    case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200'
-    case 'low': return 'bg-slate-100 text-slate-700 border-slate-200'
-    default: return 'bg-slate-100 text-slate-700 border-slate-200'
+    case 'critical': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800/30'
+    case 'high': return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-800/30'
+    case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/30'
+    case 'low': return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800'
+    default: return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800'
   }
 }
 
@@ -329,16 +329,16 @@ export function TasksPageClient({ initialTasks }: TasksPageClientProps) {
             <Badge variant="outline" className="cursor-pointer hover:bg-muted">
               All ({tasks.length})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer hover:bg-muted bg-red-50 text-red-700 border-red-200">
+            <Badge variant="outline" className="cursor-pointer hover:bg-muted bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/30">
               Overdue ({overdueTasks})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer hover:bg-muted bg-amber-50 text-amber-700 border-amber-200">
+            <Badge variant="outline" className="cursor-pointer hover:bg-muted bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/30">
               Today ({todayTasks})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer hover:bg-muted bg-blue-50 text-blue-700 border-blue-200">
+            <Badge variant="outline" className="cursor-pointer hover:bg-muted bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/30">
               Tomorrow ({tomorrowTasks})
             </Badge>
-            <Badge variant="outline" className="cursor-pointer hover:bg-muted bg-emerald-50 text-emerald-700 border-emerald-200">
+            <Badge variant="outline" className="cursor-pointer hover:bg-muted bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30">
               Completed ({tasks.filter(t => t.is_completed).length})
             </Badge>
           </div>
@@ -368,7 +368,7 @@ export function TasksPageClient({ initialTasks }: TasksPageClientProps) {
                   key={task.id} 
                   className={`transition-all ${
                     isComplete ? 'opacity-60' : ''
-                  } ${isOverdue ? 'border-red-200 bg-red-50/50' : ''}`}
+                  } ${isOverdue ? 'border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20' : ''}`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
@@ -400,7 +400,7 @@ export function TasksPageClient({ initialTasks }: TasksPageClientProps) {
                         )}
 
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
+                          <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
                             {isOverdue && <AlertCircle className="size-3" />}
                             <Clock className="size-3" />
                             {formatDueDate(task.due_date)}

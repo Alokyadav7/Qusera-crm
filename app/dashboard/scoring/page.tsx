@@ -116,10 +116,10 @@ function scoreLead(lead: Lead, interactions: Interaction[]): {
 }
 
 function scoreTier(score: number) {
-  if (score >= 80) return { label: 'Hot Lead', color: 'bg-red-100 text-red-700 border-red-200' }
-  if (score >= 55) return { label: 'Warm Lead', color: 'bg-amber-100 text-amber-700 border-amber-200' }
-  if (score >= 30) return { label: 'Cold Lead', color: 'bg-blue-100 text-blue-600 border-blue-200' }
-  return { label: 'At Risk', color: 'bg-slate-100 text-slate-600 border-slate-200' }
+  if (score >= 80) return { label: 'Hot Lead', color: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800/30' }
+  if (score >= 55) return { label: 'Warm Lead', color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/30' }
+  if (score >= 30) return { label: 'Cold Lead', color: 'bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800/30' }
+  return { label: 'At Risk', color: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800' }
 }
 
 function scoreRingColor(score: number) {
@@ -189,7 +189,7 @@ export default function AILeadScoringPage() {
             <span className="text-sm text-muted-foreground">
               {scoredLeads.length} leads scored · Live from Supabase
             </span>
-            <Badge variant="outline" className="text-emerald-600 bg-emerald-50 border-emerald-200">
+            <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/30">
               <span className="size-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />Real-time
             </Badge>
           </div>
@@ -220,7 +220,7 @@ export default function AILeadScoringPage() {
                           <p className="font-semibold text-sm truncate">{entry.lead.full_name}</p>
                           <div className="flex items-center gap-1 shrink-0">
                             <span className="text-lg font-bold">{entry.score}</span>
-                            <span className={`text-xs flex items-center gap-0.5 ${d > 0 ? 'text-emerald-600' : d < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                            <span className={`text-xs flex items-center gap-0.5 ${d > 0 ? 'text-emerald-600 dark:text-emerald-400' : d < 0 ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'}`}>
                               {d > 0 ? <ChevronUp className="size-3" /> : d < 0 ? <ChevronDown className="size-3" /> : <Minus className="size-3" />}
                               {Math.abs(d)}
                             </span>
@@ -266,7 +266,7 @@ export default function AILeadScoringPage() {
                       </CardDescription>
                       <div className="flex items-center gap-2 mt-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${tier.color}`}>{tier.label}</span>
-                        <span className={`text-xs flex items-center gap-0.5 font-medium ${delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                        <span className={`text-xs flex items-center gap-0.5 font-medium ${delta > 0 ? 'text-emerald-600 dark:text-emerald-400' : delta < 0 ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'}`}>
                           {delta > 0 ? <TrendingUp className="size-3" /> : delta < 0 ? <TrendingDown className="size-3" /> : <Minus className="size-3" />}
                           {delta > 0 ? '+' : ''}{delta} pts
                         </span>
@@ -275,7 +275,7 @@ export default function AILeadScoringPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Est. Value</p>
-                    <p className="text-xl font-bold text-emerald-600">
+                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                       ₹{((selected.lead.deal_value || selected.lead.estimated_budget || 0) / 100000).toFixed(1)}L
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">{selected.predictedConversion}% win probability</p>
@@ -284,7 +284,7 @@ export default function AILeadScoringPage() {
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* AI Recommendation */}
-                <div className="flex items-start gap-3 bg-primary/5 border border-primary/20 rounded-xl p-4">
+                <div className="flex items-start gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-xl p-4">
                   <Sparkles className="size-5 text-primary shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-primary mb-0.5">AI Recommendation</p>
@@ -300,13 +300,13 @@ export default function AILeadScoringPage() {
                   <div className="space-y-2.5">
                     {selected.signals.map((sig, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <div className={`size-6 rounded-full flex items-center justify-center shrink-0 ${sig.impact === 'positive' ? 'bg-emerald-100' : sig.impact === 'negative' ? 'bg-red-100' : 'bg-slate-100'}`}>
-                          {sig.impact === 'positive' ? <ChevronUp className="size-3.5 text-emerald-600" /> : sig.impact === 'negative' ? <ChevronDown className="size-3.5 text-red-500" /> : <Minus className="size-3.5 text-slate-500" />}
+                        <div className={`size-6 rounded-full flex items-center justify-center shrink-0 ${sig.impact === 'positive' ? 'bg-emerald-100 dark:bg-emerald-950/40' : sig.impact === 'negative' ? 'bg-red-100 dark:bg-red-950/40' : 'bg-slate-100 dark:bg-slate-900'}`}>
+                          {sig.impact === 'positive' ? <ChevronUp className="size-3.5 text-emerald-600 dark:text-emerald-400" /> : sig.impact === 'negative' ? <ChevronDown className="size-3.5 text-red-500 dark:text-red-400" /> : <Minus className="size-3.5 text-slate-500 dark:text-slate-400" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2 mb-0.5">
                             <span className="text-sm font-medium">{sig.label}</span>
-                            <span className={`text-xs font-bold ${sig.impact === 'positive' ? 'text-emerald-600' : sig.impact === 'negative' ? 'text-red-500' : 'text-muted-foreground'}`}>
+                            <span className={`text-xs font-bold ${sig.impact === 'positive' ? 'text-emerald-600 dark:text-emerald-400' : sig.impact === 'negative' ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'}`}>
                               {sig.weight > 0 ? '+' : ''}{sig.weight}pts
                             </span>
                           </div>

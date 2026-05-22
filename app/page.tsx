@@ -53,122 +53,11 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTheme } from 'next-themes'
+import { Navigation, Footer } from '@/components/landing-layout'
 import { createClient } from '@/lib/supabase/client'
 
 
-// Navigation Component
-function Navigation() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
-  }
-
-  return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary shadow-[0_0_15px_rgba(var(--primary),0.3)]">
-            <Zap className="size-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold tracking-tight text-foreground bg-gradient-to-r from-foreground to-foreground/90 bg-clip-text text-transparent">OrbitCRM</span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-8">
-          <Link href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Features
-          </Link>
-          <Link href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Pricing
-          </Link>
-          <Link href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Testimonials
-          </Link>
-          <Link href="#integrations" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Integrations
-          </Link>
-        </nav>
-
-        <div className="hidden lg:flex items-center gap-3">
-          {mounted && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-lg border border-border/50 hover:bg-muted/50"
-              onClick={toggleTheme}
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </Button>
-          )}
-          <Button variant="ghost" asChild>
-            <Link href="/login">Sign In</Link>
-          </Button>
-          <Button asChild className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow">
-            <Link href="/login">Start Free Trial</Link>
-          </Button>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <div className="flex items-center gap-2 lg:hidden">
-          {mounted && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-lg border border-border/50 hover:bg-muted/50"
-              onClick={toggleTheme}
-            >
-              {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-9 rounded-lg"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-          </Button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden border-t bg-background">
-          <nav className="container mx-auto flex flex-col gap-4 p-4">
-            <Link href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-              Features
-            </Link>
-            <Link href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-              Pricing
-            </Link>
-            <Link href="#testimonials" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-              Testimonials
-            </Link>
-            <Link href="#integrations" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-              Integrations
-            </Link>
-            <div className="flex flex-col gap-2 pt-4 border-t">
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild className="w-full">
-                <Link href="/login">Start Free Trial</Link>
-              </Button>
-            </div>
-          </nav>
-        </div>
-      )}
-    </header>
-  )
-}
 
 // Demo scenarios for the real-time interactive playground
 const DEMO_SCENARIOS = [
@@ -564,7 +453,7 @@ function HeroSection() {
 
         if (total && total > 0) {
           const winRateVal = totalWon ? Math.round((totalWon / total) * 1000) / 10 : 94.2
-          const revVal = won ? won.reduce((sum, deal) => sum + (Number(deal.deal_value) || 0), 0) : 1840000
+          const revVal = won ? won.reduce((sum: number, deal: any) => sum + (Number(deal.deal_value) || 0), 0) : 1840000
           setStats({
             totalLeads: total,
             winRate: winRateVal > 0 ? winRateVal : 94.2,
@@ -579,14 +468,41 @@ function HeroSection() {
   }, [])
 
   return (
-    <section className="relative overflow-hidden pt-10 pb-16 md:pt-14 md:pb-24 lg:pt-16 lg:pb-28 bg-gradient-to-b from-background via-background to-muted/10">
-      {/* Premium background radial highlights and grid */}
-      <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:24px_24px] opacity-40 -z-10" />
-      <div className="absolute top-[-20%] left-[-10%] size-[600px] rounded-full bg-gradient-to-br from-violet-600/10 via-indigo-600/5 to-transparent blur-[140px] pointer-events-none -z-10" />
-      <div className="absolute top-[20%] right-[-10%] size-[600px] rounded-full bg-gradient-to-br from-emerald-600/10 via-teal-600/5 to-transparent blur-[140px] pointer-events-none -z-10" />
+    <section className="relative overflow-hidden pt-10 pb-4 md:pt-14 md:pb-6 lg:pt-16 lg:pb-8 bg-gradient-to-b from-background via-background to-muted/5">
+      {/* Premium animated background design */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+        {/* Radar scanline sweep */}
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-primary/30 to-transparent animate-scanline pointer-events-none" />
+
+        {/* Dynamic mesh grids */}
+        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1.5px,transparent_1.5px)] dark:bg-[radial-gradient(#38bdf8_0.5px,transparent_0.5px)] [background-size:32px_32px] opacity-45 dark:opacity-20" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+
+        {/* Drifting glowing blobs */}
+        <div className="absolute top-[-25%] left-[-20%] size-[800px] rounded-full bg-violet-600/10 dark:bg-violet-600/15 blur-[130px] animate-drift-slow pointer-events-none" />
+        <div className="absolute top-[10%] right-[-20%] size-[850px] rounded-full bg-emerald-500/10 dark:bg-emerald-500/12 blur-[140px] animate-drift-medium pointer-events-none" />
+        <div className="absolute bottom-[-15%] left-[20%] size-[700px] rounded-full bg-fuchsia-500/8 dark:bg-fuchsia-500/10 blur-[120px] animate-pulse-slow pointer-events-none" />
+      </div>
 
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-5xl text-center mb-8">
+        <div className="mx-auto max-w-5xl text-center mb-8 relative">
+          {/* Concentric Voice Waves motion graphics behind the text */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] pointer-events-none -z-10 overflow-hidden">
+            {/* Spinning orbital rings */}
+            <div className="absolute left-1/2 top-1/2 size-[650px] border border-primary/5 rounded-full animate-spin-slow" />
+            <div className="absolute left-1/2 top-1/2 size-[550px] border border-dashed border-accent/5 rounded-full animate-spin-reverse" />
+            <div className="absolute left-1/2 top-1/2 size-[450px] border border-primary/5 rounded-full animate-spin-slow" />
+            
+            {/* Ripple sound waves */}
+            <div className="absolute left-1/2 top-1/2 size-[350px] rounded-full border border-primary/10 bg-primary/2 dark:bg-primary/1 backdrop-blur-[1px] animate-ripple-1" />
+            <div className="absolute left-1/2 top-1/2 size-[350px] rounded-full border border-accent/10 bg-accent/2 dark:bg-accent/1 backdrop-blur-[1px] animate-ripple-2" />
+            <div className="absolute left-1/2 top-1/2 size-[350px] rounded-full border border-violet-500/10 bg-violet-500/2 dark:bg-violet-500/1 backdrop-blur-[1px] animate-ripple-3" />
+            
+            {/* Glowing orbital nodes */}
+            <div className="absolute top-[8%] left-[22%] size-2 rounded-full bg-primary/40 animate-pulse" />
+            <div className="absolute bottom-[12%] right-[15%] size-3 rounded-full bg-accent/30 animate-pulse delay-700" />
+            <div className="absolute top-[40%] right-[8%] size-2.5 rounded-full bg-violet-500/40 animate-pulse delay-1000" />
+          </div>
           <h1 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-balance leading-tight animate-fade-in-up delay-100">
             Stop Typing.
             <br />
@@ -621,8 +537,18 @@ function HeroSection() {
           </div>
         </div>
 
+        {/* Trusted By Logos */}
+        <div className="mx-auto mt-12 max-w-4xl animate-fade-in-up delay-500">
+          <p className="text-center text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-6">Trusted by 10,000+ sales teams</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
+            {['TechCorp', 'GrowthBox', 'FinanceHub', 'RetailMax', 'ServicePro'].map((company) => (
+              <div key={company} className="text-lg font-bold tracking-tighter text-foreground">{company}</div>
+            ))}
+          </div>
+        </div>
+
         {/* MacBook Laptop Mockup Display Container */}
-        <div className="relative mx-auto mt-8 max-w-[800px] animate-fade-in-up delay-500">
+        <div className="relative mx-auto mt-16 max-w-[800px] animate-fade-in-up delay-600">
           {/* Laptop Spotlight glow */}
           <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-accent/5 to-transparent blur-3xl opacity-50 -z-10 rounded-full" />
 
@@ -734,18 +660,8 @@ function HeroSection() {
         </div>
 
         {/* Dynamic Interactive Dashboard Preview Playground */}
-        <div className="mx-auto mt-12 max-w-5xl animate-fade-in-up delay-600">
+        <div className="mx-auto mt-12 max-w-5xl animate-fade-in-up delay-700">
           <VoiceCRMPlayground />
-        </div>
-
-        {/* Trusted By Logos */}
-        <div className="mx-auto mt-16 max-w-4xl animate-fade-in-up delay-700">
-          <p className="text-center text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-6">Trusted by 10,000+ sales teams</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-            {['TechCorp', 'GrowthBox', 'FinanceHub', 'RetailMax', 'ServicePro'].map((company) => (
-              <div key={company} className="text-lg font-bold tracking-tighter text-foreground">{company}</div>
-            ))}
-          </div>
         </div>
       </div>
     </section>
@@ -971,7 +887,7 @@ function FeaturesSection() {
   ]
 
   return (
-    <section id="features" className="py-20 md:py-32 relative">
+    <section id="features" className="pt-8 pb-20 md:pt-12 md:pb-32 relative">
       <div className="absolute left-0 top-1/2 size-96 bg-secondary/10 blur-[100px] -z-10 rounded-full" />
       <div className="container mx-auto px-4">
         <div className="mx-auto max-w-3xl text-center mb-16 animate-fade-in-up">
@@ -980,9 +896,6 @@ function FeaturesSection() {
             Everything You Need to
             <span className="gradient-text"> Close More Deals</span>
           </h2>
-          <p className="mt-6 text-xl text-muted-foreground text-pretty">
-            Purpose-built features for Indian sales teams that actually move the needle
-          </p>
         </div>
 
         <div className="mx-auto max-w-6xl animate-fade-in-up delay-200">
@@ -1173,17 +1086,17 @@ function PricingSection() {
           {plans.map((plan) => (
             <Card
               key={plan.name}
-              className={`relative flex flex-col rounded-3xl overflow-hidden transition-all duration-500 glass-card border border-border/40 hover:-translate-y-1 ${plan.popular
-                  ? 'border-primary/80 shadow-[0_20px_50px_rgba(124,58,237,0.15)] lg:scale-105 z-10'
-                  : 'hover:border-border/80 hover:shadow-xl'
+              className={`relative flex flex-col rounded-3xl transition-all duration-500 border border-border/40 hover:-translate-y-2 hover:border-primary/30 dark:hover:border-primary/40 bg-card/60 backdrop-blur-sm ${plan.popular
+                ? 'border-primary/80 dark:border-primary/70 shadow-[0_20px_50px_rgba(124,58,237,0.15)] dark:shadow-[0_20px_50px_rgba(124,58,237,0.35)] lg:scale-105 z-10'
+                : 'hover:shadow-2xl hover:shadow-primary/5'
                 }`}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
                   <Badge className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-0 px-4 py-1 shadow-lg shadow-violet-500/20 font-semibold tracking-wider text-[10px]">MOST POPULAR</Badge>
                 </div>
               )}
-              <CardHeader className="text-center pt-8 pb-6 border-b border-border/10 bg-muted/10">
+              <CardHeader className="text-center pt-8 pb-6 border-b border-border/10 bg-muted/10 rounded-t-[22px]">
                 <CardTitle className="text-xl font-bold tracking-tight text-foreground">{plan.name}</CardTitle>
                 <div className="mt-4 flex items-baseline justify-center gap-1">
                   {plan.price !== 'Custom' && <span className="text-2xl font-semibold text-foreground/80">₹</span>}
@@ -1211,8 +1124,8 @@ function PricingSection() {
               <CardFooter className="p-6 md:p-8 pt-0 border-t border-border/10">
                 <Button
                   className={`w-full h-11 text-xs rounded-xl font-semibold transition-all ${plan.popular
-                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/35 hover:scale-[1.02]'
-                      : 'glass hover:bg-muted/50 border-border/50 text-foreground'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/20 hover:shadow-violet-500/35 hover:scale-[1.02]'
+                    : 'border border-border/60 hover:bg-primary/5 hover:border-primary/30 hover:text-primary'
                     }`}
                   variant={plan.popular ? 'default' : 'outline'}
                   size="lg"
@@ -1233,107 +1146,33 @@ function PricingSection() {
   )
 }
 
-// Testimonials Section
-function TestimonialsSection() {
-  const testimonials = [
-    {
-      quote: "OrbitCRM transformed our sales process completely. The voice-to-CRM feature saves us 2+ hours every day. My field team just records their notes in Hindi and everything is automatically organized with sentiment tags.",
-      author: "Vikram Mehta",
-      role: "Sales Director",
-      company: "TechVentures India",
-      avatar: "VM",
-      metric: "40% increase in lead conversion"
-    },
-    {
-      quote: "The WhatsApp integration is a game-changer for our business. We manage 500+ customer conversations daily and the AI sentiment alerts help us prioritize the right leads. Response time dropped from 4 hours to 15 minutes.",
-      author: "Priya Nair",
-      role: "Head of Sales",
-      company: "GrowthBox Solutions",
-      avatar: "PN",
-      metric: "3x faster response time"
-    },
-    {
-      quote: "Route optimization alone has reduced our fuel costs by 30%. The compliance verification feature keeps us audit-ready at all times. This is the only CRM that truly understands Indian business needs.",
-      author: "Amit Patel",
-      role: "Operations Manager",
-      company: "DistributeNow",
-      avatar: "AP",
-      metric: "30% reduction in operational costs"
-    },
-    {
-      quote: "Finally a CRM that understands Indian businesses! The Hindi voice support is perfect for our regional sales teams in Tier 2 and Tier 3 cities. Adoption was instant because there is no learning curve.",
-      author: "Sneha Reddy",
-      role: "CEO",
-      company: "Bharat Commerce",
-      avatar: "SR",
-      metric: "95% team adoption in first week"
-    }
-  ]
-
-  return (
-    <section id="testimonials" className="py-16 md:py-24 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-3xl text-center mb-12">
-          <Badge variant="outline" className="mb-4">Testimonials</Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl text-balance">
-            Loved by
-            <span className="text-primary"> 10,000+ Sales Teams</span>
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground text-pretty">
-            See what sales leaders across India are saying about OrbitCRM
-          </p>
-        </div>
-
-        <div className="mx-auto max-w-6xl grid gap-6 md:grid-cols-2">
-          {testimonials.map((testimonial) => (
-            <Card key={testimonial.author} className="relative overflow-hidden glass-card border border-border/40 hover:border-border/80 hover:shadow-xl transition-all duration-300 rounded-3xl p-6">
-              <CardContent className="p-0 flex flex-col justify-between h-full">
-                <div>
-                  <div className="flex gap-1 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="size-4 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <blockquote className="text-sm font-medium leading-relaxed text-foreground/90 italic">
-                    &quot;{testimonial.quote}&quot;
-                  </blockquote>
-                </div>
-                <div>
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 w-fit">
-                    <TrendingUp className="size-3.5" />
-                    <span>{testimonial.metric}</span>
-                  </div>
-                  <div className="mt-6 flex items-center gap-4 border-t border-border/10 pt-4">
-                    <Avatar className="size-11 border border-border/50 shadow-sm">
-                      <AvatarImage src="" />
-                      <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-xs">
-                        {testimonial.avatar}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-left">
-                      <div className="font-semibold text-sm text-foreground">{testimonial.author}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {testimonial.role}, {testimonial.company}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
 // Industries Section
 function IndustriesSection() {
   const industries = [
-    { name: 'Real Estate', icon: Building2, description: 'Property listings, site visits, buyer tracking' },
-    { name: 'Financial Services', icon: Briefcase, description: 'Lead nurturing, compliance, policy management' },
-    { name: 'Retail & D2C', icon: ShoppingBag, description: 'Customer orders, inventory, delivery tracking' },
-    { name: 'Manufacturing', icon: Factory, description: 'Distributor management, B2B sales, orders' }
+    {
+      name: 'Real Estate',
+      icon: Building2,
+      description: 'Property listings, site visits, buyer tracking',
+      image: '/real_estate_industry.png'
+    },
+    {
+      name: 'Financial Services',
+      icon: Briefcase,
+      description: 'Lead nurturing, compliance, policy management',
+      image: '/finance_industry.png'
+    },
+    {
+      name: 'Retail & D2C',
+      icon: ShoppingBag,
+      description: 'Customer orders, inventory, delivery tracking',
+      image: '/retail_industry.png'
+    },
+    {
+      name: 'Manufacturing',
+      icon: Factory,
+      description: 'Distributor management, B2B sales, orders',
+      image: '/manufacturing_industry.png'
+    }
   ]
 
   return (
@@ -1350,15 +1189,27 @@ function IndustriesSection() {
           </p>
         </div>
 
-        <div className="mx-auto max-w-5xl grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto max-w-6xl grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {industries.map((industry) => (
-            <Card key={industry.name} className="text-center hover:shadow-lg transition-shadow group">
-              <CardContent className="pt-6">
-                <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-primary/10 group-hover:bg-primary transition-colors">
-                  <industry.icon className="size-8 text-primary group-hover:text-primary-foreground transition-colors" />
+            <Card key={industry.name} className="overflow-hidden flex flex-col hover:shadow-2xl hover:border-primary/20 dark:hover:border-primary/30 transition-all duration-300 group rounded-3xl border border-border/40 bg-card/40 backdrop-blur-sm">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+                {/* Visual Image Banner */}
+                <img
+                  src={industry.image}
+                  alt={industry.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+                {/* Floating Icon Badges */}
+                <div className="absolute bottom-3 left-4 flex size-10 items-center justify-center rounded-xl bg-primary/95 text-primary-foreground shadow-lg backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <industry.icon className="size-5" />
                 </div>
-                <h3 className="mt-4 font-semibold">{industry.name}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{industry.description}</p>
+              </div>
+              <CardContent className="p-5 flex-1 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg text-foreground tracking-tight">{industry.name}</h3>
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{industry.description}</p>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -1368,7 +1219,6 @@ function IndustriesSection() {
   )
 }
 
-// Integrations Section
 function IntegrationsSection() {
   const integrations = [
     { name: 'WhatsApp Business', category: 'Communication', icon: '💬' },
@@ -1390,8 +1240,9 @@ function IntegrationsSection() {
 
   return (
     <section id="integrations" className="py-20 md:py-28 relative overflow-hidden bg-muted/20 border-t border-b border-border/40">
-      <div className="container mx-auto px-4 relative">
-        <div className="mx-auto max-w-3xl text-center mb-16">
+      {/* Centered Heading */}
+      <div className="container mx-auto px-4 relative mb-16">
+        <div className="mx-auto max-w-3xl text-center">
           <Badge variant="outline" className="mb-4 bg-primary/10 text-primary border-primary/20">Integrations</Badge>
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl text-balance">
             Connects With Your
@@ -1401,35 +1252,38 @@ function IntegrationsSection() {
             Seamlessly sync customer calls, texts, and bills with 50+ business apps you already run.
           </p>
         </div>
+      </div>
 
-        {/* Marquee Container */}
-        <div className="relative w-full overflow-hidden py-4 select-none">
-          {/* Left fading mask */}
-          <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-          {/* Right fading mask */}
-          <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+      {/* Edge-to-Edge (Full Screen Width) Marquee Row */}
+      <div className="relative w-full overflow-hidden py-4 select-none">
+        {/* Left fading mask */}
+        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background via-background/60 to-transparent z-10 pointer-events-none" />
+        {/* Right fading mask */}
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background via-background/60 to-transparent z-10 pointer-events-none" />
 
-          <div className="flex w-max gap-4 animate-marquee hover:[animation-play-state:paused] transition-all">
-            {duplicatedIntegrations.map((item, idx) => (
-              <Card key={idx} className="glass-card flex items-center gap-3.5 px-6 py-4 w-[220px] shrink-0 border border-border/30 hover:border-primary/30 hover:scale-102 transition-all duration-300">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-xl shadow-inner">
-                  {item.icon}
-                </div>
-                <div className="min-w-0">
-                  <span className="block text-xs font-extrabold text-foreground truncate">{item.name}</span>
-                  <span className="block text-[10px] text-muted-foreground tracking-wider uppercase mt-0.5">{item.category}</span>
-                </div>
-              </Card>
-            ))}
-          </div>
+        <div className="flex w-max gap-4 animate-marquee hover:[animation-play-state:paused] transition-all">
+          {duplicatedIntegrations.map((item, idx) => (
+            <Card key={idx} className="glass-card flex items-center gap-3.5 px-6 py-4 w-[220px] shrink-0 border border-border/30 hover:border-primary/30 hover:scale-102 transition-all duration-300">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-xl shadow-inner">
+                {item.icon}
+              </div>
+              <div className="min-w-0">
+                <span className="block text-xs font-extrabold text-foreground truncate">{item.name}</span>
+                <span className="block text-[10px] text-muted-foreground tracking-wider uppercase mt-0.5">{item.category}</span>
+              </div>
+            </Card>
+          ))}
         </div>
+      </div>
 
-        <div className="mt-16 text-center">
+      {/* CTA Button */}
+      <div className="container mx-auto px-4 relative mt-16">
+        <div className="text-center">
           <p className="text-sm text-muted-foreground mb-4">
             Need a custom integration for your workflow?
           </p>
           <Button variant="outline" asChild className="glass hover:bg-muted/50 rounded-xl">
-            <Link href="#">
+            <Link href="/api-docs">
               View API Documentation
               <ArrowRight className="ml-2 size-4" />
             </Link>
@@ -1640,8 +1494,8 @@ function CTASection() {
                     {/* Task Body Row */}
                     <div className="group flex items-center gap-3.5 p-4 rounded-xl border border-white/5 bg-zinc-950/60 hover:bg-zinc-950/90 hover:border-primary/20 transition-all duration-300 shadow-inner">
                       <div className={`size-9 rounded-lg flex items-center justify-center shrink-0 ${task.type === 'whatsapp'
-                          ? 'bg-emerald-500/10 text-emerald-400'
-                          : 'bg-primary/10 text-primary'
+                        ? 'bg-emerald-500/10 text-emerald-400'
+                        : 'bg-primary/10 text-primary'
                         }`}>
                         {task.type === 'whatsapp' ? (
                           <MessageSquare className="size-4.5" />
@@ -1665,96 +1519,7 @@ function CTASection() {
   )
 }
 
-// Footer
-function Footer() {
-  return (
-    <footer className="border-t py-12 md:py-16 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
-          {/* Brand */}
-          <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-primary">
-                <Zap className="size-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold">OrbitCRM</span>
-            </Link>
-            <p className="mt-4 text-sm text-muted-foreground max-w-xs">
-              India&apos;s first voice-native CRM built for modern sales teams.
-              Manage leads, track conversations, and close deals faster.
-            </p>
-            <div className="mt-6 flex items-center gap-3">
-              <Button variant="outline" size="icon" className="size-9">
-                <Globe className="size-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="size-9">
-                <MessageSquare className="size-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="size-9">
-                <Mail className="size-4" />
-              </Button>
-            </div>
-          </div>
 
-          {/* Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Product</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#features" className="hover:text-foreground transition-colors">Features</Link></li>
-              <li><Link href="#pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
-              <li><Link href="#integrations" className="hover:text-foreground transition-colors">Integrations</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">API Docs</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Changelog</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">About Us</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Careers</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Blog</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Press Kit</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Contact</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Resources</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Help Center</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Tutorials</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Webinars</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Case Studies</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Community</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Security</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">GDPR</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Cookies</Link></li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-8">
-          <p className="text-sm text-muted-foreground">
-            © 2026 OrbitCRM. All rights reserved.
-          </p>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <span>Made with care in India</span>
-            <Badge variant="outline" className="text-xs">SOC 2 Certified</Badge>
-          </div>
-        </div>
-      </div>
-    </footer>
-  )
-}
 
 // Main Landing Page
 export default function LandingPage() {
@@ -1766,11 +1531,10 @@ export default function LandingPage() {
         <FeaturesSection />
         <HowItWorksSection />
         <PricingSection />
-        <TestimonialsSection />
         <IndustriesSection />
         <IntegrationsSection />
         <FAQSection />
-        <CTASection />
+        {/* <CTASection /> */}
       </main>
       <Footer />
     </div>

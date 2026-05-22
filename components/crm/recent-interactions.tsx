@@ -35,11 +35,11 @@ function getSentimentLabel(score: number): string {
 }
 
 function getSentimentColor(score: number): string {
-  if (score >= 0.6) return 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950'
-  if (score >= 0.3) return 'text-green-600 bg-green-50 dark:bg-green-950'
-  if (score >= -0.3) return 'text-slate-600 bg-slate-50 dark:bg-slate-900'
-  if (score >= -0.6) return 'text-orange-600 bg-orange-50 dark:bg-orange-950'
-  return 'text-red-600 bg-red-50 dark:bg-red-950'
+  if (score >= 0.6) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/30'
+  if (score >= 0.3) return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/30'
+  if (score >= -0.3) return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+  if (score >= -0.6) return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/30'
+  return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/30'
 }
 
 // Now self-contained with real-time Supabase subscription
@@ -106,8 +106,8 @@ export function RecentInteractions({ interactions: _unused }: { interactions?: u
                     interaction.direction === 'inbound' ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-emerald-100 dark:bg-emerald-900/50'
                   }`}>
                     {interaction.direction === 'inbound'
-                      ? <ArrowDownLeft className="size-2.5 text-blue-600" />
-                      : <ArrowUpRight className="size-2.5 text-emerald-600" />
+                      ? <ArrowDownLeft className="size-2.5 text-blue-600 dark:text-blue-400" />
+                      : <ArrowUpRight className="size-2.5 text-emerald-600 dark:text-emerald-400" />
                     }
                   </span>
                   <Badge variant="outline" className="text-xs">

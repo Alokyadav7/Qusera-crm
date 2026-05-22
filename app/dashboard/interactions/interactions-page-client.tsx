@@ -47,13 +47,13 @@ function getInteractionIcon(type: string) {
 
 function getIconBg(type: string): string {
   const map: Record<string, string> = {
-    voice: 'bg-purple-100 text-purple-600',
-    whatsapp: 'bg-green-100 text-green-600',
-    call: 'bg-blue-100 text-blue-600',
-    email: 'bg-amber-100 text-amber-600',
-    image: 'bg-pink-100 text-pink-600',
+    voice: 'bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400',
+    whatsapp: 'bg-green-100 dark:bg-green-950/40 text-green-600 dark:text-green-400',
+    call: 'bg-blue-100 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400',
+    email: 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400',
+    image: 'bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400',
   }
-  return map[type] || 'bg-slate-100 text-slate-600'
+  return map[type] || 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400'
 }
 
 function getSentimentLabel(score: number): string {
@@ -65,11 +65,11 @@ function getSentimentLabel(score: number): string {
 }
 
 function getSentimentColor(score: number): string {
-  if (score >= 0.6) return 'text-emerald-600 bg-emerald-50 border-emerald-200'
-  if (score >= 0.3) return 'text-green-600 bg-green-50 border-green-200'
-  if (score >= -0.3) return 'text-slate-600 bg-slate-50 border-slate-200'
-  if (score >= -0.6) return 'text-orange-600 bg-orange-50 border-orange-200'
-  return 'text-red-600 bg-red-50 border-red-200'
+  if (score >= 0.6) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/30'
+  if (score >= 0.3) return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/30'
+  if (score >= -0.3) return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+  if (score >= -0.6) return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/30'
+  return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/30'
 }
 
 function getInitials(name: string) {
@@ -294,10 +294,10 @@ export default function InteractionsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="font-semibold text-sm">{leadName}</span>
-                          <span className={`flex size-5 items-center justify-center rounded-full ${interaction.direction === 'inbound' ? 'bg-blue-100' : 'bg-emerald-100'}`}>
+                          <span className={`flex size-5 items-center justify-center rounded-full ${interaction.direction === 'inbound' ? 'bg-blue-100 dark:bg-blue-950/40' : 'bg-emerald-100 dark:bg-emerald-950/40'}`}>
                             {interaction.direction === 'inbound'
-                              ? <ArrowDownLeft className="size-3 text-blue-600" />
-                              : <ArrowUpRight className="size-3 text-emerald-600" />
+                              ? <ArrowDownLeft className="size-3 text-blue-600 dark:text-blue-400" />
+                              : <ArrowUpRight className="size-3 text-emerald-600 dark:text-emerald-400" />
                             }
                           </span>
                           {leadCompany && <span className="text-xs text-muted-foreground">· {leadCompany}</span>}

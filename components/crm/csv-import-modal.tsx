@@ -94,7 +94,7 @@ export function CSVImportModal({ open, onClose, onImported }: CSVImportModalProp
               <p className="text-xs text-muted-foreground mt-2">Supports up to 10,000 rows</p>
               <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={e => e.target.files?.[0] && parseFile(e.target.files[0])} />
             </div>
-            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-sm text-blue-700 dark:text-blue-400">
               <Info className="size-4 shrink-0" />Required: <strong>full_name</strong>. Optional: phone_number, email, company, city, state, status, buying_intent, estimated_budget
             </div>
             <Button variant="outline" className="w-full" onClick={downloadTemplate}>
@@ -106,7 +106,7 @@ export function CSVImportModal({ open, onClose, onImported }: CSVImportModalProp
         {step === 'preview' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200"><CheckCircle2 className="size-3 mr-1" />{rows.length} rows ready</Badge>
+              <Badge className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"><CheckCircle2 className="size-3 mr-1" />{rows.length} rows ready</Badge>
               <Button variant="ghost" size="sm" onClick={() => { setStep('upload'); setRows([]) }}><X className="size-4 mr-1" />Change file</Button>
             </div>
             <div className="border rounded-lg overflow-auto max-h-52">
@@ -138,17 +138,17 @@ export function CSVImportModal({ open, onClose, onImported }: CSVImportModalProp
 
         {step === 'done' && result && (
           <div className="py-6 space-y-4 text-center">
-            <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 mx-auto"><CheckCircle2 className="size-8 text-emerald-600" /></div>
+            <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50 mx-auto"><CheckCircle2 className="size-8 text-emerald-600 dark:text-emerald-400" /></div>
             <div><h3 className="text-xl font-bold">Import Complete!</h3><p className="text-muted-foreground mt-1">Your leads have been added</p></div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-emerald-50 rounded-xl p-3"><p className="text-2xl font-bold text-emerald-700">{result.imported}</p><p className="text-xs text-emerald-600">Imported</p></div>
-              <div className="bg-amber-50 rounded-xl p-3"><p className="text-2xl font-bold text-amber-700">{result.skipped}</p><p className="text-xs text-amber-600">Skipped</p></div>
-              <div className="bg-blue-50 rounded-xl p-3"><p className="text-2xl font-bold text-blue-700">{result.imported + result.skipped}</p><p className="text-xs text-blue-600">Total</p></div>
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-xl p-3"><p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{result.imported}</p><p className="text-xs text-emerald-600 dark:text-emerald-500">Imported</p></div>
+              <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3"><p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{result.skipped}</p><p className="text-xs text-amber-600 dark:text-amber-500">Skipped</p></div>
+              <div className="bg-blue-50 dark:bg-blue-950/20 rounded-xl p-3"><p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{result.imported + result.skipped}</p><p className="text-xs text-blue-600 dark:text-blue-500">Total</p></div>
             </div>
             {result.errors.length > 0 && (
-              <div className="text-left bg-red-50 rounded-lg p-3 space-y-1">
-                <p className="text-xs font-semibold text-red-700 flex items-center gap-1"><AlertTriangle className="size-3" />Skipped rows:</p>
-                {result.errors.map((e, i) => <p key={i} className="text-xs text-red-600">{e}</p>)}
+              <div className="text-left bg-red-50 dark:bg-red-950/20 rounded-lg p-3 space-y-1">
+                <p className="text-xs font-semibold text-red-700 dark:text-red-400 flex items-center gap-1"><AlertTriangle className="size-3" />Skipped rows:</p>
+                {result.errors.map((e, i) => <p key={i} className="text-xs text-red-600 dark:text-red-400">{e}</p>)}
               </div>
             )}
           </div>

@@ -36,23 +36,23 @@ function getSentimentLabel(score: number) {
   return 'Very Negative'
 }
 function getSentimentColor(score: number) {
-  if (score >= 0.6) return 'text-emerald-600 bg-emerald-50 border-emerald-200'
-  if (score >= 0.3) return 'text-green-600 bg-green-50 border-green-200'
-  if (score >= -0.3) return 'text-slate-600 bg-slate-50 border-slate-200'
-  if (score >= -0.6) return 'text-orange-600 bg-orange-50 border-orange-200'
-  return 'text-red-600 bg-red-50 border-red-200'
+  if (score >= 0.6) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/30'
+  if (score >= 0.3) return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/30'
+  if (score >= -0.3) return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+  if (score >= -0.6) return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/30'
+  return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/30'
 }
 function getStatusColor(status: string) {
   const m: Record<string, string> = {
-    new: 'bg-blue-50 text-blue-700 border-blue-200',
-    contacted: 'bg-purple-50 text-purple-700 border-purple-200',
-    interested: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-    verified: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    negotiation: 'bg-amber-50 text-amber-700 border-amber-200',
-    closed_won: 'bg-green-50 text-green-700 border-green-200',
-    closed_lost: 'bg-red-50 text-red-700 border-red-200',
+    new: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/30',
+    contacted: 'bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800/30',
+    interested: 'bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800/30',
+    verified: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30',
+    negotiation: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/30',
+    closed_won: 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/30',
+    closed_lost: 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/30',
   }
-  return m[status] || 'bg-slate-50 text-slate-700 border-slate-200'
+  return m[status] || 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-800'
 }
 function formatINR(n: number) {
   if (n >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`

@@ -33,13 +33,13 @@ interface Stage {
 }
 
 const STAGES: Stage[] = [
-  { id: 'new',         label: 'New',         textColor: 'text-slate-700 dark:text-slate-355',   bgColor: 'bg-slate-50/80 dark:bg-slate-900/30',   borderColor: 'border-slate-200 dark:border-slate-800/80',  icon: <Target className="size-3.5" /> },
-  { id: 'contacted',   label: 'Contacted',   textColor: 'text-blue-755 dark:text-blue-300',    bgColor: 'bg-blue-50/70 dark:bg-blue-950/20',    borderColor: 'border-blue-200 dark:border-blue-900/60',   icon: <Phone className="size-3.5" /> },
-  { id: 'interested',  label: 'Interested',  textColor: 'text-violet-755 dark:text-violet-300',  bgColor: 'bg-violet-50/70 dark:bg-violet-950/20',  borderColor: 'border-violet-200 dark:border-violet-900/60', icon: <Star className="size-3.5" /> },
-  { id: 'verified',    label: 'Verified',    textColor: 'text-cyan-755 dark:text-cyan-300',    bgColor: 'bg-cyan-50/70 dark:bg-cyan-950/20',    borderColor: 'border-cyan-200 dark:border-cyan-900/60',   icon: <Sparkles className="size-3.5" /> },
-  { id: 'negotiation', label: 'Negotiation', textColor: 'text-amber-755 dark:text-amber-300',   bgColor: 'bg-amber-50/70 dark:bg-amber-950/20',   borderColor: 'border-amber-200 dark:border-amber-900/60',  icon: <TrendingUp className="size-3.5" /> },
-  { id: 'closed_won',  label: 'Won ✓',       textColor: 'text-emerald-755 dark:text-emerald-300', bgColor: 'bg-emerald-50/70 dark:bg-emerald-950/20', borderColor: 'border-emerald-200 dark:border-emerald-900/60',icon: <Trophy className="size-3.5" /> },
-  { id: 'closed_lost', label: 'Lost',        textColor: 'text-red-755 dark:text-red-300',     bgColor: 'bg-red-50/70 dark:bg-red-950/20',     borderColor: 'border-red-200 dark:border-red-900/60',    icon: <AlertCircle className="size-3.5" /> },
+  { id: 'new', label: 'New', textColor: 'text-slate-700 dark:text-slate-355', bgColor: 'bg-slate-50/80 dark:bg-slate-900/30', borderColor: 'border-slate-200 dark:border-slate-800/80', icon: <Target className="size-3.5" /> },
+  { id: 'contacted', label: 'Contacted', textColor: 'text-blue-755 dark:text-blue-300', bgColor: 'bg-blue-50/70 dark:bg-blue-950/20', borderColor: 'border-blue-200 dark:border-blue-900/60', icon: <Phone className="size-3.5" /> },
+  { id: 'interested', label: 'Interested', textColor: 'text-violet-755 dark:text-violet-300', bgColor: 'bg-violet-50/70 dark:bg-violet-950/20', borderColor: 'border-violet-200 dark:border-violet-900/60', icon: <Star className="size-3.5" /> },
+  { id: 'verified', label: 'Verified', textColor: 'text-cyan-755 dark:text-cyan-300', bgColor: 'bg-cyan-50/70 dark:bg-cyan-950/20', borderColor: 'border-cyan-200 dark:border-cyan-900/60', icon: <Sparkles className="size-3.5" /> },
+  { id: 'negotiation', label: 'Negotiation', textColor: 'text-amber-755 dark:text-amber-300', bgColor: 'bg-amber-50/70 dark:bg-amber-950/20', borderColor: 'border-amber-200 dark:border-amber-900/60', icon: <TrendingUp className="size-3.5" /> },
+  { id: 'closed_won', label: 'Won ✓', textColor: 'text-emerald-755 dark:text-emerald-300', bgColor: 'bg-emerald-50/70 dark:bg-emerald-950/20', borderColor: 'border-emerald-200 dark:border-emerald-900/60', icon: <Trophy className="size-3.5" /> },
+  { id: 'closed_lost', label: 'Lost', textColor: 'text-red-755 dark:text-red-300', bgColor: 'bg-red-50/70 dark:bg-red-950/20', borderColor: 'border-red-200 dark:border-red-900/60', icon: <AlertCircle className="size-3.5" /> },
 ]
 
 function fmt(n: number) {
@@ -50,8 +50,8 @@ function fmt(n: number) {
 
 function intentBadgeClass(intent: Lead['buying_intent']) {
   return intent === 'high' ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-200/50 dark:border-red-955/30' :
-         intent === 'medium' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-955/30' :
-         'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200/50 dark:border-slate-800'
+    intent === 'medium' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-955/30' :
+      'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200/50 dark:border-slate-800'
 }
 
 function intentEmoji(intent: Lead['buying_intent']) {
@@ -259,9 +259,9 @@ export default function PipelinePage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
           {[
             { label: 'Total Pipeline', value: fmt(totalPipeline), icon: <TrendingUp className="size-4 text-primary" />, bg: 'from-primary/5 to-transparent border-primary/20 dark:border-primary/10' },
-            { label: 'Weighted Value',  value: fmt(weightedValue),  icon: <Target className="size-4 text-violet-500" />,     bg: 'from-violet-500/5 to-transparent border-violet-500/20 dark:border-violet-500/10' },
-            { label: 'Won This Month',  value: fmt(wonValue),       icon: <Trophy className="size-4 text-emerald-500" />,    bg: 'from-emerald-500/5 to-transparent border-emerald-500/20 dark:border-emerald-500/10' },
-            { label: 'Active Deals',    value: String(activeLeads.length), icon: <IndianRupee className="size-4 text-amber-500" />, bg: 'from-amber-500/5 to-transparent border-amber-500/20 dark:border-amber-500/10' },
+            { label: 'Weighted Value', value: fmt(weightedValue), icon: <Target className="size-4 text-violet-500" />, bg: 'from-violet-500/5 to-transparent border-violet-500/20 dark:border-violet-500/10' },
+            { label: 'Won This Month', value: fmt(wonValue), icon: <Trophy className="size-4 text-emerald-500" />, bg: 'from-emerald-500/5 to-transparent border-emerald-500/20 dark:border-emerald-500/10' },
+            { label: 'Active Deals', value: String(activeLeads.length), icon: <IndianRupee className="size-4 text-amber-500" />, bg: 'from-amber-500/5 to-transparent border-amber-500/20 dark:border-amber-500/10' },
           ].map(s => (
             <Card key={s.label} className={`bg-gradient-to-br ${s.bg} border shadow-sm transition-all hover:shadow-md`}>
               <CardContent className="p-4 flex items-center justify-between">

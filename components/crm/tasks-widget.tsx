@@ -30,10 +30,10 @@ interface TasksWidgetProps {
 
 function getPriorityColor(priority: string): string {
   switch (priority) {
-    case 'critical': return 'bg-red-100 text-red-700 border-red-200'
-    case 'high': return 'bg-orange-100 text-orange-700 border-orange-200'
-    case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200'
-    default: return 'bg-slate-100 text-slate-700 border-slate-200'
+    case 'critical': return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800/30'
+    case 'high': return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-800/30'
+    case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/30'
+    default: return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800'
   }
 }
 
@@ -113,7 +113,7 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
             <div
               key={task.id}
               className={`flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50 ${
-                isOverdue ? 'border-red-200 bg-red-50/50' : ''
+                isOverdue ? 'border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20' : ''
               }`}
             >
               <Checkbox
@@ -130,7 +130,7 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
                   <span className="font-medium text-sm truncate">{task.title}</span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                  <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
+                  <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
                     {isOverdue && <AlertCircle className="size-3" />}
                     {formatDueDate(task.due_date)}
                   </span>
