@@ -41,11 +41,11 @@ interface RouteStop {
 
 function getPriorityColor(priority: string): string {
   switch (priority) {
-    case 'critical': return 'bg-red-100 text-red-700 border-red-200'
-    case 'high': return 'bg-orange-100 text-orange-700 border-orange-200'
-    case 'medium': return 'bg-amber-100 text-amber-700 border-amber-200'
-    case 'low': return 'bg-slate-100 text-slate-700 border-slate-200'
-    default: return 'bg-slate-100 text-slate-700 border-slate-200'
+    case 'critical': return 'bg-muted text-foreground border-border'
+    case 'high':     return 'bg-muted text-foreground border-border'
+    case 'medium':   return 'bg-muted/50 text-muted-foreground border-border'
+    case 'low':      return 'bg-muted/30 text-muted-foreground border-border'
+    default:         return 'bg-muted/30 text-muted-foreground border-border'
   }
 }
 
@@ -294,25 +294,25 @@ export default function RoutesPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
-                  <p className="text-3xl font-bold text-primary">{stops.length}</p>
+                  <p className="text-3xl font-bold">{stops.length}</p>
                   <p className="text-sm text-muted-foreground">Total Stops</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <p className="text-3xl font-bold text-emerald-600">{visited}</p>
+                  <p className="text-3xl font-bold">{visited}</p>
                   <p className="text-sm text-muted-foreground">Visited</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <p className="text-3xl font-bold text-amber-600">{pending}</p>
+                  <p className="text-3xl font-bold">{pending}</p>
                   <p className="text-sm text-muted-foreground">Remaining</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <p className="text-3xl font-bold text-blue-600">{optimizationScore}%</p>
+                  <p className="text-3xl font-bold">{optimizationScore}%</p>
                   <p className="text-sm text-muted-foreground">Completed</p>
                 </CardContent>
               </Card>
@@ -363,13 +363,13 @@ export default function RoutesPage() {
               <CardContent className="space-y-2">
 
                 {/* Start Point */}
-                <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-emerald-500 text-white">
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-border">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-foreground text-background shrink-0">
                     <Zap className="size-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-emerald-700">Start Point</p>
-                    <p className="text-xs text-emerald-600 truncate">{startLocation}</p>
+                    <p className="text-sm font-medium">Start Point</p>
+                    <p className="text-xs text-muted-foreground truncate">{startLocation}</p>
                   </div>
                 </div>
 

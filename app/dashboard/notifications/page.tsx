@@ -5,211 +5,278 @@ import { CRMHeader } from '@/components/crm/crm-header'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Bell, BellOff, CheckCheck, Mic, MessageSquare, Phone,
-  TrendingUp, Calendar, AlertTriangle, Info, Star,
-  Bot, Trophy, Clock, ArrowRight, Trash2, Check, Loader2, RefreshCw
+  Bell, CheckCheck, Trash2, UserPlus, CheckSquare, MessageSquare,
+  AlertCircle, Zap, Clock, TrendingUp, RefreshCw, BellOff, Database, Copy
 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
-import { useRealtimeLeads } from '@/hooks/use-realtime-leads'
-import { useRealtimeInteractions } from '@/hooks/use-realtime-interactions'
 import { toast } from 'sonner'
 
-type NotifType = 'ai' | 'task' | 'lead' | 'call' | 'whatsapp' | 'system'
-type NotifPriority = 'urgent' | 'high' | 'medium' | 'low'
+// ── Types ─────────────────────────────────────────────────────────────────────
+type NotificationType =
+  | 'lead_assigned' | 'task_created' | 'task_due' | 'whatsapp_reply'
+  | 'missed_followup' | 'status_change' | 'ai_alert' | 'mention'
+  | 'automation' | 'lead_hot' | 'compliance_alert'
 
 interface Notification {
   id: string
-  type: NotifType
-  priority: NotifPriority
+  user_id: string
+  type: NotificationType
   title: string
-  body: string
-  time: Date
-  read: boolean
-  actionLabel?: string
-  actionHref?: string
+  message: string | null
+  is_read: boolean
+  lead_id: string | null
+  task_id: string | null
+  metadata: Record<string, unknown>
+  created_at: string
 }
 
-const TYPE_CONFIG: Record<NotifType, { icon: React.ReactNode; color: string; bg: string }> = {
-  ai:       { icon: <Bot className="size-4" />,    color: 'text-violet-600', bg: 'bg-violet-50' },
-  task:     { icon: <Calendar className="size-4" />,    color: 'text-blue-600',   bg: 'bg-blue-50' },
-  lead:     { icon: <Star className="size-4" />,        color: 'text-amber-600',  bg: 'bg-amber-50' },
-  call:     { icon: <Phone className="size-4" />,       color: 'text-green-600',  bg: 'bg-green-50' },
-  whatsapp: { icon: <MessageSquare className="size-4" />,color: 'text-emerald-600',bg: 'bg-emerald-50' },
-  system:   { icon: <Info className="size-4" />,        color: 'text-slate-600',  bg: 'bg-slate-50' },
+// ── Icon map ──────────────────────────────────────────────────────────────────
+const TYPE_CONFIG: Record<string, { icon: React.ElementType; label: string }> = {
+  lead_assigned:    { icon: UserPlus,      label: 'Lead Assigned'    },
+  task_created:     { icon: CheckSquare,   label: 'Task Created'     },
+  task_due:         { icon: Clock,         label: 'Task Due'         },
+  whatsapp_reply:   { icon: MessageSquare, label: 'WhatsApp Reply'   },
+  missed_followup:  { icon: AlertCircle,   label: 'Missed Follow-up' },
+  status_change:    { icon: TrendingUp,    label: 'Status Changed'   },
+  ai_alert:         { icon: Zap,           label: 'AI Alert'         },
+  mention:          { icon: Bell,          label: 'Mention'          },
+  automation:       { icon: Zap,           label: 'Automation'       },
+  lead_hot:         { icon: TrendingUp,    label: 'Hot Lead'         },
+  compliance_alert: { icon: AlertCircle,   label: 'Compliance'       },
 }
 
-const PRIORITY_BADGE: Record<NotifPriority, string> = {
-  urgent: 'bg-red-100 text-red-700 border-red-200',
-  high:   'bg-orange-100 text-orange-700 border-orange-200',
-  medium: 'bg-blue-100 text-blue-700 border-blue-200',
-  low:    'bg-slate-100 text-slate-600 border-slate-200',
+const FILTER_OPTIONS = [
+  { value: 'all',             label: 'All'       },
+  { value: 'unread',          label: 'Unread'    },
+  { value: 'lead_hot',        label: 'Hot Leads' },
+  { value: 'whatsapp_reply',  label: 'WhatsApp'  },
+  { value: 'task_due',        label: 'Tasks'     },
+  { value: 'ai_alert',        label: 'AI Alerts' },
+]
+
+function timeSince(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1)  return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
 }
 
+// ── Setup screen shown when table doesn't exist ───────────────────────────────
+const MIGRATION_SQL = `CREATE TABLE IF NOT EXISTS public.notifications (
+  id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id      uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  type         text NOT NULL,
+  title        text NOT NULL,
+  message      text,
+  is_read      boolean DEFAULT false,
+  lead_id      uuid REFERENCES public.leads(id) ON DELETE SET NULL,
+  task_id      uuid REFERENCES public.tasks(id) ON DELETE SET NULL,
+  metadata     jsonb DEFAULT '{}',
+  created_at   timestamptz DEFAULT now()
+);
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users see own notifications"
+  ON public.notifications FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);`
+
+function SetupScreen() {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(MIGRATION_SQL)
+    setCopied(true)
+    toast.success('SQL copied to clipboard')
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="text-center space-y-3">
+        <div className="size-14 rounded-2xl border-2 border-dashed border-border flex items-center justify-center mx-auto">
+          <Database className="size-7 text-muted-foreground/50" />
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold">Notifications table not set up</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Run the SQL below in your Supabase SQL editor to enable real-time notifications.
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border divide-y divide-border">
+        {[
+          { n: '1', text: 'Open your Supabase project dashboard' },
+          { n: '2', text: 'Go to SQL Editor in the left sidebar' },
+          { n: '3', text: 'Paste the SQL below and click Run' },
+          { n: '4', text: 'Refresh this page — notifications will appear here' },
+        ].map(s => (
+          <div key={s.n} className="flex items-center gap-3 p-4">
+            <div className="size-6 rounded-full border border-border text-xs font-bold flex items-center justify-center text-muted-foreground shrink-0">
+              {s.n}
+            </div>
+            <p className="text-sm">{s.text}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+          <span className="text-xs font-mono text-muted-foreground">migration.sql</span>
+          <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 text-xs gap-1.5">
+            <Copy className="size-3" />
+            {copied ? 'Copied!' : 'Copy'}
+          </Button>
+        </div>
+        <pre className="p-4 text-xs font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap leading-relaxed">
+          {MIGRATION_SQL}
+        </pre>
+      </div>
+    </div>
+  )
+}
+
+// ── Notification Row ──────────────────────────────────────────────────────────
+function NotificationRow({
+  notif, onRead, onDelete,
+}: {
+  notif: Notification
+  onRead: (id: string) => void
+  onDelete: (id: string) => void
+}) {
+  const config = TYPE_CONFIG[notif.type] ?? { icon: Bell, label: notif.type }
+  const Icon = config.icon
+  return (
+    <div className={`flex items-start gap-3 p-4 border-b last:border-b-0 transition-colors hover:bg-muted/30 ${!notif.is_read ? 'bg-muted/20' : ''}`}>
+      <div className="relative shrink-0 mt-0.5">
+        <div className="flex size-9 items-center justify-center rounded-lg border border-border bg-background">
+          <Icon className="size-4 text-muted-foreground" />
+        </div>
+        {!notif.is_read && (
+          <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-foreground" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <p className={`text-sm leading-snug ${!notif.is_read ? 'font-semibold' : 'font-medium'}`}>
+            {notif.title}
+          </p>
+          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+            {timeSince(notif.created_at)}
+          </span>
+        </div>
+        {notif.message && (
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.message}</p>
+        )}
+        <div className="flex items-center gap-2 mt-2">
+          <Badge variant="outline" className="text-[10px] h-5 px-1.5">{config.label}</Badge>
+          {!notif.is_read && (
+            <button onClick={() => onRead(notif.id)}
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors">
+              Mark read
+            </button>
+          )}
+          <button onClick={() => onDelete(notif.id)}
+            className="text-xs text-muted-foreground hover:text-destructive transition-colors ml-auto">
+            <Trash2 className="size-3" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function NotificationsPage() {
-  const [dbNotifs, setDbNotifs] = useState<Notification[]>([])
-  const [loading, setLoading] = useState(true)
-  const { leads } = useRealtimeLeads()
-  const { interactions } = useRealtimeInteractions()
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [tableReady, setTableReady] = useState(true)   // assume ready; set false on 42P01 error
+  const [filter, setFilter]         = useState('all')
+  const [markingAll, setMarkingAll] = useState(false)
 
-  // ── Build live notifications from DB + interactions ──────────────────
-  const buildNotifications = useCallback((): Notification[] => {
-    const now = Date.now()
-    const generated: Notification[] = []
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
 
-    // Hot leads (high buying_intent + recent)
-    const hotLeads = leads.filter(l => l.buying_intent === 'high')
-    hotLeads.slice(0, 3).forEach(lead => {
-      generated.push({
-        id: `hot-${lead.id}`,
-        type: 'ai',
-        priority: 'urgent',
-        title: `🔥 ${lead.full_name} has high buying intent`,
-        body: `AI score: ${Math.round((lead.sentiment_score + 1) * 50)}%. Contact now before competitor does.`,
-        time: new Date(lead.updated_at || lead.created_at),
-        read: false,
-        actionLabel: 'View Lead',
-        actionHref: '/dashboard/leads',
-      })
-    })
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100)
 
-    // Recent inbound WhatsApp messages
-    const inboundWA = interactions
-      .filter(i => i.type === 'whatsapp' && i.direction === 'inbound')
-      .slice(0, 3)
-    inboundWA.forEach(msg => {
-      const lead = leads.find(l => l.id === msg.lead_id)
-      generated.push({
-        id: `wa-${msg.id}`,
-        type: 'whatsapp',
-        priority: 'high',
-        title: `New WhatsApp from ${lead?.full_name || 'Unknown'}`,
-        body: msg.content_raw?.slice(0, 100) || 'New message received',
-        time: new Date(msg.created_at),
-        read: false,
-        actionLabel: 'Reply',
-        actionHref: '/dashboard/whatsapp',
-      })
-    })
-
-    // New leads added today
-    const todayLeads = leads.filter(l => {
-      const created = new Date(l.created_at)
-      return new Date().toDateString() === created.toDateString()
-    })
-    if (todayLeads.length > 0) {
-      generated.push({
-        id: `new-leads-today`,
-        type: 'lead',
-        priority: 'medium',
-        title: `${todayLeads.length} new lead${todayLeads.length > 1 ? 's' : ''} added today`,
-        body: todayLeads.map(l => l.full_name).slice(0, 3).join(', ') + (todayLeads.length > 3 ? '…' : ''),
-        time: new Date(todayLeads[0].created_at),
-        read: false,
-        actionLabel: 'View Leads',
-        actionHref: '/dashboard/leads',
-      })
+      if (error) {
+        // 42P01 = table doesn't exist
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          setTableReady(false)
+        }
+      } else if (data) {
+        setTableReady(true)
+        setNotifications(data as Notification[])
+      }
+    } catch {
+      // network error — ignore silently
+    } finally {
+      setLoading(false)
     }
-
-    // Won deals
-    const wonLeads = leads.filter(l => l.status === 'closed_won')
-    wonLeads.slice(0, 2).forEach(lead => {
-      generated.push({
-        id: `won-${lead.id}`,
-        type: 'ai',
-        priority: 'high',
-        title: `🏆 Deal Won: ${lead.full_name}`,
-        body: `₹${((lead.deal_value || lead.estimated_budget || 0) / 100000).toFixed(1)}L closed. Great work!`,
-        time: new Date(lead.updated_at || lead.created_at),
-        read: true,
-        actionLabel: 'View Pipeline',
-        actionHref: '/dashboard/pipeline',
-      })
-    })
-
-    // DB notifications merged
-    return [...generated, ...dbNotifs]
-      .sort((a, b) => b.time.getTime() - a.time.getTime())
-  }, [leads, interactions, dbNotifs])
-
-  // ── Load DB notifications ─────────────────────────────────────────────
-  const loadDbNotifs = useCallback(async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('notifications')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(30)
-
-    if (data) {
-      setDbNotifs(data.map(n => ({
-        id: n.id,
-        type: (n.type || 'system') as NotifType,
-        priority: (n.priority || 'medium') as NotifPriority,
-        title: n.title,
-        body: n.body || '',
-        time: new Date(n.created_at),
-        read: n.is_read,
-        actionLabel: n.action_label,
-        actionHref: n.action_href,
-      })))
-    }
-    setLoading(false)
   }, [])
 
-  useEffect(() => { loadDbNotifs() }, [loadDbNotifs])
+  useEffect(() => {
+    fetchNotifications()
+    if (!tableReady) return   // don't subscribe if table missing
 
-  const allNotifs = buildNotifications()
-  const unread = allNotifs.filter(n => !n.read)
+    const supabase = createClient()
+    const channel = supabase
+      .channel('notifications-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' },
+        () => fetchNotifications())
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchNotifications])
+
+  const handleRead = useCallback(async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+    setNotifications(p => p.map(n => n.id === id ? { ...n, is_read: true } : n))
+  }, [])
+
+  const handleDelete = useCallback(async (id: string) => {
+    const supabase = createClient()
+    await supabase.from('notifications').delete().eq('id', id)
+    setNotifications(p => p.filter(n => n.id !== id))
+  }, [])
 
   const markAllRead = useCallback(async () => {
+    setMarkingAll(true)
     const supabase = createClient()
-    await supabase.from('notifications').update({ is_read: true }).eq('is_read', false)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setMarkingAll(false); return }
+    await supabase.from('notifications').update({ is_read: true })
+      .eq('user_id', user.id).eq('is_read', false)
+    setNotifications(p => p.map(n => ({ ...n, is_read: true })))
     toast.success('All notifications marked as read')
-    loadDbNotifs()
-  }, [loadDbNotifs])
+    setMarkingAll(false)
+  }, [])
 
-  const deleteNotif = useCallback(async (id: string) => {
-    if (!id.startsWith('hot-') && !id.startsWith('wa-') && !id.startsWith('new-') && !id.startsWith('won-')) {
-      const supabase = createClient()
-      await supabase.from('notifications').delete().eq('id', id)
-      loadDbNotifs()
-    }
-    toast.success('Notification dismissed')
-  }, [loadDbNotifs])
+  const filtered = notifications.filter(n => {
+    if (filter === 'all')    return true
+    if (filter === 'unread') return !n.is_read
+    return n.type === filter
+  })
+  const unreadCount = notifications.filter(n => !n.is_read).length
 
-  function NotifCard({ notif }: { notif: Notification }) {
-    const cfg = TYPE_CONFIG[notif.type] || TYPE_CONFIG.system
+  // ── Render ────────────────────────────────────────────────────────────────
+  if (!loading && !tableReady) {
     return (
-      <div className={`flex gap-4 p-4 rounded-xl border transition-all ${notif.read ? 'bg-background opacity-70' : 'bg-card shadow-sm'}`}>
-        <div className={`flex size-10 shrink-0 items-center justify-center rounded-full ${cfg.bg} ${cfg.color}`}>
-          {cfg.icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className={`text-sm font-semibold leading-tight ${notif.read ? 'text-muted-foreground' : ''}`}>{notif.title}</p>
-              {!notif.read && <span className="size-2 rounded-full bg-primary shrink-0 mt-0.5" />}
-            </div>
-            <Badge variant="outline" className={`text-xs shrink-0 ${PRIORITY_BADGE[notif.priority]}`}>{notif.priority}</Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{notif.body}</p>
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Clock className="size-3" />{formatDistanceToNow(notif.time, { addSuffix: true })}
-            </span>
-            {notif.actionLabel && notif.actionHref && (
-              <a href={notif.actionHref} className="text-xs text-primary hover:underline flex items-center gap-1">
-                {notif.actionLabel} <ArrowRight className="size-3" />
-              </a>
-            )}
-            <button onClick={() => deleteNotif(notif.id)} className="ml-auto text-muted-foreground hover:text-destructive transition-colors">
-              <Trash2 className="size-3.5" />
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-col min-h-screen">
+        <CRMHeader title="Notifications" subtitle="Setup required" />
+        <main className="flex-1 p-6"><SetupScreen /></main>
       </div>
     )
   }
@@ -218,70 +285,80 @@ export default function NotificationsPage() {
     <div className="flex flex-col min-h-screen">
       <CRMHeader
         title="Notifications"
-        subtitle={`${unread.length} unread · Generated from live Supabase data`}
+        subtitle={loading ? 'Loading…' : unreadCount > 0
+          ? `${unreadCount} unread · ${notifications.length} total`
+          : `${notifications.length} notifications`}
       />
-      <main className="flex-1 p-4 md:p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="text-emerald-600 bg-emerald-50 border-emerald-200">
-              <span className="size-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />Live
-            </Badge>
-            {unread.length > 0 && (
-              <Badge className="bg-red-500 text-white">{unread.length} unread</Badge>
-            )}
+
+      <main className="flex-1 p-4 md:p-6 space-y-4 max-w-3xl mx-auto w-full">
+        {/* Controls */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-1 border border-border rounded-lg p-1 bg-muted/20">
+            {FILTER_OPTIONS.map(opt => (
+              <button key={opt.value} onClick={() => setFilter(opt.value)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  filter === opt.value
+                    ? 'bg-background text-foreground shadow-sm border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}>
+                {opt.label}
+                {opt.value === 'unread' && unreadCount > 0 && (
+                  <span className="ml-1.5 inline-flex size-4 items-center justify-center rounded-full bg-foreground text-background text-[10px] font-bold">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={loadDbNotifs}>
-              <RefreshCw className="size-4 mr-2" />Refresh
+            <Button variant="ghost" size="sm" onClick={fetchNotifications}>
+              <RefreshCw className="size-4 mr-1.5" />Refresh
             </Button>
-            {unread.length > 0 && (
-              <Button variant="outline" size="sm" onClick={markAllRead}>
-                <CheckCheck className="size-4 mr-2" />Mark All Read
+            {unreadCount > 0 && (
+              <Button variant="outline" size="sm" onClick={markAllRead} disabled={markingAll}>
+                <CheckCheck className="size-4 mr-1.5" />Mark all read
               </Button>
             )}
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <Tabs defaultValue="all" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="all">All ({allNotifs.length})</TabsTrigger>
-              <TabsTrigger value="unread">Unread ({unread.length})</TabsTrigger>
-              <TabsTrigger value="ai">AI Insights ({allNotifs.filter(n => n.type === 'ai').length})</TabsTrigger>
-              <TabsTrigger value="leads">Leads ({allNotifs.filter(n => n.type === 'lead').length})</TabsTrigger>
-            </TabsList>
-
-            {['all','unread','ai','leads'].map(tab => (
-              <TabsContent key={tab} value={tab} className="space-y-3">
-                {(tab === 'all' ? allNotifs :
-                  tab === 'unread' ? unread :
-                  tab === 'ai' ? allNotifs.filter(n => n.type === 'ai') :
-                  allNotifs.filter(n => n.type === 'lead')
-                ).length === 0 ? (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                      <BellOff className="size-12 text-muted-foreground/30 mb-3" />
-                      <p className="text-muted-foreground">No notifications yet</p>
-                      <p className="text-xs text-muted-foreground mt-1">Add leads and interactions to generate real-time alerts</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-3">
-                    {(tab === 'all' ? allNotifs :
-                      tab === 'unread' ? unread :
-                      tab === 'ai' ? allNotifs.filter(n => n.type === 'ai') :
-                      allNotifs.filter(n => n.type === 'lead')
-                    ).map(notif => <NotifCard key={notif.id} notif={notif} />)}
+        {/* List */}
+        <Card>
+          {loading ? (
+            <div className="p-4 space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <Skeleton className="size-9 rounded-lg shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
                   </div>
-                )}
-              </TabsContent>
-            ))}
-          </Tabs>
-        )}
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <BellOff className="size-12 text-muted-foreground/30 mb-3" />
+              <p className="font-medium text-sm">
+                {filter === 'all' ? 'No notifications yet' : `No ${FILTER_OPTIONS.find(f => f.value === filter)?.label?.toLowerCase()} notifications`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                {filter === 'all'
+                  ? 'Notifications appear here when leads are assigned, tasks are due, or AI detects signals.'
+                  : 'Try a different filter.'}
+              </p>
+              {filter !== 'all' && (
+                <Button variant="ghost" size="sm" className="mt-3" onClick={() => setFilter('all')}>
+                  View all
+                </Button>
+              )}
+            </CardContent>
+          ) : (
+            filtered.map(n => (
+              <NotificationRow key={n.id} notif={n} onRead={handleRead} onDelete={handleDelete} />
+            ))
+          )}
+        </Card>
       </main>
     </div>
   )

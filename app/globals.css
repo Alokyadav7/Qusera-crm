@@ -272,10 +272,12 @@
 .delay-300 { animation-delay: 0.3s; }
 .delay-400 { animation-delay: 0.4s; }
 .delay-500 { animation-delay: 0.5s; }
+.delay-600 { animation-delay: 0.6s; }
+.delay-700 { animation-delay: 0.7s; }
 
-/* Gradient Text (Cosmic Theme) */
+/* Gradient Text (Editorial Monochrome High-Contrast) */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(160, 84%, 39%) 100%);
+  background: linear-gradient(135deg, hsl(var(--foreground)) 0%, color-mix(in srgb, hsl(var(--foreground)) 70%, transparent) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -283,69 +285,56 @@
 }
 
 .dark .gradient-text {
-  background: linear-gradient(135deg, hsl(262, 83%, 72%) 0%, hsl(160, 84%, 55%) 100%);
+  background: linear-gradient(135deg, hsl(var(--foreground)) 0%, color-mix(in srgb, hsl(var(--foreground)) 80%, transparent) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Glassmorphism */
+/* Glassmorphism -> Clean Editorial Border Panels */
 .glass {
-  background: color-mix(in srgb, var(--background) 75%, transparent);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
 }
 
-/* glass-dark: used in sidebar for a slightly darker, frosted panel */
+/* glass-dark */
 .glass-dark {
-  background: color-mix(in srgb, var(--sidebar) 98%, transparent);
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
-  border-right: 1px solid color-mix(in srgb, var(--sidebar-border) 60%, transparent);
+  background: hsl(var(--background));
+  border-right: 1px solid hsl(var(--border));
 }
 
 .glass-card {
-  background: color-mix(in srgb, var(--card) 60%, transparent);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
-  box-shadow: inset 0 1px 1px color-mix(in srgb, var(--foreground) 5%, transparent), var(--shadow-sm);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-sm);
 }
 
 .glass-ultra {
-  background: color-mix(in srgb, var(--background) 40%, transparent);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--foreground) 10%, transparent), var(--shadow-md);
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-md);
 }
 
-/* Gradient backgrounds - Cosmic */
+/* Neutral subtle backgrounds */
 .hero-gradient {
-  background: radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--primary) 12%, transparent) 0%, transparent 60%),
-              var(--background);
+  background: hsl(var(--background));
 }
 
 .mesh-gradient {
-  background-image:
-    radial-gradient(at 20% 25%, color-mix(in srgb, var(--primary) 8%, transparent) 0px, transparent 50%),
-    radial-gradient(at 80% 10%, color-mix(in srgb, var(--accent) 7%, transparent) 0px, transparent 50%),
-    radial-gradient(at 10% 80%, color-mix(in srgb, var(--primary) 7%, transparent) 0px, transparent 50%),
-    radial-gradient(at 90% 85%, color-mix(in srgb, var(--accent) 8%, transparent) 0px, transparent 50%);
+  background: hsl(var(--background));
 }
 
-/* Glow effects */
+/* No glowing effects */
 .glow-primary {
-  box-shadow: 0 0 30px color-mix(in srgb, var(--primary) 15%, transparent);
+  box-shadow: none;
 }
 
 .glow-accent {
-  box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: none;
 }
 
 .glow-sm {
-  box-shadow: 0 0 12px color-mix(in srgb, var(--foreground) 8%, transparent);
+  box-shadow: none;
 }
 
 /* Premium card hover */
@@ -406,3 +395,70 @@ body.ai-assistant-open #ai-assistant-toggle {
   opacity: 0;
   pointer-events: none;
 }
+
+/* Custom premium elements */
+.faq-content-enter {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease-out;
+}
+.faq-content-active {
+  max-height: 300px;
+  opacity: 1;
+}
+
+/* Slider Track Custom Redesign */
+.custom-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.custom-range-slider::-webkit-slider-runnable-track {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  height: 6px;
+  border-radius: 99px;
+}
+.custom-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -5px;
+  background-color: hsl(var(--foreground));
+  height: 16px;
+  width: 16px;
+  border-radius: 99px;
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s ease;
+}
+.custom-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+.custom-range-slider::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+}
+
+.custom-range-slider::-moz-range-thumb {
+  background-color: hsl(var(--foreground));
+  height: 16px;
+  width: 16px;
+  border-radius: 99px;
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s ease;
+}
+
+/* Premium glows - removed for minimal look */
+.glow-card-primary:hover { box-shadow: var(--shadow-md); }
+.glow-card-accent:hover { box-shadow: var(--shadow-md); }
+.glow-card-emerald:hover { box-shadow: var(--shadow-md); }
+
+/* Micro-animations */
+.animate-pulse-emerald {
+  animation: none;
+}
+.animate-pulse-violet {
+  animation: none;
+}
+

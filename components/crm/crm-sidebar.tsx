@@ -25,7 +25,8 @@ import {
   Smartphone,
   Globe,
   Plug,
-  HeartHandshake
+  HeartHandshake,
+  ShieldCheck
 } from 'lucide-react'
 import {
   Sidebar,
@@ -148,6 +149,25 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [unreadCount, setUnreadCount] = useState<number>(0)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // ── Check admin role ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
+      setIsAdmin(true)
+      return
+    }
+    if (!user) return
+    const supabase = createClient()
+    supabase
+      .from('user_roles')
+      .select('role:roles(name)')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        const names = (data ?? []).map((r: any) => r.role?.name).filter(Boolean)
+        setIsAdmin(names.some((n: string) => ['super_admin', 'admin'].includes(n)))
+      })
+  }, [user])
 
   // ── Real unread count from Supabase ──────────────────────────────────
   useEffect(() => {
@@ -207,6 +227,29 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Admin link — only for admins */}
+        {isAdmin && (
+          <>
+            <SidebarGroup>
+              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin')}>
+                      <a href="/dashboard/admin">
+                        <ShieldCheck className="size-4" />
+                        <span>Admin Panel</span>
+                        <Badge className="ml-auto text-xs bg-red-500 text-white border-0">Admin</Badge>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarSeparator />
+          </>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>

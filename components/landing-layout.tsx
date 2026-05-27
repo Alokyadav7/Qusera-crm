@@ -5,107 +5,116 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useTheme } from 'next-themes'
-import { Zap, Globe, MessageSquare, Mail, Sun, Moon, Menu, X } from 'lucide-react'
+import { Sun, Moon, Menu, X, ChevronDown, Zap } from 'lucide-react'
 
-// Navigation Component
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
+  useEffect(() => { setMounted(true) }, [])
+
   useEffect(() => {
-    setMounted(true)
+    const onScroll = () => setScrolled(window.scrollY > 16)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
-  }
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary shadow-[0_0_15px_rgba(var(--primary),0.3)]">
-            <Zap className="size-5 text-primary-foreground" />
+    <header className={`fixed top-0 z-50 w-full transition-all duration-200 ${
+      scrolled
+        ? 'bg-background/90 backdrop-blur-md border-b border-border'
+        : 'bg-transparent'
+    }`}>
+      <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 group z-10">
+          <div className="flex size-6 items-center justify-center rounded bg-foreground">
+            <Zap className="size-3.5 text-background" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-foreground bg-gradient-to-r from-foreground to-foreground/90 bg-clip-text text-transparent">OrbitCRM</span>
+          <span className="text-[14px] font-bold tracking-tight text-foreground">
+            OrbitCRM
+          </span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-8">
-          <Link href="/#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+        {/* Desktop Nav */}
+        <nav className="hidden lg:flex items-center gap-6">
+          <Link href="/#features" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
             Features
           </Link>
-          <Link href="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link href="/#pricing" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
             Pricing
           </Link>
-          <Link href="/#integrations" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <Link href="/#integrations" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
             Integrations
+          </Link>
+          <Link href="/#faq" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            FAQ
           </Link>
         </nav>
 
+        {/* Actions */}
         <div className="hidden lg:flex items-center gap-3">
           {mounted && (
             <Button
               variant="ghost"
               size="icon"
-              className="size-9 rounded-lg border border-border/50 hover:bg-muted/50"
-              onClick={toggleTheme}
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="size-7 rounded text-muted-foreground hover:text-foreground"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              aria-label="Toggle theme"
             >
-              {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              {theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
             </Button>
           )}
-          <Button variant="ghost" asChild>
-            <Link href="/login">Sign In</Link>
+          <Button variant="ghost" asChild className="h-8 px-3 text-xs font-semibold">
+            <Link href="/login">Sign in</Link>
           </Button>
-          <Button asChild className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow">
-            <Link href="/login">Start Free Trial</Link>
+          <Button asChild className="h-8 px-4 text-xs font-semibold rounded bg-foreground text-background hover:bg-foreground/90 shadow-sm">
+            <Link href="/login">
+              Get Started
+            </Link>
           </Button>
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile controls */}
         <div className="flex items-center gap-2 lg:hidden">
           {mounted && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-lg border border-border/50 hover:bg-muted/50"
-              onClick={toggleTheme}
-            >
-              {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            <Button variant="ghost" size="icon" className="size-8 rounded" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              {theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-9 rounded-lg"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          <Button variant="ghost" size="icon" className="size-8 rounded" onClick={() => setMobileMenuOpen(v => !v)}>
+            {mobileMenuOpen ? <X className="size-4" /> : <Menu className="size-4" />}
           </Button>
         </div>
       </div>
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t bg-background">
-          <nav className="container mx-auto flex flex-col gap-4 p-4">
-            <Link href="/#features" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-              Features
-            </Link>
-            <Link href="/#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-              Pricing
-            </Link>
-            <Link href="/#integrations" className="text-sm font-medium text-muted-foreground hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>
-              Integrations
-            </Link>
-            <div className="flex flex-col gap-2 pt-4 border-t">
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/login">Sign In</Link>
+        <div className="lg:hidden border-t border-border bg-background">
+          <nav className="container mx-auto flex flex-col gap-1 p-4">
+            {[
+              { label: 'Features', href: '/#features' },
+              { label: 'Pricing', href: '/#pricing' },
+              { label: 'Integrations', href: '/#integrations' },
+              { label: 'FAQ', href: '/#faq' },
+            ].map(item => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <div className="flex flex-col gap-2 pt-3 mt-2 border-t border-border">
+              <Button variant="outline" asChild className="w-full rounded h-9 text-xs font-semibold">
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
               </Button>
-              <Button asChild className="w-full">
-                <Link href="/login">Start Free Trial</Link>
+              <Button asChild className="w-full rounded h-9 text-xs font-semibold bg-foreground text-background hover:bg-foreground/90">
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Get started free</Link>
               </Button>
             </div>
           </nav>
@@ -115,90 +124,73 @@ export function Navigation() {
   )
 }
 
-// Footer Component
 export function Footer() {
   return (
-    <footer className="border-t py-12 md:py-16 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
-          {/* Brand */}
-          <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-primary">
-                <Zap className="size-5 text-primary-foreground" />
+    <footer className="border-t border-border py-12 bg-background">
+      <div className="container mx-auto px-4 md:px-6">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
+          <div className="lg:col-span-2 space-y-3">
+            <Link href="/" className="flex items-center gap-2 group w-fit">
+              <div className="flex size-6 items-center justify-center rounded bg-foreground">
+                <Zap className="size-3.5 text-background" />
               </div>
-              <span className="text-xl font-bold">OrbitCRM</span>
+              <span className="text-[14px] font-bold tracking-tight text-foreground">OrbitCRM</span>
             </Link>
-            <p className="mt-4 text-sm text-muted-foreground max-w-xs">
-              India&apos;s first voice-native CRM built for modern sales teams.
-              Manage leads, track conversations, and close deals faster.
+            <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+              India's first voice-native CRM for modern sales teams. Manage leads, track conversations, and close deals faster.
             </p>
-            <div className="mt-6 flex items-center gap-3">
-              <Button variant="outline" size="icon" className="size-9">
-                <Globe className="size-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="size-9">
-                <MessageSquare className="size-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="size-9">
-                <Mail className="size-4" />
-              </Button>
+          </div>
+
+          {[
+            {
+              title: 'Product',
+              links: [
+                { label: 'Features', href: '/#features' },
+                { label: 'Pricing', href: '/#pricing' },
+                { label: 'Integrations', href: '/#integrations' },
+              ]
+            },
+            {
+              title: 'Company',
+              links: [
+                { label: 'About Us', href: '/about' },
+                { label: 'Careers', href: '/careers' },
+                { label: 'Blog', href: '/blog' },
+              ]
+            },
+            {
+              title: 'Legal',
+              links: [
+                { label: 'Privacy Policy', href: '/privacy' },
+                { label: 'Terms of Service', href: '/terms' },
+              ]
+            },
+          ].map(col => (
+            <div key={col.title} className="space-y-3">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-foreground">{col.title}</h4>
+              <ul className="space-y-1.5">
+                {col.links.map(link => (
+                  <li key={link.label}>
+                    <Link href={link.href} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-
-          {/* Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Product</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/#features" className="hover:text-foreground transition-colors">Features</Link></li>
-              <li><Link href="/#pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
-              <li><Link href="/#integrations" className="hover:text-foreground transition-colors">Integrations</Link></li>
-              <li><Link href="/api-docs" className="hover:text-foreground transition-colors">API Docs</Link></li>
-              <li><Link href="/changelog" className="hover:text-foreground transition-colors">Changelog</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/about" className="hover:text-foreground transition-colors">About Us</Link></li>
-              <li><Link href="/careers" className="hover:text-foreground transition-colors">Careers</Link></li>
-              <li><Link href="/blog" className="hover:text-foreground transition-colors">Blog</Link></li>
-              <li><Link href="/press" className="hover:text-foreground transition-colors">Press Kit</Link></li>
-              <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Resources</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/help" className="hover:text-foreground transition-colors">Help Center</Link></li>
-              <li><Link href="/tutorials" className="hover:text-foreground transition-colors">Tutorials</Link></li>
-              <li><Link href="/webinars" className="hover:text-foreground transition-colors">Webinars</Link></li>
-              <li><Link href="/case-studies" className="hover:text-foreground transition-colors">Case Studies</Link></li>
-              <li><Link href="/community" className="hover:text-foreground transition-colors">Community</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
-              <li><Link href="/security" className="hover:text-foreground transition-colors">Security</Link></li>
-              <li><Link href="/gdpr" className="hover:text-foreground transition-colors">GDPR</Link></li>
-              <li><Link href="/cookies" className="hover:text-foreground transition-colors">Cookies</Link></li>
-            </ul>
-          </div>
+          ))}
         </div>
 
-        <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-8">
-          <p className="text-sm text-muted-foreground">
-            © 2026 OrbitCRM. All rights reserved.
-          </p>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <span>Made with care in India</span>
-            <Badge variant="outline" className="text-xs">SOC 2 Certified</Badge>
+        <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
+          <p>© 2026 OrbitCRM Technologies Pvt. Ltd. All rights reserved.</p>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              Made in India
+            </span>
+            <Badge variant="outline" className="text-[10px] font-mono border-border px-1.5 py-0">
+              SOC 2 Type II
+            </Badge>
           </div>
         </div>
       </div>

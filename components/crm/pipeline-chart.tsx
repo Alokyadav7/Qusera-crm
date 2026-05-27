@@ -17,13 +17,13 @@ interface PipelineChartProps {
 }
 
 const stages = [
-  { key: 'new', label: 'New', color: 'bg-blue-500' },
-  { key: 'contacted', label: 'Contacted', color: 'bg-purple-500' },
-  { key: 'interested', label: 'Interested', color: 'bg-cyan-500' },
-  { key: 'verified', label: 'Verified', color: 'bg-emerald-500' },
-  { key: 'negotiation', label: 'Negotiation', color: 'bg-amber-500' },
-  { key: 'closed_won', label: 'Won', color: 'bg-green-500' },
-  { key: 'closed_lost', label: 'Lost', color: 'bg-red-500' }
+  { key: 'new',        label: 'New',         opacity: 'opacity-40' },
+  { key: 'contacted',  label: 'Contacted',   opacity: 'opacity-50' },
+  { key: 'interested', label: 'Interested',  opacity: 'opacity-60' },
+  { key: 'verified',   label: 'Verified',    opacity: 'opacity-70' },
+  { key: 'negotiation',label: 'Negotiation', opacity: 'opacity-80' },
+  { key: 'closed_won', label: 'Won',         opacity: 'opacity-100' },
+  { key: 'closed_lost',label: 'Lost',        opacity: 'opacity-20' },
 ] as const
 
 export function PipelineChart({ data }: PipelineChartProps) {
@@ -34,7 +34,7 @@ export function PipelineChart({ data }: PipelineChartProps) {
   const activeLeads = data.new + data.contacted + data.interested + data.verified + data.negotiation
 
   return (
-    <Card className="glass-card flex flex-col h-full card-hover border-border/50 shadow-sm shadow-primary/5">
+    <Card className="flex flex-col h-full">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Sales Pipeline</CardTitle>
         <CardDescription>
@@ -56,9 +56,9 @@ export function PipelineChart({ data }: PipelineChartProps) {
                   <span className="text-muted-foreground">{stage.label}</span>
                   <span className="font-medium">{count}</span>
                 </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${stage.color}`}
+                    className={`h-full rounded-full bg-foreground transition-all duration-500 ${stage.opacity}`}
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
@@ -70,15 +70,15 @@ export function PipelineChart({ data }: PipelineChartProps) {
         <div className="mt-6 pt-4 border-t">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold text-blue-600">{activeLeads}</p>
+              <p className="text-2xl font-bold">{activeLeads}</p>
               <p className="text-xs text-muted-foreground">Active</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-emerald-600">{data.closed_won}</p>
+              <p className="text-2xl font-bold">{data.closed_won}</p>
               <p className="text-xs text-muted-foreground">Won</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-amber-600">{winRate}%</p>
+              <p className="text-2xl font-bold">{winRate}%</p>
               <p className="text-xs text-muted-foreground">Win Rate</p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRealtimeLeads } from '@/hooks/use-realtime-leads'
 import { useRealtimeInteractions } from '@/hooks/use-realtime-interactions'
 import { CRMHeader } from '@/components/crm/crm-header'
@@ -11,10 +11,25 @@ import { Progress } from '@/components/ui/progress'
 import {
   BrainCircuit, TrendingUp, TrendingDown, Minus,
   Phone, MessageSquare, Clock, Star,
-  RefreshCw, ChevronUp, ChevronDown, Zap, Loader2
+  RefreshCw, ChevronUp, ChevronDown, Zap, Loader2, History
 } from 'lucide-react'
 import type { Lead } from '@/hooks/use-realtime-leads'
 import type { Interaction } from '@/hooks/use-realtime-interactions'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
+
+// ── Score history record type ─────────────────────────────────────────────────
+interface ScoreHistoryRecord {
+  id: string
+  lead_id: string
+  score: number
+  previous_score: number | null
+  delta: number | null
+  tier: string
+  reasons: { label: string; weight: number; detail: string }[]
+  triggered_by: string | null
+  created_at: string
+}
 
 // ── Score a lead from real Supabase fields ────────────────────────────────────
 function scoreLead(lead: Lead, interactions: Interaction[]): {
@@ -97,14 +112,19 @@ function scoreLead(lead: Lead, interactions: Interaction[]): {
   if (lead.status === 'closed_lost') { score = 5 }
 
   const finalScore = Math.max(5, Math.min(100, score))
-  const previousScore = Math.max(5, Math.min(100, finalScore + (Math.random() > 0.5 ? -8 : 8)))
+
+  // Deterministic delta derived from lead ID character sum (no Math.random)
+  const idSum = lead.id.split('').reduce((s, c) => s + c.charCodeAt(0), 0)
+  const deterministicDelta = (idSum % 17) - 8  // Range: -8 to +8
+  const previousScore = Math.max(5, Math.min(100, finalScore + deterministicDelta))
 
   const tier: 'hot' | 'warm' | 'cold' | 'lost' =
     lead.status === 'closed_lost' ? 'lost' :
     finalScore >= 75 ? 'hot' :
     finalScore >= 50 ? 'warm' : 'cold'
 
-  const predictedConversion = Math.min(95, Math.max(5, finalScore - 5 + Math.floor(Math.random() * 10)))
+  // Deterministic win probability — directly derived from score, no randomness
+  const predictedConversion = Math.min(95, Math.max(5, Math.round(finalScore * 0.9)))
 
   const recommendation =
     tier === 'hot' ? 'Call now — high intent. Offer a time-limited deal to close this week.' :
@@ -116,17 +136,17 @@ function scoreLead(lead: Lead, interactions: Interaction[]): {
 }
 
 function scoreTier(score: number) {
-  if (score >= 80) return { label: 'Hot Lead', color: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800/30' }
-  if (score >= 55) return { label: 'Warm Lead', color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-800/30' }
-  if (score >= 30) return { label: 'Cold Lead', color: 'bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800/30' }
-  return { label: 'At Risk', color: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800' }
+  if (score >= 80) return { label: 'Hot Lead',  color: 'bg-foreground/10 text-foreground border-border' }
+  if (score >= 55) return { label: 'Warm Lead', color: 'bg-muted text-muted-foreground border-border' }
+  if (score >= 30) return { label: 'Cold Lead', color: 'bg-muted/60 text-muted-foreground border-border' }
+  return { label: 'At Risk', color: 'bg-muted/30 text-muted-foreground border-border' }
 }
 
 function scoreRingColor(score: number) {
-  if (score >= 80) return 'stroke-red-500'
-  if (score >= 55) return 'stroke-amber-500'
-  if (score >= 30) return 'stroke-blue-400'
-  return 'stroke-slate-400'
+  if (score >= 80) return 'stroke-foreground'
+  if (score >= 55) return 'stroke-foreground/70'
+  if (score >= 30) return 'stroke-foreground/40'
+  return 'stroke-muted-foreground'
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -134,6 +154,61 @@ export default function AILeadScoringPage() {
   const { leads, isLoading: leadsLoading, refetch } = useRealtimeLeads()
   const { interactions, isLoading: intLoading } = useRealtimeInteractions()
   const isLoading = leadsLoading || intLoading
+
+  // Score history map: lead_id → most recent history record
+  const [historyMap, setHistoryMap] = useState<Record<string, ScoreHistoryRecord>>({})
+  const [saving, setSaving] = useState(false)
+
+  // Load latest score history per lead from DB
+  const loadHistory = useCallback(async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('lead_score_history')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    if (data) {
+      // Keep only the most recent record per lead (already sorted desc)
+      const map: Record<string, ScoreHistoryRecord> = {}
+      for (const row of data as ScoreHistoryRecord[]) {
+        if (!map[row.lead_id]) map[row.lead_id] = row
+      }
+      setHistoryMap(map)
+    }
+  }, [])
+
+  useEffect(() => { loadHistory() }, [loadHistory])
+
+  // Save computed scores to DB (called on rescore)
+  const saveScores = useCallback(async (scored: typeof scoredLeads) => {
+    setSaving(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setSaving(false); return }
+
+    const rows = scored.map(entry => ({
+      lead_id: entry.lead.id,
+      user_id: user.id,
+      score: entry.score,
+      previous_score: historyMap[entry.lead.id]?.score ?? null,
+      tier: entry.tier,
+      reasons: entry.signals.map(s => ({ label: s.label, weight: s.weight, detail: s.detail })),
+      triggered_by: 'manual_rescore',
+    }))
+
+    const { error } = await supabase.from('lead_score_history').insert(rows)
+    if (error) {
+      // Table may not exist yet — show friendly message
+      if (error.message.includes('relation') || error.message.includes('does not exist')) {
+        toast.info('Run the DB migration to enable score history tracking.')
+      }
+    } else {
+      toast.success('Scores saved to history')
+      loadHistory()
+    }
+    setSaving(false)
+  }, [historyMap, loadHistory])
 
   // Score all leads in real time
   const scoredLeads = useMemo(() =>
@@ -171,7 +246,9 @@ export default function AILeadScoringPage() {
   }
 
   const selected = selectedEntry!
-  const delta = selected.score - selected.previousScore
+  // Use real DB historical previous score if available, otherwise no delta
+  const dbHistory = historyMap[selected.lead.id]
+  const delta = dbHistory ? selected.score - dbHistory.score : 0
   const tier = scoreTier(selected.score)
 
   return (
@@ -185,17 +262,31 @@ export default function AILeadScoringPage() {
         {/* Header bar */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BrainCircuit className="size-5 text-primary" />
+            <BrainCircuit className="size-5 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
               {scoredLeads.length} leads scored · Live from Supabase
             </span>
-            <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/30">
-              <span className="size-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />Real-time
+            <Badge variant="outline" className="text-xs">
+              <span className="size-2 rounded-full bg-foreground/60 mr-1.5" />Real-time
             </Badge>
           </div>
-          <Button size="sm" variant="outline" onClick={refetch}>
-            <RefreshCw className="size-4 mr-2" />Rescore All
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm" variant="outline"
+              onClick={async () => { await refetch(); await saveScores(scoredLeads) }}
+              disabled={saving}
+            >
+              {saving
+                ? <><Loader2 className="size-4 mr-2 animate-spin" />Saving…</>
+                : <><RefreshCw className="size-4 mr-2" />Rescore &amp; Save</>}
+            </Button>
+            {Object.keys(historyMap).length > 0 && (
+              <Badge variant="outline" className="text-xs gap-1">
+                <History className="size-3" />
+                {Object.keys(historyMap).length} scored
+              </Badge>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-5">
@@ -203,7 +294,9 @@ export default function AILeadScoringPage() {
           <div className="lg:col-span-2 space-y-3">
             {scoredLeads.map(entry => {
               const t = scoreTier(entry.score)
-              const d = entry.score - entry.previousScore
+              // Real delta from DB history
+              const hist = historyMap[entry.lead.id]
+              const d = hist ? entry.score - hist.score : 0
               return (
                 <Card
                   key={entry.lead.id}
@@ -275,7 +368,7 @@ export default function AILeadScoringPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Est. Value</p>
-                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    <p className="text-xl font-bold">
                       ₹{((selected.lead.deal_value || selected.lead.estimated_budget || 0) / 100000).toFixed(1)}L
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">{selected.predictedConversion}% win probability</p>
@@ -295,18 +388,18 @@ export default function AILeadScoringPage() {
                 {/* Scoring signals */}
                 <div>
                   <p className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Zap className="size-4 text-amber-500" />Scoring Signals
+                    <Zap className="size-4 text-muted-foreground" />Scoring Signals
                   </p>
                   <div className="space-y-2.5">
                     {selected.signals.map((sig, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <div className={`size-6 rounded-full flex items-center justify-center shrink-0 ${sig.impact === 'positive' ? 'bg-emerald-100 dark:bg-emerald-950/40' : sig.impact === 'negative' ? 'bg-red-100 dark:bg-red-950/40' : 'bg-slate-100 dark:bg-slate-900'}`}>
-                          {sig.impact === 'positive' ? <ChevronUp className="size-3.5 text-emerald-600 dark:text-emerald-400" /> : sig.impact === 'negative' ? <ChevronDown className="size-3.5 text-red-500 dark:text-red-400" /> : <Minus className="size-3.5 text-slate-500 dark:text-slate-400" />}
+                        <div className="size-6 rounded-full flex items-center justify-center shrink-0 bg-muted border border-border">
+                          {sig.impact === 'positive' ? <ChevronUp className="size-3.5 text-foreground" /> : sig.impact === 'negative' ? <ChevronDown className="size-3.5 text-muted-foreground" /> : <Minus className="size-3.5 text-muted-foreground" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2 mb-0.5">
                             <span className="text-sm font-medium">{sig.label}</span>
-                            <span className={`text-xs font-bold ${sig.impact === 'positive' ? 'text-emerald-600 dark:text-emerald-400' : sig.impact === 'negative' ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'}`}>
+                            <span className="text-xs font-bold text-muted-foreground">
                               {sig.weight > 0 ? '+' : ''}{sig.weight}pts
                             </span>
                           </div>
@@ -331,6 +424,44 @@ export default function AILeadScoringPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Score History Card — shows real DB history */}
+            {dbHistory && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <History className="size-4 text-muted-foreground" />
+                    Score History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-0">
+                  <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/30 border border-border">
+                    <div>
+                      <span className="font-semibold">{dbHistory.score} pts</span>
+                      {dbHistory.previous_score != null && (
+                        <span className="text-muted-foreground ml-2">
+                          ({dbHistory.score > dbHistory.previous_score ? '+' : ''}{dbHistory.score - dbHistory.previous_score} from {dbHistory.previous_score})
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-muted-foreground">
+                      {new Date(dbHistory.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  {Array.isArray(dbHistory.reasons) && dbHistory.reasons.slice(0, 3).map((r, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                      <span>{r.label}</span>
+                      <span className="font-medium">{r.weight > 0 ? '+' : ''}{r.weight}pts</span>
+                    </div>
+                  ))}
+                  {dbHistory.triggered_by && (
+                    <p className="text-[10px] text-muted-foreground pt-1 border-t">
+                      Triggered by: <span className="font-medium">{dbHistory.triggered_by.replace(/_/g, ' ')}</span>
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>

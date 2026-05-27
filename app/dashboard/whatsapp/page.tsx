@@ -19,7 +19,11 @@ import {
   Image,
   ArrowLeft,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  ExternalLink,
+  CheckCircle2,
+  Settings
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -215,20 +219,83 @@ export default function WhatsAppPage() {
     ? (process.env.NEXT_PUBLIC_META_CONFIGURED === 'true')
     : false
 
+  // ── Not configured: show setup screen instead of broken UI ──
+  if (!isConfigured) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <CRMHeader
+          title="WhatsApp Business"
+          subtitle="Not connected"
+        />
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-lg w-full space-y-6">
+            {/* Status card */}
+            <div className="text-center space-y-3">
+              <div className="size-16 rounded-2xl border-2 border-dashed border-border flex items-center justify-center mx-auto">
+                <MessageSquare className="size-8 text-muted-foreground/50" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold">WhatsApp Business not connected</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Connect the Meta WhatsApp Business API to send and receive messages directly from the CRM.
+                </p>
+              </div>
+            </div>
+
+            {/* Setup steps */}
+            <div className="rounded-xl border border-border divide-y divide-border">
+              {[
+                { step: '1', label: 'Get a Meta WhatsApp Business account', done: false, detail: 'Apply at business.whatsapp.com for API access' },
+                { step: '2', label: 'Create a Meta App on Meta Developers', done: false, detail: 'developers.facebook.com → Create App → Business type' },
+                { step: '3', label: 'Add your Phone Number ID and Access Token', done: false, detail: 'Found under WhatsApp → API Setup in your Meta app' },
+                { step: '4', label: 'Paste credentials in Integrations settings', done: false, detail: 'Dashboard → Integrations → WhatsApp Business API section' },
+                { step: '5', label: 'Add META_WHATSAPP_TOKEN to your .env file', done: false, detail: 'Required for the server to send outbound messages' },
+              ].map(s => (
+                <div key={s.step} className="flex items-start gap-3 p-4">
+                  <div className={`size-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${
+                    s.done ? 'bg-foreground text-background' : 'border border-border text-muted-foreground'
+                  }`}>
+                    {s.done ? <CheckCircle2 className="size-3.5" /> : s.step}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${s.done ? 'line-through text-muted-foreground' : ''}`}>{s.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{s.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA buttons */}
+            <div className="flex gap-3">
+              <a href="/dashboard/integrations" className="flex-1">
+                <Button className="w-full" size="lg">
+                  <Settings className="size-4 mr-2" />
+                  Open Integration Settings
+                </Button>
+              </a>
+              <a href="https://business.whatsapp.com" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="lg">
+                  <ExternalLink className="size-4 mr-2" />
+                  Meta Docs
+                </Button>
+              </a>
+            </div>
+
+            <p className="text-xs text-center text-muted-foreground">
+              Already configured? Messages logged without the API are still visible below once the token is set.
+            </p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <CRMHeader
         title="WhatsApp Business"
         subtitle={isLoading ? 'Loading…' : `${conversations.length} conversations · real-time`}
       />
-      {/* Connection status banner */}
-      {!isConfigured && (
-        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 md:px-6 py-2.5 flex items-center gap-3 shrink-0">
-          <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">⚠️ WhatsApp API not configured</span>
-          <span className="text-amber-700 dark:text-amber-400 text-xs">Messages are logged to CRM only. Add META_WHATSAPP_TOKEN to .env to send real messages.</span>
-          <a href="/dashboard/integrations" className="text-xs underline text-amber-700 dark:text-amber-400 ml-auto">Configure →</a>
-        </div>
-      )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* ── Conversations List ── */}

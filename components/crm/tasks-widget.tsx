@@ -69,7 +69,7 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
       .eq('id', taskId)
     if (error) toast.error('Failed to complete task')
     else {
-      toast.success('Task completed! ✅')
+      toast.success('Task completed!')
       refetch()
       onTaskCompleted?.()
     }
@@ -85,10 +85,10 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
     .slice(0, 6)
 
   return (
-    <Card className="glass-card flex flex-col h-full card-hover border-border/50 shadow-sm shadow-primary/5">
+    <Card className="flex flex-col h-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Clock className="size-5 text-primary" />
+          <Clock className="size-5 text-muted-foreground" />
           Upcoming Tasks
         </CardTitle>
         <CardAction>
@@ -100,7 +100,7 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
       <CardContent className="space-y-2">
         {sortedTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CheckCircle2 className="size-12 text-emerald-500 mb-2" />
+            <CheckCircle2 className="size-12 text-muted-foreground/40 mb-2" />
             <p className="text-sm font-medium">All caught up!</p>
             <p className="text-xs text-muted-foreground">No pending tasks</p>
             <Button size="sm" className="mt-4" asChild>
@@ -113,7 +113,7 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
             <div
               key={task.id}
               className={`flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50 ${
-                isOverdue ? 'border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20' : ''
+                isOverdue ? 'border-border bg-muted/30' : ''
               }`}
             >
               <Checkbox
@@ -130,7 +130,7 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
                   <span className="font-medium text-sm truncate">{task.title}</span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                  <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
+                  <span className={`flex items-center gap-1 ${isOverdue ? 'text-foreground font-medium' : ''}`}>
                     {isOverdue && <AlertCircle className="size-3" />}
                     {formatDueDate(task.due_date)}
                   </span>

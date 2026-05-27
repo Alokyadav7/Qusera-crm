@@ -285,8 +285,8 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged }: Le
                 <TableCell><Badge variant="outline" className={getSentimentColor(lead.sentiment_score)}>{getSentimentLabel(lead.sentiment_score)}</Badge></TableCell>
                 <TableCell><Badge variant={lead.buying_intent === 'high' ? 'default' : 'secondary'}>{lead.buying_intent}</Badge></TableCell>
                 <TableCell>
-                  {lead.estimated_budget
-                    ? <span className="font-medium text-emerald-600">{formatINR(lead.estimated_budget)}</span>
+                  {(lead.deal_value || lead.estimated_budget)
+                    ? <span className="font-medium tabular-nums">{formatINR(lead.deal_value || lead.estimated_budget || 0)}</span>
                     : <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell>

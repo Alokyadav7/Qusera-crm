@@ -33,13 +33,13 @@ interface Stage {
 }
 
 const STAGES: Stage[] = [
-  { id: 'new', label: 'New', textColor: 'text-slate-700 dark:text-slate-355', bgColor: 'bg-slate-50/80 dark:bg-slate-900/30', borderColor: 'border-slate-200 dark:border-slate-800/80', icon: <Target className="size-3.5" /> },
-  { id: 'contacted', label: 'Contacted', textColor: 'text-blue-755 dark:text-blue-300', bgColor: 'bg-blue-50/70 dark:bg-blue-950/20', borderColor: 'border-blue-200 dark:border-blue-900/60', icon: <Phone className="size-3.5" /> },
-  { id: 'interested', label: 'Interested', textColor: 'text-violet-755 dark:text-violet-300', bgColor: 'bg-violet-50/70 dark:bg-violet-950/20', borderColor: 'border-violet-200 dark:border-violet-900/60', icon: <Star className="size-3.5" /> },
-  { id: 'verified', label: 'Verified', textColor: 'text-cyan-755 dark:text-cyan-300', bgColor: 'bg-cyan-50/70 dark:bg-cyan-950/20', borderColor: 'border-cyan-200 dark:border-cyan-900/60', icon: <ShieldCheck className="size-3.5" /> },
-  { id: 'negotiation', label: 'Negotiation', textColor: 'text-amber-755 dark:text-amber-300', bgColor: 'bg-amber-50/70 dark:bg-amber-950/20', borderColor: 'border-amber-200 dark:border-amber-900/60', icon: <TrendingUp className="size-3.5" /> },
-  { id: 'closed_won', label: 'Won ✓', textColor: 'text-emerald-755 dark:text-emerald-300', bgColor: 'bg-emerald-50/70 dark:bg-emerald-950/20', borderColor: 'border-emerald-200 dark:border-emerald-900/60', icon: <Trophy className="size-3.5" /> },
-  { id: 'closed_lost', label: 'Lost', textColor: 'text-red-755 dark:text-red-300', bgColor: 'bg-red-50/70 dark:bg-red-950/20', borderColor: 'border-red-200 dark:border-red-900/60', icon: <AlertCircle className="size-3.5" /> },
+  { id: 'new',         label: 'New',         textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <Target className="size-3.5" /> },
+  { id: 'contacted',  label: 'Contacted',   textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <Phone className="size-3.5" /> },
+  { id: 'interested', label: 'Interested',  textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <Star className="size-3.5" /> },
+  { id: 'verified',   label: 'Verified',    textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <ShieldCheck className="size-3.5" /> },
+  { id: 'negotiation',label: 'Negotiation', textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <TrendingUp className="size-3.5" /> },
+  { id: 'closed_won', label: 'Won',         textColor: 'text-foreground font-semibold', bgColor: 'bg-muted/20',      borderColor: 'border-border', icon: <Trophy className="size-3.5" /> },
+  { id: 'closed_lost',label: 'Lost',        textColor: 'text-muted-foreground',    bgColor: 'bg-muted/10',           borderColor: 'border-border', icon: <AlertCircle className="size-3.5" /> },
 ]
 
 function fmt(n: number) {
@@ -49,13 +49,9 @@ function fmt(n: number) {
 }
 
 function intentBadgeClass(intent: Lead['buying_intent']) {
-  return intent === 'high' ? 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-200/50 dark:border-red-955/30' :
-    intent === 'medium' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-955/30' :
-      'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200/50 dark:border-slate-800'
-}
-
-function intentEmoji(intent: Lead['buying_intent']) {
-  return intent === 'high' ? '🔥' : intent === 'medium' ? '🌡️' : '❄️'
+  return intent === 'high' ? 'bg-foreground/10 text-foreground border-border' :
+    intent === 'medium' ? 'bg-muted text-muted-foreground border-border' :
+      'bg-muted/50 text-muted-foreground border-border'
 }
 
 function daysSince(dateStr: string | null) {
@@ -91,7 +87,7 @@ function DealCard({ lead, onDragStart }: { lead: Lead; onDragStart: (e: React.Dr
       <div className="flex items-center justify-between mb-3">
         <span className="text-base font-bold text-foreground">{value > 0 ? fmt(value) : '—'}</span>
         <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${intentBadgeClass(lead.buying_intent)}`}>
-          {intentEmoji(lead.buying_intent)} {lead.buying_intent.toUpperCase()}
+          {lead.buying_intent.toUpperCase()}
         </span>
       </div>
 
@@ -103,7 +99,7 @@ function DealCard({ lead, onDragStart }: { lead: Lead; onDragStart: (e: React.Dr
         </div>
         <div className="h-1.5 bg-muted dark:bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${winProb >= 70 ? 'bg-emerald-500' : winProb >= 40 ? 'bg-amber-500' : 'bg-red-400'}`}
+            className="h-full rounded-full bg-foreground/70 transition-all duration-500"
             style={{ width: `${winProb}%` }}
           />
         </div>
@@ -258,18 +254,18 @@ export default function PipelinePage() {
         {/* Summary stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
           {[
-            { label: 'Total Pipeline', value: fmt(totalPipeline), icon: <TrendingUp className="size-4 text-primary" />, bg: 'from-primary/5 to-transparent border-primary/20 dark:border-primary/10' },
-            { label: 'Weighted Value', value: fmt(weightedValue), icon: <Target className="size-4 text-violet-500" />, bg: 'from-violet-500/5 to-transparent border-violet-500/20 dark:border-violet-500/10' },
-            { label: 'Won This Month', value: fmt(wonValue), icon: <Trophy className="size-4 text-emerald-500" />, bg: 'from-emerald-500/5 to-transparent border-emerald-500/20 dark:border-emerald-500/10' },
-            { label: 'Active Deals', value: String(activeLeads.length), icon: <IndianRupee className="size-4 text-amber-500" />, bg: 'from-amber-500/5 to-transparent border-amber-500/20 dark:border-amber-500/10' },
+            { label: 'Total Pipeline', value: fmt(totalPipeline), icon: <TrendingUp className="size-4 text-muted-foreground" /> },
+            { label: 'Weighted Value', value: fmt(weightedValue), icon: <Target className="size-4 text-muted-foreground" /> },
+            { label: 'Won This Month', value: fmt(wonValue), icon: <Trophy className="size-4 text-muted-foreground" /> },
+            { label: 'Active Deals', value: String(activeLeads.length), icon: <IndianRupee className="size-4 text-muted-foreground" /> },
           ].map(s => (
-            <Card key={s.label} className={`bg-gradient-to-br ${s.bg} border shadow-sm transition-all hover:shadow-md`}>
+            <Card key={s.label}>
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="space-y-1">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{s.label}</span>
-                  <p className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">{s.value}</p>
+                  <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+                  <p className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">{s.value}</p>
                 </div>
-                <div className="size-10 rounded-xl bg-background border flex items-center justify-center shadow-inner shrink-0">
+                <div className="size-10 rounded-xl border border-border flex items-center justify-center shrink-0">
                   {s.icon}
                 </div>
               </CardContent>
@@ -278,9 +274,9 @@ export default function PipelinePage() {
         </div>
 
         <div className="flex items-center justify-between shrink-0">
-          <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 border-emerald-500/20 dark:border-emerald-500/10 px-3 py-1 rounded-full text-xs font-semibold">
-            <span className="size-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />
-            Real-time · Drag to update status in Supabase
+          <Badge variant="outline" className="text-xs px-3 py-1">
+            <span className="size-2 rounded-full bg-foreground/60 mr-2" />
+            Real-time · Drag to update status
           </Badge>
           <Button size="sm" variant="outline" onClick={refetch} className="shadow-sm rounded-xl">
             <RefreshCw className="size-4 mr-2" />Refresh

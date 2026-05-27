@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch'
 import {
   Building2, Users, Bell, Shield, CreditCard, Mail, Phone,
   Globe, Loader2, CheckCircle2, Trash2, UserPlus, Key, Crown,
-  Lock, Settings, ShieldAlert, Sparkles, MessageSquare, Zap
+  Lock, ShieldAlert, MessageSquare, Zap
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -186,18 +186,15 @@ export default function SettingsPage() {
 
       <main className="flex-1 p-4 md:p-6 space-y-6">
         {/* Real-time telemetry status banner */}
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-card border border-border/60 shadow-sm">
+        <div className="flex items-center justify-between p-3.5 rounded-lg bg-card border border-border/60">
           <div className="flex items-center gap-3">
-            <div className="relative flex size-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full size-3 bg-emerald-500"></span>
-            </div>
+            <span className="size-2 rounded-full bg-foreground/60" />
             <div>
               <p className="text-sm font-semibold text-foreground">Real-Time Settings Active</p>
-              <p className="text-xs text-muted-foreground">Changes sync dynamically to Supabase database without requiring refresh</p>
+              <p className="text-xs text-muted-foreground">Changes sync dynamically to the database</p>
             </div>
           </div>
-          <Badge variant="secondary" className="font-mono text-[10px]">
+          <Badge variant="outline" className="font-mono text-[10px]">
             {user?.email}
           </Badge>
         </div>
@@ -213,10 +210,10 @@ export default function SettingsPage() {
 
           {/* ── COMPANY PROFILE ── */}
           <TabsContent value="profile">
-            <Card className="border-border/60 shadow-md overflow-hidden animate-in fade-in-50 duration-200">
-              <CardHeader className="bg-gradient-to-r from-primary/[0.02] to-secondary/[0.02] pb-6 border-b border-border/40">
+            <Card className="border-border/60 overflow-hidden animate-in fade-in-50 duration-200">
+              <CardHeader className="pb-6 border-b border-border/40">
                 <CardTitle className="flex items-center gap-2">
-                  <Building2 className="size-5 text-primary" />
+                  <Building2 className="size-5 text-muted-foreground" />
                   Company Profile
                 </CardTitle>
                 <CardDescription>
@@ -585,14 +582,13 @@ export default function SettingsPage() {
                     }`}
                   >
                     {plan.highlight && (
-                      <div className="bg-primary text-primary-foreground text-[10px] font-extrabold tracking-wider text-center py-1.5 uppercase">
+                      <div className="bg-foreground text-background text-[10px] font-bold tracking-wider text-center py-1.5 uppercase">
                         Most Popular
                       </div>
                     )}
                     <CardHeader className="p-6">
                       <CardTitle className="text-lg font-bold flex items-center justify-between">
                         {plan.name}
-                        {plan.highlight && <Sparkles className="size-4 text-primary animate-pulse" />}
                       </CardTitle>
                       <div className="flex items-baseline gap-1 mt-2">
                         <span className="text-3xl font-extrabold tracking-tight text-foreground">{priceFormatted}</span>

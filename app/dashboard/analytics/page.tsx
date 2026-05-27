@@ -13,21 +13,20 @@ import { useRealtimeInteractions } from '@/hooks/use-realtime-interactions'
 import { TrendingUp, TrendingDown, Users, IndianRupee, Zap, MessageSquare, Target, Activity } from 'lucide-react'
 import { format, subDays, startOfDay, isAfter } from 'date-fns'
 
-const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
+const COLORS = ['hsl(var(--foreground))', 'hsl(var(--muted-foreground))', 'hsl(var(--border))', '#525252', '#737373', '#a1a1aa']
 const STATUS_COLORS: Record<string, string> = {
-  new: '#6366f1', contacted: '#8b5cf6', interested: '#06b6d4',
-  verified: '#22c55e', negotiation: '#f59e0b',
-  closed_won: '#10b981', closed_lost: '#ef4444',
+  new: 'hsl(var(--foreground))', contacted: '#525252', interested: '#737373',
+  verified: '#404040', negotiation: '#2d2d2d',
+  closed_won: '#1a1a1a', closed_lost: '#a1a1aa',
 }
 
-function StatCard({ title, value, sub, icon: Icon, trend, color = 'primary' }: {
+function StatCard({ title, value, sub, icon: Icon, trend }: {
   title: string; value: string | number; sub: string
-  icon: React.ElementType; trend?: number; color?: string
+  icon: React.ElementType; trend?: number
 }) {
   const trendPositive = trend !== undefined && trend >= 0
   return (
-    <Card className="relative overflow-hidden">
-      <div className={`absolute inset-0 opacity-[0.03] bg-gradient-to-br from-${color}-500 to-${color}-600`} />
+    <Card>
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div>
@@ -35,8 +34,8 @@ function StatCard({ title, value, sub, icon: Icon, trend, color = 'primary' }: {
             <p className="text-3xl font-bold mt-1 tracking-tight">{value}</p>
             <p className="text-xs text-muted-foreground mt-1">{sub}</p>
           </div>
-          <div className={`flex size-10 items-center justify-center rounded-xl bg-primary/10`}>
-            <Icon className="size-5 text-primary" />
+          <div className={`flex size-10 items-center justify-center rounded-xl border border-border`}>
+            <Icon className="size-5 text-muted-foreground" />
           </div>
         </div>
         {trend !== undefined && (
@@ -105,24 +104,24 @@ function DashboardSalesCalculator({ leads, interactions }: { leads: any[]; inter
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-secondary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <CardHeader className="pb-3 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Zap className="size-5 text-primary animate-pulse" />
-            Interactive Sales Team ROI & Savings Calculator
+            <Zap className="size-5 text-muted-foreground" />
+            Sales Team ROI &amp; Savings Calculator
           </CardTitle>
           <CardDescription className="text-xs">
-            Estimate how much time and money your sales reps save by speaking instead of typing updates.
+            Estimate how much time and money your reps save by speaking instead of typing updates.
           </CardDescription>
         </div>
         {telemetry.isRealData ? (
-          <Badge variant="outline" className="text-[10px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/30 w-fit shrink-0">
-            <span className="size-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-            Live CRM Telemetry Active: {telemetry.computedTeamSize} rep{telemetry.computedTeamSize > 1 ? 's' : ''} (averaging {telemetry.dailyCalls} calls/day)
+          <Badge variant="outline" className="text-[10px] font-medium w-fit shrink-0">
+            <span className="size-1.5 rounded-full bg-foreground/60 mr-1.5" />
+            Live: {telemetry.computedTeamSize} rep{telemetry.computedTeamSize > 1 ? 's' : ''} · {telemetry.dailyCalls} calls/day avg
           </Badge>
         ) : (
-          <Badge variant="outline" className="text-[10px] font-medium text-muted-foreground bg-muted/10 border-border w-fit shrink-0">
-            Using default benchmarks (no recent call activity detected)
+          <Badge variant="outline" className="text-[10px] font-medium text-muted-foreground w-fit shrink-0">
+            Default benchmarks — add call interactions for live data
           </Badge>
         )}
       </CardHeader>

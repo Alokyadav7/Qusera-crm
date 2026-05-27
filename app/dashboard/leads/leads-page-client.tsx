@@ -61,7 +61,7 @@ export function LeadsPageClient({ initialLeads }: LeadsPageClientProps) {
   const hotLeads = displayLeads.filter(l => l.buying_intent === 'high').length
   const pendingVerification = displayLeads.filter(l => l.gst_status === 'pending' || l.pan_status === 'pending').length
   const newToday = displayLeads.filter(l => new Date(l.created_at).toDateString() === new Date().toDateString()).length
-  const highValue = displayLeads.filter(l => l.estimated_budget && l.estimated_budget >= 300000).length
+  const highValue = displayLeads.filter(l => (l.deal_value || l.estimated_budget || 0) >= 300000).length
 
   const handleAddLead = async (formData: FormData) => {
     setIsSubmitting(true)
@@ -272,40 +272,40 @@ export function LeadsPageClient({ initialLeads }: LeadsPageClientProps) {
         {/* Quick Filter Badges */}
         {leads.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge 
-              variant="outline" 
-              className={`cursor-pointer hover:bg-muted ${statusFilter === 'all' && intentFilter === 'all' ? 'bg-primary/10' : ''}`}
+            <Badge
+              variant="outline"
+              className={`cursor-pointer hover:bg-muted ${statusFilter === 'all' && intentFilter === 'all' ? 'bg-muted' : ''}`}
               onClick={() => { setStatusFilter('all'); setIntentFilter('all') }}
             >
               All Leads ({leads.length})
             </Badge>
-            <Badge 
-              variant="outline" 
-              className={`cursor-pointer hover:bg-muted bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 ${intentFilter === 'high' ? 'ring-2 ring-red-400' : ''}`}
+            <Badge
+              variant="outline"
+              className={`cursor-pointer hover:bg-muted ${intentFilter === 'high' ? 'bg-muted' : ''}`}
               onClick={() => setIntentFilter(intentFilter === 'high' ? 'all' : 'high')}
             >
-              🔥 Hot / High Intent ({hotLeads})
+              Hot / High Intent ({hotLeads})
             </Badge>
-            <Badge 
-              variant="outline" 
-              className={`cursor-pointer hover:bg-muted bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 ${statusFilter === 'new' && intentFilter === 'all' ? 'ring-2 ring-amber-400' : ''}`}
+            <Badge
+              variant="outline"
+              className={`cursor-pointer hover:bg-muted ${statusFilter === 'new' && intentFilter === 'all' ? 'bg-muted' : ''}`}
               onClick={() => { setStatusFilter(statusFilter === 'new' ? 'all' : 'new'); setIntentFilter('all') }}
             >
-              ⚠️ Pending Verification ({pendingVerification})
+              Pending Verification ({pendingVerification})
             </Badge>
-            <Badge 
-              variant="outline" 
-              className="cursor-pointer hover:bg-muted bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800"
-              onClick={() => { setStatusFilter('all'); setIntentFilter('all'); setSearchQuery(new Date().toLocaleDateString()) }}
-            >
-              🆕 New Today ({newToday})
-            </Badge>
-            <Badge 
-              variant="outline" 
-              className="cursor-pointer hover:bg-muted bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-muted"
               onClick={() => { setStatusFilter('all'); setIntentFilter('all'); setSearchQuery('') }}
             >
-              💎 High Value ({highValue})
+              New Today ({newToday})
+            </Badge>
+            <Badge
+              variant="outline"
+              className="cursor-pointer hover:bg-muted"
+              onClick={() => { setStatusFilter('all'); setIntentFilter('all'); setSearchQuery('') }}
+            >
+              High Value ({highValue})
             </Badge>
           </div>
         )}
