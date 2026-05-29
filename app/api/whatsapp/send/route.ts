@@ -1,112 +1,186 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
-/**
- * Meta WhatsApp Business API — Send real WhatsApp messages
- * POST /api/whatsapp/send
- * Body: { to: string, message: string, leadId?: string }
- */
-export async function POST(req: NextRequest) {
-  try {
-    const { to, message, leadId } = await req.json()
-    if (!to || !message) {
-      return NextResponse.json({ error: 'Missing: to, message' }, { status: 400 })
-    }
+interface WAConfig {
+  phone_number_id: string
+  access_token: string
+  phone_number: string
+}
 
-    const TOKEN = process.env.META_WHATSAPP_TOKEN
-    const PHONE_ID = process.env.META_WHATSAPP_PHONE_NUMBER_ID
-
-    // Helper: log to Supabase CRM interactions
-    async function logToCRM(userId: string) {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
-      if (leadId) {
-        await supabase.from('interactions').insert({
-          user_id: userId, lead_id: leadId, type: 'whatsapp',
-          direction: 'outbound', content_raw: message,
-          created_at: new Date().toISOString(),
-        })
-        await supabase.from('leads').update({ last_contacted_at: new Date().toISOString() }).eq('id', leadId)
-      }
-    }
-
-    // Determine if Meta WhatsApp is actually configured (non-empty, non-placeholder values)
-    const isMetaConfigured = TOKEN && TOKEN.length > 10 && !TOKEN.startsWith('replace') &&
-      PHONE_ID && PHONE_ID.length > 5 && !PHONE_ID.startsWith('replace')
-
-    if (!isMetaConfigured) {
-      // Mock/sandbox mode — log to CRM only
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) await logToCRM(user.id)
-      return NextResponse.json({
-        success: true, mock: true,
-        message: 'WhatsApp message logged to CRM (Meta API not configured — add META_WHATSAPP_TOKEN to .env)',
-      })
-    }
-
-    // Attempt to send via real Meta WhatsApp API
-    const res = await fetch(`https://graph.facebook.com/v19.0/${PHONE_ID}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: to.replace(/[^0-9]/g, ''), // strip non-digits
-        type: 'text',
-        text: { body: message },
-      }),
-    })
-
-    const data = await res.json()
-
-    // Meta API auth failure (401) — token is invalid or expired
-    // Fall back to CRM-only logging so the user's workflow isn't broken
-    if (res.status === 401) {
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) await logToCRM(user.id)
-      return NextResponse.json({
-        success: true,
-        mock: true,
-        metaError: data.error?.message || 'Meta token expired or invalid',
-        message: 'Message logged to CRM — Meta token is invalid or expired. Refresh your token at developers.facebook.com.',
-      })
-    }
-
-    if (!res.ok) {
-      return NextResponse.json({
-        error: `Meta API error (${res.status}): ${data.error?.message || 'WhatsApp send failed'}`,
-      }, { status: 502 })
-    }
-
-    // Success — log to CRM
-    const { createClient } = await import('@/lib/supabase/server')
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) await logToCRM(user.id)
-
-    return NextResponse.json({ success: true, messageId: data.messages?.[0]?.id })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
-  }
+interface Lead {
+  phone: string | null
+  full_name: string | null
 }
 
 /**
- * Meta WhatsApp Webhook Verification
- * GET /api/whatsapp/send?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...
+ * POST /api/whatsapp/send
+ * Sends a WhatsApp message using the COMPANY'S OWN phone_number_id + access_token
+ * fetched from company_whatsapp table — fully isolated per company.
+ *
+ * Body: { lead_id: string, message: string }
  */
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const mode = searchParams.get('hub.mode')
-  const token = searchParams.get('hub.verify_token')
-  const challenge = searchParams.get('hub.challenge')
+export async function POST(req: NextRequest) {
+  try {
+    const sessionClient = await createClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
+    }
 
-  if (mode === 'subscribe' && token === process.env.META_WHATSAPP_VERIFY_TOKEN) {
-    return new NextResponse(challenge, { status: 200 })
+    const { lead_id, message } = await req.json()
+    if (!lead_id || !message?.trim()) {
+      return NextResponse.json(
+        { error: 'lead_id and message are required', code: 'BAD_REQUEST' },
+        { status: 400 }
+      )
+    }
+
+    const svc = createServiceClient()
+
+    // Get caller's company_id
+    const { data: memberData } = await (svc as any)
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    const companyId: string | null = memberData?.company_id ?? null
+    if (!companyId) {
+      return NextResponse.json({ error: 'No active company found', code: 'NO_COMPANY' }, { status: 403 })
+    }
+
+    // Get this company's WhatsApp config
+    const { data: waConfig } = await (svc as any)
+      .from('company_whatsapp')
+      .select('phone_number_id, access_token, phone_number')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .single() as { data: WAConfig | null }
+
+    if (!waConfig) {
+      return NextResponse.json(
+        {
+          error: 'WhatsApp not connected for your company. Go to Settings → Integrations to connect.',
+          code: 'WA_NOT_CONNECTED',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Get lead details (scoped to same company)
+    const { data: lead } = await (svc as any)
+      .from('leads')
+      .select('phone, full_name')
+      .eq('id', lead_id)
+      .eq('company_id', companyId)
+      .single() as { data: Lead | null }
+
+    if (!lead) {
+      return NextResponse.json({ error: 'Lead not found', code: 'LEAD_NOT_FOUND' }, { status: 404 })
+    }
+
+    const toPhone = (lead.phone ?? '').replace(/[^\d+]/g, '')
+    if (!toPhone) {
+      return NextResponse.json(
+        { error: 'Lead has no phone number', code: 'NO_PHONE' },
+        { status: 400 }
+      )
+    }
+
+    // ── Send via Meta API using COMPANY'S OWN token ───────────────────────────
+    const metaRes = await fetch(
+      `https://graph.facebook.com/v19.0/${waConfig.phone_number_id}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${waConfig.access_token}`,
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: toPhone.startsWith('+') ? toPhone.slice(1) : toPhone,
+          type: 'text',
+          text: { body: message.trim() },
+        }),
+      }
+    )
+
+    const metaData = await metaRes.json()
+
+    if (!metaRes.ok || metaData.error) {
+      // Check for expired token
+      if (metaData.error?.code === 190) {
+        return NextResponse.json(
+          {
+            error: 'WhatsApp token expired. Please reconnect at Settings → Integrations.',
+            code: 'TOKEN_EXPIRED',
+          },
+          { status: 401 }
+        )
+      }
+      return NextResponse.json(
+        {
+          error: metaData.error?.message ?? 'Failed to send via WhatsApp',
+          code: 'WA_SEND_FAILED',
+          meta_error: metaData.error,
+        },
+        { status: 502 }
+      )
+    }
+
+    const waMessageId: string = metaData.messages?.[0]?.id ?? null
+
+    // ── Log to whatsapp_messages ──────────────────────────────────────────────
+    await (svc as any).from('whatsapp_messages').insert({
+      company_id: companyId,
+      lead_id,
+      phone_number_id: waConfig.phone_number_id,
+      wa_message_id: waMessageId,
+      direction: 'outbound',
+      from_number: waConfig.phone_number,
+      to_number: toPhone,
+      message_text: message.trim(),
+      message_type: 'text',
+      status: 'sent',
+      created_at: new Date().toISOString(),
+    })
+
+    // ── Interactions timeline ─────────────────────────────────────────────────
+    await (svc as any).from('interactions').insert({
+      company_id: companyId,
+      lead_id,
+      user_id: user.id,
+      type: 'whatsapp',
+      direction: 'outbound',
+      content_raw: message.trim(),
+      created_at: new Date().toISOString(),
+    })
+
+    // ── Update lead last_contacted_at ─────────────────────────────────────────
+    await (svc as any)
+      .from('leads')
+      .update({ last_contacted_at: new Date().toISOString() })
+      .eq('id', lead_id)
+
+    // ── Audit log ─────────────────────────────────────────────────────────────
+    await (svc as any).from('audit_logs').insert({
+      company_id: companyId,
+      user_id: user.id,
+      action: 'whatsapp.sent',
+      resource: 'lead',
+      details: { lead_id, to: toPhone, preview: message.substring(0, 60) },
+      created_at: new Date().toISOString(),
+    })
+
+    return NextResponse.json({ success: true, message_id: waMessageId })
+  } catch (err: any) {
+    console.error('WhatsApp send error:', err)
+    return NextResponse.json(
+      { error: err.message ?? 'Unexpected error', code: 'INTERNAL_ERROR' },
+      { status: 500 }
+    )
   }
-  return NextResponse.json({ error: 'Verification failed' }, { status: 403 })
 }

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -34,7 +34,7 @@ export function Navigation() {
             <Zap className="size-3.5 text-background" />
           </div>
           <span className="text-[14px] font-bold tracking-tight text-foreground">
-            OrbitCRM
+            KlinqCRM
           </span>
         </Link>
 
@@ -134,7 +134,7 @@ export function Footer() {
               <div className="flex size-6 items-center justify-center rounded bg-foreground">
                 <Zap className="size-3.5 text-background" />
               </div>
-              <span className="text-[14px] font-bold tracking-tight text-foreground">OrbitCRM</span>
+              <span className="text-[14px] font-bold tracking-tight text-foreground">KlinqCRM</span>
             </Link>
             <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
               India's first voice-native CRM for modern sales teams. Manage leads, track conversations, and close deals faster.
@@ -182,7 +182,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>© 2026 OrbitCRM Technologies Pvt. Ltd. All rights reserved.</p>
+          <p>© 2026 KlinqCRM Technologies Pvt. Ltd. All rights reserved.</p>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-emerald-500" />

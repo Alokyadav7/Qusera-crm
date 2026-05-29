@@ -1,4 +1,4 @@
-const { Client } = require('pg');
+﻿const { Client } = require('pg');
 const client = new Client({
   connectionString: 'postgres://postgres.eqllqrppeodrhalpiajx:fcFxfE8Z7BjLbX99@aws-1-us-east-1.pooler.supabase.com:5432/postgres',
   ssl: { rejectUnauthorized: false },
@@ -23,7 +23,7 @@ async function run() {
       google_connected boolean DEFAULT false,
       -- Fast2SMS
       fast2sms_api_key text,
-      fast2sms_sender_id text DEFAULT 'ORBITC',
+      fast2sms_sender_id text DEFAULT 'klinqC',
       sms_connected boolean DEFAULT false,
       -- WhatsApp Business
       whatsapp_phone_number_id text,

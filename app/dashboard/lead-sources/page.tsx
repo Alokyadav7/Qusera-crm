@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import {
@@ -67,7 +67,7 @@ const PLATFORM_INTEGRATIONS = [
       'Add "Leads Access" permission to your App',
       'Go to Webhooks → Subscribe to "leadgen" on your Page',
       'Set Callback URL to your domain + /api/webhooks/meta-leads',
-      'Set Verify Token: orbitcrm_webhook_verify_2024',
+      'Set Verify Token: KlinqCRM_webhook_verify_2024',
       'Add META_WHATSAPP_TOKEN (Page Access Token) to .env',
     ],
     sources: ['facebook_ads', 'instagram_ads'],
@@ -84,7 +84,7 @@ const PLATFORM_INTEGRATIONS = [
       'Go to Google Ads → Campaigns → Lead Form Extensions',
       'Enable Lead Delivery via Webhook',
       'Set Webhook URL: your domain + /api/webhooks/google-leads',
-      'Set Key: orbitcrm_google_key (or add GOOGLE_LEADS_WEBHOOK_KEY to .env)',
+      'Set Key: KlinqCRM_google_key (or add GOOGLE_LEADS_WEBHOOK_KEY to .env)',
       'New form submissions flow in automatically',
     ],
     sources: ['google_ads'],
@@ -132,14 +132,31 @@ export default function LeadSourcesPage() {
   const [envStatus, setEnvStatus] = useState<Record<string, boolean>>({})
 
   const fetchLeads = useCallback(async () => {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('leads')
-      .select('id, full_name, email, phone_number, company, source, status, buying_intent, created_at, meta_ad_name, google_campaign_id')
-      .order('created_at', { ascending: false })
-      .limit(200)
-    if (data) setLeads(data as Lead[])
-    setLoading(false)
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, full_name, email, phone_number, company, source, status, buying_intent, created_at, meta_ad_name, google_campaign_id')
+        .order('created_at', { ascending: false })
+        .limit(200)
+      if (error || !data) {
+        const res = await fetch('/api/data?table=leads&limit=200')
+        if (res.ok) {
+          const json = await res.json()
+          setLeads((json.data || []) as Lead[])
+        }
+      } else {
+        setLeads(data as unknown as Lead[])
+      }
+    } catch {
+      const res = await fetch('/api/data?table=leads&limit=200')
+      if (res.ok) {
+        const json = await res.json()
+        setLeads((json.data || []) as Lead[])
+      }
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -329,9 +346,9 @@ export default function LeadSourcesPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { label: 'Meta (Facebook + Instagram) Lead Ads', url: 'https://YOUR_DOMAIN/api/webhooks/meta-leads', token: 'orbitcrm_webhook_verify_2024', icon: '📘' },
+              { label: 'Meta (Facebook + Instagram) Lead Ads', url: 'https://YOUR_DOMAIN/api/webhooks/meta-leads', token: 'KlinqCRM_webhook_verify_2024', icon: '📘' },
               { label: 'Google Ads Lead Form', url: 'https://YOUR_DOMAIN/api/webhooks/google-leads', token: 'GET: health check', icon: '🔍' },
-              { label: 'WhatsApp Business', url: 'https://YOUR_DOMAIN/api/webhooks/whatsapp', token: 'orbitcrm_webhook_verify_2024', icon: '💬' },
+              { label: 'WhatsApp Business', url: 'https://YOUR_DOMAIN/api/webhooks/whatsapp', token: 'KlinqCRM_webhook_verify_2024', icon: '💬' },
             ].map(w => (
               <div key={w.label} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
                 <span className="text-xl shrink-0">{w.icon}</span>

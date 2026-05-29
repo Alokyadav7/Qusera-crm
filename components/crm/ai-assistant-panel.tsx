@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Bot, X, Send, Loader2, RotateCcw } from 'lucide-react'
@@ -59,7 +59,7 @@ export function AIAssistantPanel({ context, pendingPrompt, onPromptConsumed, for
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([{
     role:'assistant',
-    content:"Hi! I'm your OrbitCRM AI powered by Gemini. Ask me anything about your leads, pipeline, or need help drafting emails. 🚀",
+    content:"Hi! I'm your KlinqCRM AI powered by Gemini. Ask me anything about your leads, pipeline, or need help drafting emails. 🚀",
     timestamp: new Date()
   }])
   const [input, setInput] = useState('')
@@ -123,7 +123,7 @@ export function AIAssistantPanel({ context, pendingPrompt, onPromptConsumed, for
               return idx >= firstUserIdx
             })
             .map(m => ({ role: m.role, content: m.content })),
-          context: context || 'User is viewing the OrbitCRM dashboard.'
+          context: context || 'User is viewing the KlinqCRM dashboard.'
         })
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'AI request failed') }
@@ -176,7 +176,7 @@ export function AIAssistantPanel({ context, pendingPrompt, onPromptConsumed, for
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">OrbitCRM AI</span>
+              <span className="font-semibold text-sm">KlinqCRM AI</span>
               <Badge variant="secondary" className="text-[10px] py-0 px-1.5 h-4 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
                 Gemini
               </Badge>

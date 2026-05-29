@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -35,7 +35,7 @@ export function HeroSection() {
           {/* Eyebrow */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-muted/30 text-[11px] font-medium text-muted-foreground uppercase tracking-widest mb-8">
             <span className="size-1 bg-foreground rounded-full" />
-            OrbitCRM for Indian Sales Teams
+            KlinqCRM for Indian Sales Teams
           </div>
 
           {/* Headline */}
@@ -87,7 +87,7 @@ export function HeroSection() {
                     <div className="size-2.5 rounded-full bg-border" />
                   </div>
                   <div className="text-[10px] font-mono text-muted-foreground bg-background border border-border/40 rounded px-4 py-0.5">
-                    dashboard.orbitcrm.in
+                    dashboard.KlinqCRM.in
                   </div>
                   <div className="w-14" />
                 </div>

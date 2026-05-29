@@ -32,8 +32,16 @@ export function useRealtimeTasks(initialTasks: RealtimeTask[] = []) {
       .select('*, lead:leads(full_name, company)')
       .order('due_date', { ascending: true })
 
-    if (error) {
-      setError(error.message)
+    if (error || !data) {
+      // RLS blocked — fall back to API route
+      try {
+        const res = await fetch('/api/data?table=tasks&orderBy=due_date&ascending=true&limit=500')
+        if (res.ok) {
+          const json = await res.json()
+          setTasks((json.data as RealtimeTask[]) || [])
+          setError(null)
+        }
+      } catch { /* silent */ }
     } else {
       setTasks((data as RealtimeTask[]) || [])
       setError(null)

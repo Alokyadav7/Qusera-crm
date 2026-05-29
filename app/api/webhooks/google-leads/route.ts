@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 // ── Google Lead Gen Form Webhook ──────────────────────────────────────────────
@@ -8,11 +8,11 @@ import { createClient } from '@/lib/supabase/server'
 // 3. Set Key: same as GOOGLE_LEADS_WEBHOOK_KEY in .env
 // 4. Google sends a JSON POST for every new lead form submission
 
-const WEBHOOK_KEY = process.env.GOOGLE_LEADS_WEBHOOK_KEY || 'orbitcrm_google_key'
+const WEBHOOK_KEY = process.env.GOOGLE_LEADS_WEBHOOK_KEY || 'KlinqCRM_google_key'
 
 export async function GET() {
   // Google verifies the endpoint by sending a GET — just return 200
-  return NextResponse.json({ status: 'OrbitCRM Google Lead Webhook Active' })
+  return NextResponse.json({ status: 'KlinqCRM Google Lead Webhook Active' })
 }
 
 export async function POST(request: NextRequest) {
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    const { data: newLead, error } = await supabase.from('leads').insert({
+    const { data: newLead, error } = await (supabase as any).from('leads').insert({
       user_id: null,
       full_name: fullName,
       email: fields.email || null,
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }).select().single()
 
     if (!error && newLead) {
-      await supabase.from('notifications').insert({
+      await (supabase as any).from('notifications').insert({
         user_id: null,
         type: 'lead',
         priority: 'high',

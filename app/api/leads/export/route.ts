@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -33,7 +33,7 @@ export async function GET() {
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="orbitcrm-leads-${new Date().toISOString().slice(0, 10)}.csv"`,
+          'Content-Disposition': `attachment; filename="KlinqCRM-leads-${new Date().toISOString().slice(0, 10)}.csv"`,
         },
       })
     }
@@ -56,32 +56,35 @@ export async function GET() {
       return str
     }
 
-    const rows = leads.map(lead => [
-      escape(lead.full_name),
-      escape(lead.phone_number),
-      escape(lead.email),
-      escape(lead.company),
-      escape(lead.status),
-      escape(lead.buying_intent),
-      escape(lead.source),
-      escape(lead.city),
-      escape(lead.state),
-      escape(lead.deal_value),
-      escape(lead.estimated_budget),
-      escape(lead.sentiment_score),
-      escape(lead.gst_status),
-      escape(lead.pan_status),
-      escape(lead.ai_summary),
-      escape(lead.last_contacted_at),
-      escape(lead.created_at),
-    ].join(','))
+    const rows = leads.map(lead => {
+      const l = lead as any
+      return [
+        escape(l.full_name),
+        escape(l.phone_number),
+        escape(l.email),
+        escape(l.company),
+        escape(l.status),
+        escape(l.buying_intent),
+        escape(l.source),
+        escape(l.city),
+        escape(l.state),
+        escape(l.deal_value),
+        escape(l.estimated_budget),
+        escape(l.sentiment_score),
+        escape(l.gst_status),
+        escape(l.pan_status),
+        escape(l.ai_summary),
+        escape(l.last_contacted_at),
+        escape(l.created_at),
+      ].join(',')
+    })
 
     const csv = [headers.join(','), ...rows].join('\n')
 
     return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="orbitcrm-leads-${new Date().toISOString().slice(0, 10)}.csv"`,
+        'Content-Disposition': `attachment; filename="KlinqCRM-leads-${new Date().toISOString().slice(0, 10)}.csv"`,
       },
     })
   } catch (err) {

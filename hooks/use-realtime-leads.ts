@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 export interface Lead {
   id: string
   user_id: string
+  company_id?: string | null
   full_name: string
   phone_number: string | null
   email: string | null
@@ -24,14 +25,12 @@ export interface Lead {
   pincode: string | null
   preferred_language: string | null
   last_contacted_at: string | null
-  // Compliance fields
   gstin: string | null
   gst_status: 'verified' | 'pending' | 'invalid'
   pan_number: string | null
   pan_status: 'verified' | 'pending' | 'invalid'
   aadhaar_verified: boolean
   bank_verified: boolean
-  // Metadata
   tags: string[] | null
   notes: string | null
   created_at: string
@@ -50,44 +49,76 @@ export function useRealtimeLeads(initialLeads: Lead[] = []) {
         .from('leads')
         .select('*')
         .order('created_at', { ascending: false })
-      if (error) {
-        setError(error.message)
+
+      if (error || !data) {
+        const res = await fetch('/api/data?table=leads&orderBy=created_at&ascending=false&limit=500')
+        if (res.ok) {
+          const json = await res.json()
+          setLeads((json.data as unknown as Lead[]) || [])
+          setError(null)
+        } else {
+          setError('Failed to fetch leads')
+        }
       } else {
-        setLeads((data as Lead[]) || [])
+        setLeads((data as unknown as Lead[]) || [])
         setError(null)
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch leads')
+      try {
+        const res = await fetch('/api/data?table=leads&orderBy=created_at&ascending=false&limit=500')
+        if (res.ok) {
+          const json = await res.json()
+          setLeads((json.data as unknown as Lead[]) || [])
+          setError(null)
+        }
+      } catch {
+        setError(err.message || 'Failed to fetch leads')
+      }
     } finally {
       setIsLoading(false)
     }
   }, [])
 
+  /**
+   * updateLeadStatus — Optimistically updates UI then persists via PATCH /api/deals/[id].
+   * Reverts on error, shows toast on both success and failure.
+   */
   const updateLeadStatus = useCallback(async (id: string, status: Lead['status']) => {
-    // Optimistically update local state immediately — instant kanban response
+    // Snapshot previous state for revert
+    const prevLeads = leads
+    const prevLead = leads.find(l => l.id === id)
+
+    // Optimistic UI update
     setLeads(prev => prev.map(l =>
       l.id === id ? { ...l, status, updated_at: new Date().toISOString() } : l
     ))
 
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('leads')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', id)
-      if (error) {
-        // Roll back the optimistic update on failure
-        fetchLeads()
-        toast.error('Failed to move lead: ' + error.message)
-      } else {
-        const label = status.replace('_', ' ')
-        toast.success(`Lead moved to ${label.charAt(0).toUpperCase() + label.slice(1)} ✓`)
+      const res = await fetch(`/api/deals/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stage: status,
+          from_stage: prevLead?.status,
+          company_id: prevLead?.company_id,
+        }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        // Revert optimistic update
+        setLeads(prevLeads)
+        toast.error('Failed to update: ' + (err.error || 'Unknown error'))
+        return
       }
+
+      const label = status.replace(/_/g, ' ')
+      toast.success(`Deal moved to ${label.charAt(0).toUpperCase() + label.slice(1)} ✓`)
     } catch (err: any) {
-      fetchLeads()
-      toast.error('Failed to update lead: ' + (err.message || err))
+      setLeads(prevLeads)
+      toast.error('Failed to update: ' + (err.message || 'Network error'))
     }
-  }, [fetchLeads])
+  }, [leads])
 
   useEffect(() => {
     fetchLeads()
@@ -100,24 +131,19 @@ export function useRealtimeLeads(initialLeads: Lead[] = []) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads' },
         (payload) => {
-          console.log('🔔 [Realtime Leads] Event received:', payload.eventType, payload)
           if (payload.eventType === 'INSERT') {
-            setLeads(prev => [payload.new as Lead, ...prev])
+            setLeads(prev => [payload.new as unknown as Lead, ...prev])
           } else if (payload.eventType === 'UPDATE') {
-            setLeads(prev => prev.map(l => l.id === (payload.new as Lead).id ? payload.new as Lead : l))
+            setLeads(prev => prev.map(l => l.id === (payload.new as any).id ? payload.new as unknown as Lead : l))
           } else if (payload.eventType === 'DELETE') {
-            setLeads(prev => prev.filter(l => l.id !== (payload.old as Lead).id))
+            setLeads(prev => prev.filter(l => l.id !== (payload.old as any).id))
           }
         }
       )
-      .subscribe((status) => {
-        console.log(`🔌 [Realtime Leads] Subscription status for ${channelName}:`, status)
-      })
+      .subscribe()
 
-    // Fallback polling interval every 6 seconds to ensure data remains fresh
-    const interval = setInterval(() => {
-      fetchLeads()
-    }, 6000)
+    // Fallback polling every 30 seconds (less aggressive — real-time handles updates)
+    const interval = setInterval(() => { fetchLeads() }, 30000)
 
     return () => {
       supabase.removeChannel(channel)

@@ -1,3 +1,4 @@
+﻿import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import { CRMHeader } from '@/components/crm/crm-header'
 import { DashboardStats } from '@/components/crm/dashboard-stats'
@@ -12,16 +13,27 @@ import { PersonalNotesWidget } from '@/components/crm/personal-notes-widget'
 import Link from 'next/link'
 
 async function getDashboardData() {
-  const supabase = await createClient()
-  
+  const supabase = createServiceClient() // Bypass RLS for server render
+  const sessionClient = await createClient()
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
-  
+
+  // Get current user for scoped queries
+  const { data: { user } } = await sessionClient.auth.getUser()
+  const userId = user?.id
+
+  // Get profile name
+  let userName = 'User'
+  if (userId) {
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', userId as any).single()
+    if ((profile as any)?.full_name) userName = (profile as any).full_name
+  }
+
   // Fetch all dashboard data in parallel
   const [
-    { data: profile },
     { count: pendingTasks },
     { data: leads },
     { data: pipelineLeads },
@@ -33,7 +45,6 @@ async function getDashboardData() {
     { data: closedDeals },
     { count: closedLostCount }
   ] = await Promise.all([
-    supabase.from('profiles').select('full_name').single(),
     supabase.from('tasks').select('*', { count: 'exact', head: true })
       .eq('is_completed', false)
       .gte('due_date', today.toISOString())
@@ -73,7 +84,7 @@ async function getDashboardData() {
   }
   
   return {
-    userName: profile?.full_name || 'User',
+    userName,
     pendingTasks: pendingTasks || 0,
     leads: leads || [],
     tasks: tasks || [],
@@ -94,7 +105,7 @@ function EmptyStateOnboarding({ userName }: { userName: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <div className="text-5xl mb-4">🚀</div>
-      <h2 className="text-2xl font-bold mb-2">Welcome to OrbitCRM, {userName}!</h2>
+      <h2 className="text-2xl font-bold mb-2">Welcome to KlinqCRM, {userName}!</h2>
       <p className="text-muted-foreground mb-8 max-w-md">
         Your workspace is ready. Start by adding your first lead to unlock the full power of AI-driven sales.
       </p>
@@ -171,7 +182,7 @@ export default async function DashboardPage() {
             <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
               {/* Row 1: Live Revenue (8 cols) + Voice Recorder (4 cols) */}
               <div className="lg:col-span-8 animate-fade-in-up delay-75">
-                <LiveRevenueCommandCenter initialLeads={data.leads} initialTasks={data.tasks} />
+                <LiveRevenueCommandCenter initialLeads={data.leads as any} initialTasks={data.tasks} />
               </div>
               <div className="lg:col-span-4 animate-fade-in-up delay-100">
                 <VoiceRecorderWidget />
@@ -179,7 +190,7 @@ export default async function DashboardPage() {
               
               {/* Row 2: Priority Leads (4 cols) + Tasks (4 cols) + Recent Interactions (4 cols) */}
               <div className="lg:col-span-4 animate-fade-in-up delay-150">
-                <LeadPriorityList leads={data.leads} />
+                <LeadPriorityList leads={data.leads as any} />
               </div>
               <div className="lg:col-span-4 animate-fade-in-up delay-200">
                 <TasksWidget tasks={data.tasks} />

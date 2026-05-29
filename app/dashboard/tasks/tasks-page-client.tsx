@@ -104,7 +104,7 @@ export function TasksPageClient({ initialTasks }: TasksPageClientProps) {
   // ── Real-time Supabase subscription ────────────────────────────────────────
   const fetchTasks = useCallback(async () => {
     const supabase = createClient()
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('tasks')
       .select('*, lead:leads(full_name, company)')
       .order('due_date', { ascending: true })
@@ -112,10 +112,10 @@ export function TasksPageClient({ initialTasks }: TasksPageClientProps) {
   }, [])
 
   useEffect(() => {
-    fetchTasks()
+    fetchTasks();
     // Load leads for task assignment
-    createClient().from('leads').select('id, full_name').order('full_name').limit(100)
-      .then(({ data }) => { if (data) setLeads(data) })
+    (createClient() as any).from('leads').select('id, full_name').order('full_name').limit(100)
+      .then(({ data }: any) => { if (data) setLeads(data) })
     const supabase = createClient()
     const channel = supabase
       .channel('realtime-tasks')
@@ -127,14 +127,14 @@ export function TasksPageClient({ initialTasks }: TasksPageClientProps) {
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleCompleteTask = useCallback(async (taskId: string) => {
     const supabase = createClient()
-    const { error } = await supabase.from('tasks').update({ is_completed: true, updated_at: new Date().toISOString() }).eq('id', taskId)
+    const { error } = await (supabase as any).from('tasks').update({ is_completed: true, updated_at: new Date().toISOString() }).eq('id', taskId)
     if (error) toast.error('Failed to complete task')
     else toast.success('Task completed! ✅')
   }, [])
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
     const supabase = createClient()
-    const { error } = await supabase.from('tasks').delete().eq('id', taskId)
+    const { error } = await (supabase as any).from('tasks').delete().eq('id', taskId)
     if (error) toast.error('Failed to delete task')
     else toast.success('Task deleted')
   }, [])
@@ -147,7 +147,7 @@ export function TasksPageClient({ initialTasks }: TasksPageClientProps) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { toast.error('Not authenticated'); setIsSubmitting(false); return }
 
-    const { error } = await supabase.from('tasks').insert({
+    const { error } = await (supabase as any).from('tasks').insert({
       user_id: user.id,
       title: formData.get('title') as string,
       description: formData.get('description') as string || null,

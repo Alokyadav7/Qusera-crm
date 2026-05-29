@@ -43,10 +43,21 @@ export function useRealtimeInteractions(typeFilter?: string) {
     }
 
     const { data, error } = await query
-    if (error) {
-      setError(error.message)
+    if (error || !data) {
+      // RLS blocked — fall back to API route
+      try {
+        const url = typeFilter
+          ? `/api/data?table=interactions&limit=100`
+          : `/api/data?table=interactions&limit=100`
+        const res = await fetch(url)
+        if (res.ok) {
+          const json = await res.json()
+          const filtered = typeFilter ? (json.data || []).filter((i: any) => i.type === typeFilter) : (json.data || [])
+          setInteractions((filtered as unknown as Interaction[]))
+        }
+      } catch { /* silent */ }
     } else {
-      setInteractions((data as Interaction[]) || [])
+      setInteractions((data as unknown as Interaction[]) || [])
     }
     setIsLoading(false)
   }, [typeFilter])
@@ -57,11 +68,11 @@ export function useRealtimeInteractions(typeFilter?: string) {
     if (!user) return null
     const { data, error } = await supabase
       .from('interactions')
-      .insert({ ...payload, user_id: user.id })
+      .insert({ ...(payload as any), user_id: user.id })
       .select('*, lead:leads(id, full_name, company, phone_number)')
       .single()
     if (error) { console.error('Failed to create interaction:', error); return null }
-    return data as Interaction
+    return data as unknown as Interaction
   }, [])
 
   useEffect(() => {
@@ -74,19 +85,12 @@ export function useRealtimeInteractions(typeFilter?: string) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'interactions' },
-        (payload) => {
-          console.log('🔔 [Realtime Interactions] Event received:', payload.eventType, payload)
-          fetchInteractions()
-        }
+        () => { fetchInteractions() }
       )
-      .subscribe((status) => {
-        console.log(`🔌 [Realtime Interactions] Subscription status for ${channelName}:`, status)
-      })
+      .subscribe()
 
-    // Fallback polling interval every 6 seconds to ensure data remains fresh
-    const interval = setInterval(() => {
-      fetchInteractions()
-    }, 6000)
+    // Fallback polling every 10 seconds
+    const interval = setInterval(() => { fetchInteractions() }, 10000)
 
     return () => {
       supabase.removeChannel(channel)

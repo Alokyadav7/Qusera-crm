@@ -3,30 +3,31 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from 'sonner'
+import { CompanyProvider } from '@/lib/company-context'
 
 export const metadata: Metadata = {
   title: {
-    default: 'OrbitCRM — Voice-First CRM for Indian Sales Teams',
-    template: '%s | OrbitCRM'
+    default: 'Klinq CRM — Smart CRM for Sales Teams',
+    template: '%s | Klinq CRM'
   },
-  description: "India's first voice-native CRM. Record conversations in Hindi or English, let AI extract leads, update your pipeline hands-free — built for field sales teams.",
-  keywords: ['CRM India', 'OrbitCRM', 'Voice CRM', 'Sales CRM Hindi', 'WhatsApp CRM', 'Lead Management India', 'Field Sales CRM'],
-  authors: [{ name: 'OrbitCRM' }],
-  creator: 'OrbitCRM',
-  metadataBase: new URL('https://orbitcrm.in'),
+  description: "Klinq CRM — The intelligent multi-tenant CRM platform for modern sales teams. Manage leads, deals, team, and integrations in one place.",
+  keywords: ['CRM', 'Klinq CRM', 'Sales CRM', 'Lead Management', 'WhatsApp CRM', 'Team CRM'],
+  authors: [{ name: 'Klinq CRM' }],
+  creator: 'Klinq CRM',
+  metadataBase: new URL('https://klinq.app'),
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://orbitcrm.in',
-    siteName: 'OrbitCRM',
-    title: 'OrbitCRM — Stop Typing. Start Talking.',
-    description: "India's first AI-powered voice CRM. Capture leads, track conversations, and close deals — all in Hindi, English, or Hinglish.",
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'OrbitCRM' }]
+    url: 'https://klinq.app',
+    siteName: 'Klinq CRM',
+    title: 'Klinq CRM — Smart CRM for Modern Teams',
+    description: 'Manage your entire sales pipeline, team, and customer communication from one platform.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Klinq CRM' }]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'OrbitCRM — Voice-First Sales Intelligence',
-    description: "India's #1 voice-native CRM for modern sales teams.",
+    title: 'Klinq CRM',
+    description: 'Smart CRM for modern sales teams.',
     images: ['/og-image.png']
   },
   icons: {
@@ -53,7 +54,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <CompanyProvider>
+            {children}
+          </CompanyProvider>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

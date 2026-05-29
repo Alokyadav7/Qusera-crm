@@ -96,7 +96,7 @@ export default function InteractionsPage() {
       .select('*, lead:leads(id, full_name, company)')
       .order('created_at', { ascending: false })
       .limit(200)
-    if (data) setInteractions(data as Interaction[])
+    if (data) setInteractions(data as unknown as Interaction[])
     setLoading(false)
   }, [])
 
@@ -124,7 +124,7 @@ export default function InteractionsPage() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-    const { error } = await supabase.from('interactions').insert({
+    const { error } = await (supabase as any).from('interactions').insert({
       user_id: user.id,
       lead_id: logForm.lead_id || null,
       type: logForm.type,

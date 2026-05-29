@@ -1,7 +1,7 @@
-import { GoogleGenAI } from '@google/genai'
+﻿import { GoogleGenAI } from '@google/genai'
 import { NextRequest, NextResponse } from 'next/server'
 
-const CRM_SYSTEM_PROMPT = `You are OrbitCRM AI, an expert sales intelligence assistant embedded inside a CRM platform called OrbitCRM, built for Indian sales teams.
+const CRM_SYSTEM_PROMPT = `You are KlinqCRM AI, an expert sales intelligence assistant embedded inside a CRM platform called KlinqCRM, built for Indian sales teams.
 
 You help sales teams with:
 - Lead prioritization and scoring

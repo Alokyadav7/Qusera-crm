@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Users, BarChart3, Activity, BrainCircuit, CheckSquare, MessageSquare, TrendingUp, Clock, AlertCircle, RefreshCw, ArrowRight, Phone, Target, Zap } from 'lucide-react'
@@ -77,7 +77,7 @@ function InsightCard({ title, body, action, href }: {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function OrbitPage() {
+export default function klinqPage() {
   const { leads, isLoading: leadsLoading, refetch } = useRealtimeLeads()
   const { interactions, isLoading: interactionsLoading } = useRealtimeInteractions()
   const [tasks, setTasks] = useState<Task[]>([])
@@ -194,7 +194,7 @@ export default function OrbitPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <CRMHeader
-        title="Orbit"
+        title="klinq"
         subtitle={isLoading ? 'Loading…' : `${leads.length} leads · ${interactions.length} interactions · Live`}
       />
 

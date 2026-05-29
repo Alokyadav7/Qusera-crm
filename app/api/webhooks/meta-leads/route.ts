@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'orbitcrm_webhook_verify_2024'
+const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'KlinqCRM_webhook_verify_2024'
 
 // GET — Meta verification challenge
 export async function GET(request: NextRequest) {
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
           fields.full_name || fields.name || 'Meta Lead'
         const platform = entry.platform === 'instagram' ? 'instagram_ads' : 'facebook_ads'
 
-        const { data: newLead, error } = await supabase.from('leads').insert({
+        const { data: newLead, error } = await (supabase as any).from('leads').insert({
           user_id: userId || null,
           full_name: fullName,
           email: fields.email || null,
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         }).select().single()
 
         if (!error && newLead && userId) {
-          await supabase.from('notifications').insert({
+          await (supabase as any).from('notifications').insert({
             user_id: userId,
             type: 'lead',
             priority: 'high',

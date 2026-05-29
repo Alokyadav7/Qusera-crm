@@ -1,10 +1,12 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import { useState, useEffect } from 'react'
+import { useNotifications } from '@/lib/hooks/use-notifications'
+import { useCompany } from '@/lib/company-context'
 import {
   LayoutDashboard,
   Users,
@@ -12,21 +14,28 @@ import {
   Calendar,
   BarChart3,
   Settings,
-  MapPin,
   Mic,
   FileCheck,
-  Phone,
   LogOut,
   Zap,
   Kanban,
   Bell,
   BrainCircuit,
-  Satellite,
-  Smartphone,
   Globe,
   Plug,
-  HeartHandshake,
-  ShieldCheck
+  ShieldCheck,
+  ExternalLink,
+  Building2,
+  Mail,
+  Phone,
+  Shield,
+  KeyRound,
+  FileText,
+  Contact,
+  TrendingUp,
+  Heart,
+  MapPin,
+  Smartphone
 } from 'lucide-react'
 import {
   Sidebar,
@@ -43,14 +52,9 @@ import {
 } from '@/components/ui/sidebar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { OrgSwitcher } from '@/components/crm/org-switcher'
 
 const mainNavItems = [
-  {
-    title: 'OrbitCRM AI',
-    href: '/dashboard/orbit',
-    icon: Satellite,
-    badge: 'AI'
-  },
   {
     title: 'Dashboard',
     href: '/dashboard',
@@ -64,15 +68,27 @@ const mainNavItems = [
     badge: null
   },
   {
-    title: 'Pipeline',
-    href: '/dashboard/pipeline',
-    icon: Kanban,
-    badge: 'New'
+    title: 'Contacts',
+    href: '/dashboard/contacts',
+    icon: Contact,
+    badge: null
   },
   {
-    title: 'Interactions',
-    href: '/dashboard/interactions',
-    icon: MessageSquare,
+    title: 'Deals',
+    href: '/dashboard/deals',
+    icon: Kanban,
+    badge: null
+  },
+  {
+    title: 'Pipeline',
+    href: '/dashboard/pipeline',
+    icon: TrendingUp,
+    badge: 'Live'
+  },
+  {
+    title: 'Accounts',
+    href: '/dashboard/accounts',
+    icon: Building2,
     badge: null
   },
   {
@@ -81,12 +97,6 @@ const mainNavItems = [
     icon: Calendar,
     badge: null
   },
-  {
-    title: 'Customer Success',
-    href: '/dashboard/customer-success',
-    icon: HeartHandshake,
-    badge: 'Live'
-  }
 ]
 
 const featureNavItems = [
@@ -103,15 +113,9 @@ const featureNavItems = [
     badge: 'New'
   },
   {
-    title: 'Bulk SMS',
-    href: '/dashboard/sms',
-    icon: Smartphone,
-    badge: 'New'
-  },
-  {
-    title: 'Lead Sources',
-    href: '/dashboard/lead-sources',
-    icon: Globe,
+    title: 'Customer Success',
+    href: '/dashboard/customer-success',
+    icon: Heart,
     badge: 'Live'
   },
   {
@@ -121,24 +125,39 @@ const featureNavItems = [
     badge: null
   },
   {
+    title: 'Lead Sources',
+    href: '/dashboard/lead-sources',
+    icon: Globe,
+    badge: 'Live'
+  },
+  {
     title: 'Compliance',
     href: '/dashboard/compliance',
     icon: FileCheck,
     badge: null
   },
   {
-    title: 'WhatsApp',
-    href: '/dashboard/whatsapp',
-    icon: Phone,
+    title: 'Invoices',
+    href: '/dashboard/invoices',
+    icon: FileText,
     badge: null
-  }
+  },
+  {
+    title: 'Reports',
+    href: '/dashboard/reports',
+    icon: BarChart3,
+    badge: null
+  },
 ]
 
 const settingsNavItems = [
-  { title: 'Analytics',     href: '/dashboard/analytics',     icon: BarChart3,  badge: null },
-  { title: 'Integrations',  href: '/dashboard/integrations',  icon: Plug,       badge: 'New' },
-  { title: 'Notifications', href: '/dashboard/notifications', icon: Bell,       badge: 'LIVE' },
-  { title: 'Settings',      href: '/dashboard/settings',      icon: Settings,   badge: null },
+  { title: 'Email Integration', href: '/dashboard/email',         icon: Mail,           badge: null },
+  { title: 'WhatsApp Live',    href: '/dashboard/whatsapp',      icon: Phone,          badge: null },
+  { title: 'Bulk SMS',         href: '/dashboard/sms',           icon: Smartphone,     badge: null },
+  { title: 'Automations',      href: '/dashboard/automations',   icon: Zap,            badge: null },
+  { title: 'Integrations',     href: '/dashboard/integrations',  icon: Plug,           badge: null },
+  { title: 'Notifications',    href: '/dashboard/notifications', icon: Bell,           badge: 'LIVE' },
+  { title: 'Settings',         href: '/dashboard/settings',      icon: Settings,       badge: null },
 ]
 
 interface CRMSidebarProps {
@@ -148,54 +167,48 @@ interface CRMSidebarProps {
 export function CRMSidebar({ user }: CRMSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [unreadCount, setUnreadCount] = useState<number>(0)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const { company } = useCompany()
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const { unread: unreadCount } = useNotifications(companyId)
 
-  // ── Check admin role ─────────────────────────────────────────────────
+  // ── Fetch active company id (for notifications) ───────────────────────
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
-      setIsAdmin(true)
-      return
-    }
+    if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') return
     if (!user) return
-    const supabase = createClient()
-    supabase
-      .from('user_roles')
-      .select('role:roles(name)')
-      .eq('user_id', user.id)
-      .then(({ data }) => {
-        const names = (data ?? []).map((r: any) => r.role?.name).filter(Boolean)
-        setIsAdmin(names.some((n: string) => ['super_admin', 'admin'].includes(n)))
-      })
+    const run = async () => {
+      try {
+        const supabase = createClient()
+        const res = await (supabase as any)
+          .from('user_active_company')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .single()
+        const cid = res.data?.company_id
+        if (cid) {
+          setCompanyId(cid)
+          // Fetch role
+          const memberRes = await (supabase as any)
+            .from('company_members')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('company_id', cid)
+            .single()
+          setUserRole(memberRes.data?.role ?? null)
+        }
+        // Check super admin
+        const profileRes = await (supabase as any)
+          .from('profiles')
+          .select('is_super_admin')
+          .eq('id', user.id)
+          .single()
+        setIsSuperAdmin(profileRes.data?.is_super_admin === true)
+      } catch (_) {}
+    }
+    run()
   }, [user])
 
-  // ── Real unread count from Supabase ──────────────────────────────────
-  useEffect(() => {
-    if (!user) return
-    const supabase = createClient()
-
-    // Count inbound interactions in last 48h as notifications
-    async function fetchCount() {
-      const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
-      const { count } = await supabase
-        .from('interactions')
-        .select('id', { count: 'exact', head: true })
-        .eq('direction', 'inbound')
-        .gte('created_at', since)
-      setUnreadCount(count || 0)
-    }
-    fetchCount()
-
-    // Subscribe to new interactions for live badge update
-    const channel = supabase
-      .channel('notif-badge')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'interactions' }, () => {
-        fetchCount()
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [user])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -214,42 +227,23 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
 
   return (
     <Sidebar className="border-r border-border/50 glass-dark">
-      <SidebarHeader className="border-b border-sidebar-border/50 bg-background/5 p-4">
-        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background shadow-lg ring-2 ring-foreground/10">
-            <Zap className="size-5" />
+      <SidebarHeader className="border-b border-sidebar-border/50 bg-background/5 p-4 space-y-3">
+        <Link href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background shadow-lg ring-2 ring-foreground/10 overflow-hidden shrink-0">
+            {company?.logo_url
+              ? <img src={company.logo_url} alt={company.name} className="size-10 object-cover" />
+              : <span className="text-background font-bold text-lg">{(company?.name ?? 'Q').charAt(0).toUpperCase()}</span>
+            }
           </div>
-          <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight">OrbitCRM</span>
-            <span className="text-xs font-medium text-muted-foreground">Voice-First CRM</span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-base font-bold tracking-tight truncate">{company?.name ?? 'Klinq'} CRM</span>
+            <span className="text-xs font-medium text-muted-foreground">powered by Klinq</span>
           </div>
         </Link>
+        <OrgSwitcher user={user} />
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Admin link — only for admins */}
-        {isAdmin && (
-          <>
-            <SidebarGroup>
-              <SidebarGroupLabel>Administration</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin')}>
-                      <a href="/dashboard/admin">
-                        <ShieldCheck className="size-4" />
-                        <span>Admin Panel</span>
-                        <Badge className="ml-auto text-xs bg-red-500 text-white border-0">Admin</Badge>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-            <SidebarSeparator />
-          </>
-        )}
-
         <SidebarGroup>
           <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -325,6 +319,60 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin Panels - role gated */}
+        {(userRole === 'company_admin' || userRole === 'sales_manager' || isSuperAdmin) && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel>Admin Panels</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {(userRole === 'company_admin' || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin') && !pathname.includes('/audit-logs') && !pathname.includes('/api')}>
+                        <Link href="/dashboard/admin">
+                          <ShieldCheck className="size-4" />
+                          <span>Company Admin</span>
+                          <Badge className="ml-auto text-xs bg-blue-500 text-white border-0">Admin</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/audit-logs')}>
+                      <Link href="/dashboard/admin/audit-logs">
+                        <Shield className="size-4" />
+                        <span>Audit Logs</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {(userRole === 'company_admin' || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/api')}>
+                        <Link href="/dashboard/admin/api">
+                          <KeyRound className="size-4" />
+                          <span>API & Webhooks</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {isSuperAdmin && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/super-admin')}>
+                        <Link href="/super-admin">
+                          <ExternalLink className="size-4" />
+                          <span>Super Admin</span>
+                          <Badge className="ml-auto text-xs bg-purple-600 text-white border-0">Platform</Badge>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">

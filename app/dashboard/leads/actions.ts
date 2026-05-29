@@ -1,18 +1,26 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { revalidatePath } from 'next/cache'
 
 export async function createLead(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const sessionClient = await createClient()
+  const { data: { user } } = await sessionClient.auth.getUser()
   
-  if (!user) {
-    throw new Error('Not authenticated')
-  }
+  if (!user) throw new Error('Not authenticated')
+  
+  // Get active company_id for multi-tenant isolation
+  const supabase = createServiceClient()
+  const { data: uac } = await (supabase as any)
+    .from('user_active_company')
+    .select('company_id')
+    .eq('user_id', user.id)
+    .single()
   
   const lead = {
     user_id: user.id,
+    company_id: (uac as any)?.company_id || null,
     full_name: formData.get('full_name') as string,
     phone_number: formData.get('phone_number') as string || null,
     email: formData.get('email') as string || null,
@@ -28,23 +36,19 @@ export async function createLead(formData: FormData) {
   
   const { data, error } = await supabase
     .from('leads')
-    .insert(lead)
+    .insert(lead as any)
     .select()
     .single()
   
-  if (error) {
-    console.error('Error creating lead:', error)
-    throw new Error('Failed to create lead')
-  }
+  if (error) throw new Error('Failed to create lead: ' + error.message)
   
   revalidatePath('/dashboard/leads')
   revalidatePath('/dashboard')
-  
   return data
 }
 
 export async function updateLead(id: string, formData: FormData) {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   const updates = {
     full_name: formData.get('full_name') as string,
@@ -64,59 +68,45 @@ export async function updateLead(id: string, formData: FormData) {
   
   const { data, error } = await supabase
     .from('leads')
-    .update(updates)
+    .update(updates as any)
     .eq('id', id)
     .select()
     .single()
   
-  if (error) {
-    console.error('Error updating lead:', error)
-    throw new Error('Failed to update lead')
-  }
+  if (error) throw new Error('Failed to update lead: ' + error.message)
   
   revalidatePath('/dashboard/leads')
   revalidatePath('/dashboard')
-  
   return data
 }
 
 export async function deleteLead(id: string) {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   const { error } = await supabase
     .from('leads')
     .delete()
     .eq('id', id)
   
-  if (error) {
-    console.error('Error deleting lead:', error)
-    throw new Error('Failed to delete lead')
-  }
+  if (error) throw new Error('Failed to delete lead: ' + error.message)
   
   revalidatePath('/dashboard/leads')
   revalidatePath('/dashboard')
 }
 
 export async function updateLeadStatus(id: string, status: string) {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   const { data, error } = await supabase
     .from('leads')
-    .update({ 
-      status, 
-      updated_at: new Date().toISOString() 
-    })
+    .update({ status, updated_at: new Date().toISOString() } as any)
     .eq('id', id)
     .select()
     .single()
   
-  if (error) {
-    console.error('Error updating lead status:', error)
-    throw new Error('Failed to update lead status')
-  }
+  if (error) throw new Error('Failed to update lead status: ' + error.message)
   
   revalidatePath('/dashboard/leads')
   revalidatePath('/dashboard')
-  
   return data
 }

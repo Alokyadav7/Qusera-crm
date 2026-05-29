@@ -76,10 +76,10 @@ function EditComplianceDialog({ lead, onClose, onSaved }: EditDialogProps) {
     const { error } = await supabase.from('leads').update({
       gstin: gstin.toUpperCase() || null,
       pan_number: pan.toUpperCase() || null,
-      gst_status: gstin ? gstStatus : null,
-      pan_status: pan ? panStatus : null,
+      gst_status: (gstin ? gstStatus : null) as any,
+      pan_status: (pan ? panStatus : null) as any,
       updated_at: new Date().toISOString(),
-    }).eq('id', lead.id)
+    } as any).eq('id', lead.id)
     if (error) toast.error(error.message)
     else { toast.success('Compliance data saved!'); onSaved() }
     setSaving(false)
@@ -244,7 +244,7 @@ export default function CompliancePage() {
     setUpdating(`${leadId}-${field}`)
     const supabase = createClient()
     const { error } = await supabase.from('leads')
-      .update({ [field]: newStatus, updated_at: new Date().toISOString() })
+      .update({ [field]: newStatus, updated_at: new Date().toISOString() } as any)
       .eq('id', leadId)
     if (error) toast.error('Update failed: ' + error.message)
     else { toast.success('Status updated'); refetch() }

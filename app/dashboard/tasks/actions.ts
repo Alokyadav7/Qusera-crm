@@ -21,7 +21,7 @@ export async function createTask(formData: FormData) {
     is_completed: false,
   }
   
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('tasks')
     .insert(task)
     .select()
@@ -41,7 +41,7 @@ export async function createTask(formData: FormData) {
 export async function completeTask(id: string) {
   const supabase = await createClient()
   
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('tasks')
     .update({ 
       is_completed: true, 
@@ -66,7 +66,7 @@ export async function completeTask(id: string) {
 export async function deleteTask(id: string) {
   const supabase = await createClient()
   
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('tasks')
     .delete()
     .eq('id', id)

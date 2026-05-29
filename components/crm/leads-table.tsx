@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback } from 'react'
 import {
@@ -26,6 +26,7 @@ interface LeadsTableProps {
   onViewLead?: (lead: Lead) => void
   onEditLead?: (lead: Lead) => void
   onLeadsChanged?: () => void
+  aiScoringEnabled?: boolean
 }
 
 function getSentimentLabel(score: number) {
@@ -72,7 +73,7 @@ function getStatusLabel(status: string) {
   return status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged }: LeadsTableProps) {
+export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged, aiScoringEnabled = false }: LeadsTableProps) {
   const [selected, setSelected] = useState<string[]>([])
   const [bulkLoading, setBulkLoading] = useState<string | null>(null)
 
@@ -117,7 +118,7 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged }: Le
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: lead.phone_number,
-          message: `Hi ${lead.full_name}, following up from OrbitCRM. How can we help you today?`,
+          message: `Hi ${lead.full_name}, following up from KlinqCRM. How can we help you today?`,
           leadId: lead.id,
         }),
       })
@@ -155,8 +156,8 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged }: Le
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: emailLeads.map(l => l.email),
-          subject: 'Following up from OrbitCRM',
-          html: `<p>Hi there,</p><p>We wanted to follow up with you. Please reply to this email if you have any questions.</p><p>Best regards,<br/>OrbitCRM Team</p>`,
+          subject: 'Following up from KlinqCRM',
+          html: `<p>Hi there,</p><p>We wanted to follow up with you. Please reply to this email if you have any questions.</p><p>Best regards,<br/>KlinqCRM Team</p>`,
         }),
       })
       const data = await res.json()
@@ -165,7 +166,7 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged }: Le
         if (noEmail.length) toast.info(`${noEmail.length} lead(s) skipped — no email address`)
         // Log interactions
         if (user) {
-          await supabase.from('interactions').insert(
+          await (supabase as any).from('interactions').insert(
             emailLeads.map(l => ({ user_id: user.id, lead_id: l.id, type: 'email', direction: 'outbound', content_raw: 'Bulk email sent', created_at: new Date().toISOString() }))
           )
           await supabase.from('leads').update({ last_contacted_at: new Date().toISOString() }).in('id', emailLeads.map(l => l.id))
@@ -209,7 +210,7 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged }: Le
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('interactions').insert({
+    await (supabase as any).from('interactions').insert({
       user_id: user.id, lead_id: leadId, type,
       direction: 'outbound', content_raw: `${type} initiated from Leads page`,
       created_at: new Date().toISOString(),
@@ -257,6 +258,7 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged }: Le
                 />
               </TableHead>
               <TableHead><Button variant="ghost" size="sm" className="-ml-3">Lead <ArrowUpDown className="size-3 ml-1" /></Button></TableHead>
+              {aiScoringEnabled && <TableHead>AI Score</TableHead>}
               <TableHead>Status</TableHead>
               <TableHead>Sentiment</TableHead>
               <TableHead>Intent</TableHead>
@@ -281,6 +283,13 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged }: Le
                     </div>
                   </div>
                 </TableCell>
+                {aiScoringEnabled && (
+                  <TableCell>
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold font-mono">
+                      {(lead as any).ai_score ?? 0}
+                    </Badge>
+                  </TableCell>
+                )}
                 <TableCell><Badge variant="outline" className={getStatusColor(lead.status)}>{getStatusLabel(lead.status)}</Badge></TableCell>
                 <TableCell><Badge variant="outline" className={getSentimentColor(lead.sentiment_score)}>{getSentimentLabel(lead.sentiment_score)}</Badge></TableCell>
                 <TableCell><Badge variant={lead.buying_intent === 'high' ? 'default' : 'secondary'}>{lead.buying_intent}</Badge></TableCell>

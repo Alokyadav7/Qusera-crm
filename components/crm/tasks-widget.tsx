@@ -63,7 +63,7 @@ export function TasksWidget({ tasks, onTaskCompleted }: TasksWidgetProps) {
   const handleComplete = async (taskId: string) => {
     setCompleting(taskId)
     const supabase = createClient()
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('tasks')
       .update({ is_completed: true, updated_at: new Date().toISOString() })
       .eq('id', taskId)

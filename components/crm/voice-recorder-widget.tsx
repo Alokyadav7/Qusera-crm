@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
@@ -187,7 +187,7 @@ Sales note: "${text}"`,
     if (!user) { toast.error('Not authenticated'); setSaving(false); return }
 
     // Save interaction
-    const { error } = await supabase.from('interactions').insert({
+    const { error } = await (supabase as any).from('interactions').insert({
       user_id: user.id,
       type: 'voice',
       direction: 'outbound',
@@ -205,7 +205,7 @@ Sales note: "${text}"`,
     }
 
     if (fields.name) {
-      await supabase.from('leads').insert({
+      await (supabase as any).from('leads').insert({
         user_id: user.id,
         full_name: fields.name,
         company: fields.company || null,
@@ -359,7 +359,7 @@ Sales note: "${text}"`,
         {/* Terminal logs */}
         <div className="bg-black text-zinc-400 font-mono rounded-lg p-3 border border-zinc-800 text-[9px] max-h-[80px] overflow-hidden">
           <div className="flex items-center gap-1 border-b border-zinc-900 pb-1.5 mb-1.5">
-            <span className="text-zinc-600 uppercase tracking-widest text-[8px]">OrbitCRM System Console</span>
+            <span className="text-zinc-600 uppercase tracking-widest text-[8px]">KlinqCRM System Console</span>
           </div>
           <div className="space-y-0.5">
             {logs.map((log, i) => (

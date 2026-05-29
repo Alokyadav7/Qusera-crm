@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/select'
 import { Plus, User, Phone, Building2, IndianRupee, Mic, Zap } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
+import { ImpersonationBanner } from '@/components/impersonation-banner'
+import { GlobalSearch } from '@/components/global-search'
 
 function QuickAddLeadFAB() {
   const [open, setOpen] = useState(false)
@@ -31,7 +33,7 @@ function QuickAddLeadFAB() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
 
-    const { error } = await supabase.from('leads').insert({
+    const { error } = await (supabase as any).from('leads').insert({
       user_id: user.id,
       full_name: form.name,
       phone_number: form.phone || null,
@@ -171,19 +173,41 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
 
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
+
       if (!user) {
-        if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
-          setUser({
-            id: 'mock-user-id',
-            email: 'dev@orbitcrm.com',
-            user_metadata: { full_name: 'Developer Mode' },
-          } as any)
-        } else {
-          router.push('/login')
-        }
-      } else {
-        setUser(user)
+        // Middleware handles redirect, but add client-side fallback
+        router.push('/login')
+        return
       }
+
+      // Check if platform admin — redirect to super-admin
+      const isPlatformAdmin =
+        user.user_metadata?.is_platform_admin === true ||
+        (user as any).app_metadata?.is_platform_admin === true
+
+      if (isPlatformAdmin) {
+        router.push('/super-admin')
+        return
+      }
+
+      // Check profiles for super admin flag and onboarding status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_super_admin, onboarding_completed')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if ((profile as any)?.is_super_admin) {
+        router.push('/super-admin')
+        return
+      }
+
+      if (!(profile as any)?.onboarding_completed) {
+        router.push('/onboarding')
+        return
+      }
+
+      setUser(user)
       setIsLoading(false)
     }
 
@@ -191,9 +215,6 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
-          return
-        }
         if (event === 'SIGNED_OUT' || !session) {
           router.push('/login')
         } else if (session?.user) {
@@ -210,19 +231,23 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground text-sm">Loading workspace...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <SidebarProvider>
-      <CRMSidebar user={user} />
-      <SidebarInset>
-        {children}
-        <QuickAddLeadFAB />
-      </SidebarInset>
-    </SidebarProvider>
+    <>
+      <ImpersonationBanner />
+      <GlobalSearch />
+      <SidebarProvider>
+        <CRMSidebar user={user} />
+        <SidebarInset>
+          {children}
+          <QuickAddLeadFAB />
+        </SidebarInset>
+      </SidebarProvider>
+    </>
   )
 }

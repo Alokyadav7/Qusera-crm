@@ -100,7 +100,7 @@ export async function getLeads() {
     .order('created_at', { ascending: false })
   
   if (error) throw error
-  return data as Lead[]
+  return data as unknown as Lead[]
 }
 
 export async function getLeadById(id: string) {
@@ -112,8 +112,9 @@ export async function getLeadById(id: string) {
     .single()
   
   if (error) throw error
-  return data as Lead
+  return data as unknown as Lead
 }
+
 
 export async function createLead(lead: Partial<Lead>) {
   const supabase = await createClient()
@@ -123,27 +124,28 @@ export async function createLead(lead: Partial<Lead>) {
   
   const { data, error } = await supabase
     .from('leads')
-    .insert({ ...lead, user_id: user.id })
+    .insert({ ...(lead as any), user_id: user.id })
     .select()
     .single()
   
   if (error) throw error
-  return data as Lead
+  return data as unknown as Lead
 }
+
 
 export async function updateLead(id: string, updates: Partial<Lead>) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('leads')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...(updates as any), updated_at: new Date().toISOString() })
+
     .eq('id', id)
     .select()
     .single()
   
   if (error) throw error
-  return data as Lead
+  return data as unknown as Lead
 }
-
 export async function deleteLead(id: string) {
   const supabase = await createClient()
   const { error } = await supabase
@@ -163,9 +165,8 @@ export async function getTasks() {
     .order('due_date', { ascending: true })
   
   if (error) throw error
-  return data as Task[]
+  return data as unknown as Task[]
 }
-
 export async function getTasksForToday() {
   const supabase = await createClient()
   const today = new Date()
@@ -181,9 +182,8 @@ export async function getTasksForToday() {
     .order('due_date', { ascending: true })
   
   if (error) throw error
-  return data as Task[]
+  return data as unknown as Task[]
 }
-
 export async function createTask(task: Partial<Task>) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -192,42 +192,40 @@ export async function createTask(task: Partial<Task>) {
   
   const { data, error } = await supabase
     .from('tasks')
-    .insert({ ...task, user_id: user.id })
+    .insert({ ...(task as any), user_id: user.id })
     .select()
     .single()
   
   if (error) throw error
-  return data as Task
+  return data as unknown as Task
 }
-
 export async function updateTask(id: string, updates: Partial<Task>) {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('tasks')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...(updates as any), updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()
   
   if (error) throw error
-  return data as Task
+  return data as unknown as Task
 }
-
 export async function completeTask(id: string) {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('tasks')
     .update({ 
       is_completed: true, 
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString() 
-    })
+    } as any)
     .eq('id', id)
     .select()
     .single()
   
   if (error) throw error
-  return data as Task
+  return data as unknown as Task
 }
 
 export async function deleteTask(id: string) {
@@ -249,9 +247,8 @@ export async function getInteractions() {
     .order('created_at', { ascending: false })
   
   if (error) throw error
-  return data as Interaction[]
+  return data as unknown as Interaction[]
 }
-
 export async function getInteractionsForLead(leadId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -261,9 +258,8 @@ export async function getInteractionsForLead(leadId: string) {
     .order('created_at', { ascending: false })
   
   if (error) throw error
-  return data as Interaction[]
+  return data as unknown as Interaction[]
 }
-
 export async function createInteraction(interaction: Partial<Interaction>) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -272,12 +268,12 @@ export async function createInteraction(interaction: Partial<Interaction>) {
   
   const { data, error } = await supabase
     .from('interactions')
-    .insert({ ...interaction, user_id: user.id })
+    .insert({ ...(interaction as any), user_id: user.id })
     .select()
     .single()
   
   if (error) throw error
-  return data as Interaction
+  return data as unknown as Interaction
 }
 
 // Compliance Documents
@@ -289,9 +285,8 @@ export async function getComplianceDocuments() {
     .order('created_at', { ascending: false })
   
   if (error) throw error
-  return data as ComplianceDocument[]
+  return data as unknown as ComplianceDocument[]
 }
-
 export async function createComplianceDocument(doc: Partial<ComplianceDocument>) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -300,26 +295,26 @@ export async function createComplianceDocument(doc: Partial<ComplianceDocument>)
   
   const { data, error } = await supabase
     .from('compliance_documents')
-    .insert({ ...doc, user_id: user.id })
+    .insert({ ...(doc as any), user_id: user.id })
     .select()
     .single()
   
   if (error) throw error
-  return data as ComplianceDocument
+  return data as unknown as ComplianceDocument
 }
-
 export async function updateComplianceDocument(id: string, updates: Partial<ComplianceDocument>) {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('compliance_documents')
-    .update(updates)
+    .update(updates as any)
     .eq('id', id)
     .select()
     .single()
   
   if (error) throw error
-  return data as ComplianceDocument
+  return data as unknown as ComplianceDocument
 }
+
 
 // Dashboard Stats
 export async function getDashboardStats(): Promise<DashboardStats> {
@@ -397,7 +392,7 @@ export async function getProfile() {
     .single()
   
   if (error) return null
-  return data as Profile
+  return data as unknown as Profile
 }
 
 export async function updateProfile(updates: Partial<Profile>) {
@@ -408,11 +403,11 @@ export async function updateProfile(updates: Partial<Profile>) {
   
   const { data, error } = await supabase
     .from('profiles')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...(updates as any), updated_at: new Date().toISOString() })
     .eq('id', user.id)
     .select()
     .single()
   
   if (error) throw error
-  return data as Profile
+  return data as unknown as Profile
 }

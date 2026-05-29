@@ -1,5 +1,5 @@
 {
-  "name": "orbitcrm",
+  "name": "klinq-crm",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -46,6 +46,7 @@
     "@radix-ui/react-tooltip": "1.2.8",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.3",
+    "@types/nodemailer": "^8.0.0",
     "@types/papaparse": "^5.5.2",
     "@vercel/analytics": "1.6.1",
     "autoprefixer": "^10.4.20",
@@ -58,7 +59,9 @@
     "lucide-react": "^0.564.0",
     "next": "^16.2.6",
     "next-themes": "^0.4.6",
+    "nodemailer": "^8.0.9",
     "papaparse": "^5.5.3",
+    "razorpay": "^2.9.6",
     "react": "^19",
     "react-day-picker": "9.13.2",
     "react-dom": "^19",

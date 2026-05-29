@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ export function CSVImportModal({ open, onClose, onImported }: CSVImportModalProp
   const downloadTemplate = () => {
     const csv = [TEMPLATE_HEADERS.join(','), ...SAMPLE_ROWS.map(r => r.join(','))].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'orbitcrm-template.csv' })
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'KlinqCRM-template.csv' })
     a.click()
   }
 
@@ -77,7 +77,7 @@ export function CSVImportModal({ open, onClose, onImported }: CSVImportModalProp
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><FileSpreadsheet className="size-5 text-primary" />Import Leads from CSV</DialogTitle>
-          <DialogDescription>Upload your spreadsheet to bulk-import leads into OrbitCRM</DialogDescription>
+          <DialogDescription>Upload your spreadsheet to bulk-import leads into KlinqCRM</DialogDescription>
         </DialogHeader>
 
         {step === 'upload' && (

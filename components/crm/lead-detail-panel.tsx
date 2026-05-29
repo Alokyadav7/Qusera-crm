@@ -120,7 +120,7 @@ export function LeadDetailPanel({ lead, onClose, onLeadUpdated }: LeadDetailPane
       .order('created_at', { ascending: false })
       .limit(50)
       .then(({ data }) => {
-        if (data) setInteractions(data as Interaction[])
+        if (data) setInteractions(data as unknown as Interaction[])
         setLoadingInteractions(false)
       })
     // Real-time subscribe

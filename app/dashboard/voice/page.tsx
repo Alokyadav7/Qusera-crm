@@ -160,34 +160,35 @@ Note: "${text}"`
 
   const handleSave = useCallback(async () => {
     setSaving(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { toast.error('Not authenticated'); setSaving(false); return }
+    try {
+      const matchedLead = extracted.leadName
+        ? leads.find(l => l.full_name.toLowerCase().includes((extracted.leadName || '').toLowerCase()))
+        : null
 
-    const matchedLead = extracted.leadName
-      ? leads.find(l => l.full_name.toLowerCase().includes((extracted.leadName || '').toLowerCase()))
-      : null
+      const res = await fetch('/api/interactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: matchedLead?.id || null,
+          type: 'voice',
+          direction: 'inbound',
+          content_raw: transcript,
+          content_transcribed: transcript,
+          sentiment_score: extracted.sentimentScore || 0,
+          ai_summary: extracted.summary || null,
+        }),
+      })
 
-    const { data: ins, error } = await supabase.from('interactions').insert({
-      user_id: user.id,
-      lead_id: matchedLead?.id || null,
-      type: 'voice',
-      direction: 'inbound',
-      content_raw: transcript,
-      content_transcribed: transcript,
-      sentiment_score: extracted.sentimentScore || 0,
-      created_at: new Date().toISOString(),
-    }).select('id').single()
+      if (!res.ok) {
+        toast.error('Failed to save voice note')
+        setSaving(false)
+        return
+      }
 
-    if (!error && ins?.id && extracted.summary) {
-      await supabase.from('interactions').update({ ai_summary: extracted.summary }).eq('id', ins.id).then(() => {})
-    }
-
-    if (error) {
-      toast.error('Failed to save')
-    } else {
+      // Update lead if matched
       if (matchedLead) {
-        await supabase.from('leads').update({
+        const supabase = createClient()
+        await (supabase as any).from('leads').update({
           last_contacted_at: new Date().toISOString(),
           sentiment_score: extracted.sentimentScore || matchedLead.sentiment_score,
           ai_summary: extracted.summary || matchedLead.ai_summary,
@@ -195,9 +196,12 @@ Note: "${text}"`
           updated_at: new Date().toISOString(),
         }).eq('id', matchedLead.id)
       }
-      toast.success('Saved successfully!')
+
+      toast.success('Saved to CRM successfully!')
       refetch()
       handleReset()
+    } catch (err: any) {
+      toast.error('Save failed: ' + err.message)
     }
     setSaving(false)
   }, [transcript, extracted, leads, refetch])

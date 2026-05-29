@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { Search, Bell, Plus, Mic, Languages, X, User, CheckSquare, Loader2, Building2, Phone, Sun, Moon } from 'lucide-react'
+import { Search, Bell, Plus, Mic, Languages, X, User, CheckSquare, Loader2, Building2, Phone, Sun, Moon, BellOff, ExternalLink, CheckCheck } from 'lucide-react'
+import { useNotifications } from '@/lib/hooks/use-notifications'
+import { formatDistanceToNow as _fmtDist } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -60,12 +62,12 @@ function GlobalSearch() {
     const supabase = createClient()
 
     const [leadsRes, tasksRes] = await Promise.all([
-      supabase
+      (supabase as any)
         .from('leads')
         .select('id, full_name, company, phone_number, status')
         .or(`full_name.ilike.%${q}%,company.ilike.%${q}%,phone_number.ilike.%${q}%`)
         .limit(6),
-      supabase
+      (supabase as any)
         .from('tasks')
         .select('id, title, task_type, due_date, is_completed')
         .ilike('title', `%${q}%`)
@@ -73,7 +75,7 @@ function GlobalSearch() {
         .limit(4),
     ])
 
-    const leadResults: SearchResult[] = (leadsRes.data || []).map(l => ({
+    const leadResults: SearchResult[] = ((leadsRes.data || []) as any[]).map(l => ({
       id: l.id,
       type: 'lead',
       title: l.full_name,
@@ -81,7 +83,7 @@ function GlobalSearch() {
       href: '/dashboard/leads',
     }))
 
-    const taskResults: SearchResult[] = (tasksRes.data || []).map(t => ({
+    const taskResults: SearchResult[] = ((tasksRes.data || []) as any[]).map(t => ({
       id: t.id,
       type: 'task',
       title: t.title,
@@ -218,50 +220,116 @@ function GlobalSearch() {
   )
 }
 
-// ── Live Notification Bell ─────────────────────────────────────────────────────
+// ── Live Notification Bell (Realtime) ─────────────────────────────────────────
 function NotificationBell() {
-  const [count, setCount] = useState(0)
+  const [open, setOpen] = useState(false)
+  const [companyId, setCompanyId] = useState<string | null>(null)
   const router = useRouter()
+  const dropRef = useRef<HTMLDivElement>(null)
 
+  // Load company_id once
   useEffect(() => {
     const supabase = createClient()
-
-    const fetchCount = async () => {
-      // Use interactions table (inbound in last 48h) — consistent with sidebar badge
-      const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
-      const { count: c } = await supabase
-        .from('interactions')
-        .select('id', { count: 'exact', head: true })
-        .eq('direction', 'inbound')
-        .gte('created_at', since)
-      setCount(c || 0)
-    }
-
-    fetchCount()
-
-    const channel = supabase
-      .channel('header-notif-count')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'interactions' }, fetchCount)
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('user_active_company').select('company_id')
+        .eq('user_id', user.id).single()
+        .then(({ data }) => setCompanyId((data as any)?.company_id ?? null))
+    })
   }, [])
 
+  const { notifications, unread, loading, markRead, markAllRead } = useNotifications(companyId)
+  const recent = notifications.slice(0, 10)
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function entityHref(n: typeof notifications[0]) {
+    if (n.entity_type === 'lead') return `/dashboard/leads`
+    if (n.entity_type === 'task') return `/dashboard/tasks`
+    if (n.entity_type === 'deal') return `/dashboard/pipeline`
+    if (n.entity_type === 'message') return `/dashboard/whatsapp`
+    return `/dashboard/notifications`
+  }
+
   return (
-    <Button
-      variant="outline"
-      size="icon"
-      className="size-9 relative"
-      onClick={() => router.push('/dashboard/notifications')}
-    >
-      <Bell className="size-4" />
-      {count > 0 && (
-        <Badge className="absolute -top-1 -right-1 size-5 p-0 flex items-center justify-center text-[10px] bg-foreground text-background hover:bg-foreground/90 border-0">
-          {count > 9 ? '9+' : count}
-        </Badge>
+    <div className="relative" ref={dropRef}>
+      <Button
+        id="notification-bell-btn"
+        variant="outline"
+        size="icon"
+        className="size-9 relative"
+        onClick={() => setOpen(o => !o)}
+        aria-label={`Notifications (${unread} unread)`}
+      >
+        <Bell className="size-4" />
+        {unread > 0 && (
+          <Badge className="absolute -top-1 -right-1 size-5 p-0 flex items-center justify-center text-[10px] bg-destructive text-white border-0 animate-pulse">
+            {unread > 9 ? '9+' : unread}
+          </Badge>
+        )}
+      </Button>
+
+      {open && (
+        <div className="absolute right-0 top-11 w-80 z-50 rounded-xl border border-border shadow-2xl bg-popover text-popover-foreground overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <span className="text-sm font-semibold">Notifications</span>
+            <div className="flex items-center gap-1.5">
+              {unread > 0 && (
+                <button
+                  onClick={() => markAllRead()}
+                  className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors"
+                >
+                  <CheckCheck className="size-3" /> Mark all read
+                </button>
+              )}
+              <button onClick={() => { setOpen(false); router.push('/dashboard/notifications') }}
+                className="text-[10px] text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors flex items-center gap-1">
+                <ExternalLink className="size-3" /> All
+              </button>
+            </div>
+          </div>
+
+          {/* List */}
+          <div className="max-h-80 overflow-y-auto">
+            {loading && (
+              <div className="flex justify-center py-8">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!loading && recent.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                <BellOff className="size-8 mb-2 opacity-30" />
+                <p className="text-xs">No notifications yet</p>
+              </div>
+            )}
+            {!loading && recent.map(n => (
+              <button
+                key={n.id}
+                className={`w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-muted/60 transition-colors border-b border-border/40 last:border-0 ${!n.read ? 'bg-primary/5' : ''}`}
+                onClick={() => { markRead(n.id); setOpen(false); router.push(entityHref(n)) }}
+              >
+                <span className={`mt-1 size-2 rounded-full shrink-0 ${!n.read ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold truncate text-foreground">{n.title}</p>
+                  {n.body && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{n.body}</p>}
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">
+                    {_fmtDist(new Date(n.created_at), { addSuffix: true })}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
-      <span className="sr-only">Notifications ({count} unread)</span>
-    </Button>
+    </div>
   )
 }
 
@@ -279,7 +347,7 @@ function QuickAddMenu() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-    const { error } = await supabase.from('leads').insert({
+    const { error } = await (supabase as any).from('leads').insert({
       user_id: user.id,
       full_name: leadForm.full_name,
       phone_number: leadForm.phone_number || null,
@@ -306,7 +374,7 @@ function QuickAddMenu() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-    const { error } = await supabase.from('tasks').insert({
+    const { error } = await (supabase as any).from('tasks').insert({
       user_id: user.id,
       title: taskForm.title,
       due_date: taskForm.due_date,

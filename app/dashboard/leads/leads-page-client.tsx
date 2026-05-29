@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { Plus, Filter, Download, Upload, Search, LayoutGrid, List, Users } from 'lucide-react'
@@ -33,9 +33,10 @@ import { toast } from 'sonner'
 
 interface LeadsPageClientProps {
   initialLeads: Lead[]
+  aiScoringEnabled?: boolean
 }
 
-export function LeadsPageClient({ initialLeads }: LeadsPageClientProps) {
+export function LeadsPageClient({ initialLeads, aiScoringEnabled = false }: LeadsPageClientProps) {
   const { leads, refetch } = useRealtimeLeads(initialLeads)
   const displayLeads = leads
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -130,7 +131,7 @@ export function LeadsPageClient({ initialLeads }: LeadsPageClientProps) {
                 const res = await fetch('/api/leads/export')
                 if (res.ok) {
                   const blob = await res.blob()
-                  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'orbitcrm-leads.csv' })
+                  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'KlinqCRM-leads.csv' })
                   a.click()
                   toast.dismiss(); toast.success('Export downloaded!')
                 } else { toast.dismiss(); toast.error('Export failed') }
@@ -336,6 +337,7 @@ export function LeadsPageClient({ initialLeads }: LeadsPageClientProps) {
             onViewLead={(lead) => setSelectedLead(lead)}
             onEditLead={(lead) => setSelectedLead(lead)}
             onLeadsChanged={refetch}
+            aiScoringEnabled={aiScoringEnabled}
           />
         )}
       </main>

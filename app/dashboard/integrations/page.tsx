@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { CRMHeader } from '@/components/crm/crm-header'
@@ -29,7 +29,7 @@ interface Integration {
 const EMPTY: Integration = {
   meta_page_access_token: '', meta_page_id: '', meta_app_id: '', meta_connected: false,
   google_ads_customer_id: '', google_connected: false,
-  fast2sms_api_key: '', fast2sms_sender_id: 'ORBITC', sms_connected: false,
+  fast2sms_api_key: '', fast2sms_sender_id: 'klinqC', sms_connected: false,
   whatsapp_phone_number_id: '', whatsapp_connected: false,
   webhook_secret: '',
 }
@@ -76,7 +76,7 @@ export default function IntegrationsPage() {
       if (!user) { setLoading(false); return }
       setUserId(user.id)
       const { data: intg } = await supabase.from('integrations').select('*').eq('user_id', user.id).single()
-      if (intg) setData({ ...EMPTY, ...intg })
+      if (intg) setData({ ...EMPTY, ...intg } as any)
       setLoading(false)
     }
 
@@ -102,7 +102,7 @@ export default function IntegrationsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(null); return }
     const payload = { user_id: user.id, ...fields, updated_at: new Date().toISOString() }
-    const { error } = await supabase.from('integrations').upsert(payload, { onConflict: 'user_id' })
+    const { error } = await (supabase as any).from('integrations').upsert(payload, { onConflict: 'user_id' })
     if (error) toast.error(error.message)
     else { toast.success(`${section} settings saved!`); setData(d => ({ ...d, ...fields })) }
     setSaving(null)
@@ -137,7 +137,7 @@ export default function IntegrationsPage() {
             </div>
           </div>
           <CopyField label="Your Webhook URL (paste in Meta)" value={webhookUrl('/api/webhooks/meta-leads')} />
-          <CopyField label="Verify Token (paste in Meta)" value="orbitcrm_webhook_verify_2024" />
+          <CopyField label="Verify Token (paste in Meta)" value="KlinqCRM_webhook_verify_2024" />
           <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-800 space-y-1">
             <p className="font-semibold">Steps to connect:</p>
             <ol className="list-decimal list-inside space-y-0.5">
@@ -196,7 +196,7 @@ export default function IntegrationsPage() {
           </div>
           <div className="space-y-1.5">
             <Label>Sender ID (6 chars, TRAI approved)</Label>
-            <Input value={data.fast2sms_sender_id} maxLength={6} onChange={e => setData(d => ({ ...d, fast2sms_sender_id: e.target.value.toUpperCase() }))} placeholder="ORBITC" />
+            <Input value={data.fast2sms_sender_id} maxLength={6} onChange={e => setData(d => ({ ...d, fast2sms_sender_id: e.target.value.toUpperCase() }))} placeholder="klinqC" />
           </div>
           <div className="p-3 bg-green-50 rounded-lg text-xs text-green-800 space-y-1">
             <p className="font-semibold">Steps to connect:</p>
@@ -232,7 +232,7 @@ export default function IntegrationsPage() {
             <p className="text-xs text-muted-foreground">(Same token as Meta integration above)</p>
           </div>
           <CopyField label="WhatsApp Webhook URL" value={webhookUrl('/api/webhooks/whatsapp')} />
-          <CopyField label="Verify Token" value="orbitcrm_webhook_verify_2024" />
+          <CopyField label="Verify Token" value="KlinqCRM_webhook_verify_2024" />
         </div>
       ),
       onSave: () => save('WhatsApp', { whatsapp_phone_number_id: data.whatsapp_phone_number_id, whatsapp_connected: !!data.whatsapp_phone_number_id }),

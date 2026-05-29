@@ -1,87 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
-// ── Fast2SMS Bulk SMS API (India) ──────────────────────────────────────────────
-// Get free key at: https://www.fast2sms.com/dashboard/credentials
-// Supports 160 chars free DLT SMS
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json()
-    const { message, numbers, leadIds, templateId } = body as {
-      message: string
-      numbers: string[]       // phone numbers
-      leadIds?: string[]      // optional — to log interaction per lead
-      templateId?: string     // DLT template ID (required for India)
+    const { phone, message, contact_id, company_id } = await req.json()
+
+    if (!phone || !message) {
+      return NextResponse.json({ success: false, error: 'phone and message are required' }, { status: 400 })
     }
 
-    if (!message || !numbers?.length) {
-      return NextResponse.json({ error: 'message and numbers are required' }, { status: 400 })
+    const sessionClient = await createClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+
+    // Rate limit: 10 SMS per minute per company
+    if (company_id) {
+      const rl = checkRateLimit('sms', company_id)
+      const denied = rateLimitResponse(rl)
+      if (denied) return denied
     }
 
-    const API_KEY = process.env.FAST2SMS_API_KEY
-    const SENDER_ID = process.env.FAST2SMS_SENDER_ID || 'ORBITC'
+    // Get Fast2SMS credentials: first try integrations table, then env vars
+    const supabase = createServiceClient()
+    let apiKey = process.env.FAST2SMS_API_KEY || null
+    let senderId = process.env.FAST2SMS_SENDER_ID || 'FSTSMS'
 
-    // Clean numbers — strip spaces, +91, etc.
-    const cleaned = numbers.map(n => n.replace(/\D/g, '').slice(-10)).filter(n => n.length === 10)
-
-    let provider = 'mock'
-    let sendResult: any = { sent: cleaned.length, failed: 0 }
-
-    if (API_KEY && !API_KEY.includes('replace')) {
-      // Real Fast2SMS send
-      const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-        method: 'POST',
-        headers: {
-          authorization: API_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          route: 'dlt',                        // DLT route for India
-          sender_id: SENDER_ID,
-          message,
-          template_id: templateId || '',
-          variables_values: '',
-          flash: 0,
-          numbers: cleaned.join(','),
-        }),
-      })
-      const data = await res.json()
-      provider = 'fast2sms'
-      if (!data.return) {
-        sendResult = { sent: 0, failed: cleaned.length, error: data.message }
-      } else {
-        sendResult = { sent: cleaned.length, failed: 0, requestId: data.request_id }
+    try {
+      const { data: intg } = await (supabase as any)
+        .from('integrations')
+        .select('fast2sms_api_key, fast2sms_sender_id')
+        .eq('user_id', user.id)
+        .single()
+      if (intg?.fast2sms_api_key) {
+        apiKey = intg.fast2sms_api_key
+        senderId = intg.fast2sms_sender_id || senderId
       }
-    }
+    } catch { /* use env fallback */ }
 
-    // Log interaction for each lead in Supabase
-    if (leadIds?.length) {
-      const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const rows = leadIds.map(lid => ({
-          user_id: user.id,
-          lead_id: lid,
-          type: 'sms',
-          direction: 'outbound',
-          content_raw: message,
-          created_at: new Date().toISOString(),
-        }))
-        await supabase.from('interactions').insert(rows)
+    let messageId: string | null = null
+    let status: 'sent' | 'failed' | 'pending' = 'pending'
+
+    if (apiKey) {
+      try {
+        const cleanPhone = phone.replace(/\D/g, '').slice(-10)
+        const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+          method: 'POST',
+          headers: {
+            'authorization': apiKey,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            route: 'q',
+            sender_id: senderId,
+            message,
+            language: 'english',
+            flash: '0',
+            numbers: cleanPhone,
+          }).toString(),
+        })
+        const data = await res.json()
+        if (data.return === true) {
+          messageId = data.request_id || null
+          status = 'sent'
+        } else {
+          status = 'failed'
+          return NextResponse.json({ success: false, error: data.message || 'Fast2SMS rejected the request' }, { status: 422 })
+        }
+      } catch (err: any) {
+        return NextResponse.json({ success: false, error: 'SMS gateway unreachable: ' + err.message }, { status: 503 })
       }
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'SMS not configured. Add FAST2SMS_API_KEY to .env or configure in Integrations settings.',
+        setup_required: true,
+      }, { status: 503 })
     }
 
-    return NextResponse.json({
-      success: true,
-      provider,
-      mock: provider === 'mock',
-      message: provider === 'mock'
-        ? 'SMS sent (mock — add FAST2SMS_API_KEY to .env to send real SMS)'
-        : `SMS sent to ${sendResult.sent} numbers`,
-      ...sendResult,
+    // Log to sms_messages table
+    await (supabase as any).from('sms_messages').insert({
+      company_id: company_id || null,
+      contact_id: contact_id || null,
+      user_id: user.id,
+      phone,
+      message,
+      status,
+      fast2sms_ref: messageId,
+      created_at: new Date().toISOString(),
     })
+
+    return NextResponse.json({ success: true, status, message_id: messageId })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }

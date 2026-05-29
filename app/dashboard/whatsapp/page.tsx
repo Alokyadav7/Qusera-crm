@@ -1,625 +1,113 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { redirect } from 'next/navigation'
+import { WhatsAppInboxClient, type WALead } from './whatsapp-inbox-client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { CRMHeader } from '@/components/crm/crm-header'
-import { toast } from 'sonner'
-import {
-  Phone,
-  Send,
-  Search,
-  Paperclip,
-  Mic,
-  MoreVertical,
-  CheckCheck,
-  Bot,
-  User,
-  MessageSquare,
-  FileText,
-  MapPin,
-  Image,
-  ArrowLeft,
-  Loader2,
-  RefreshCw,
-  AlertTriangle,
-  ExternalLink,
-  CheckCircle2,
-  Settings
-} from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/client'
-import type { Interaction, InteractionLead } from '@/hooks/use-realtime-interactions'
+export default async function WhatsAppPage() {
+  const sessionClient = await createClient()
+  const { data: { user } } = await sessionClient.auth.getUser()
+  if (!user) redirect('/login')
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-interface Conversation {
-  lead: InteractionLead
-  lastInteraction: Interaction
-  unreadCount: number
-  allInteractions: Interaction[]
-}
+  const svc = createServiceClient()
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function getSentimentLabel(score: number | null): string {
-  if (score === null) return 'Unknown'
-  if (score >= 0.6) return 'Very Positive'
-  if (score >= 0.3) return 'Positive'
-  if (score >= -0.3) return 'Neutral'
-  if (score >= -0.6) return 'Negative'
-  return 'Very Negative'
-}
+  // Get company_id
+  const { data: member } = await (svc as any)
+    .from('company_members')
+    .select('company_id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .single()
 
-function getSentimentColor(score: number | null): string {
-  if (score === null) return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-  if (score >= 0.6) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/30'
-  if (score >= 0.3) return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/30'
-  if (score >= -0.3) return 'text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-  if (score >= -0.6) return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/30'
-  return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/30'
-}
+  const companyId: string | null = member?.company_id ?? null
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  return `${days}d ago`
-}
-
-function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-}
-
-function getInitials(name: string) {
-  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-}
-
-function getMessageText(interaction: Interaction): string {
-  return interaction.content_transcribed || interaction.content_raw || `[${interaction.type} message]`
-}
-
-const quickReplies = [
-  'Thank you for your interest!',
-  'Let me check and get back to you.',
-  'I will send the details shortly.',
-  'Can we schedule a call?',
-  'Please find the document attached.',
-  'What time works best for you?',
-]
-
-const templateMessages = [
-  { id: 't1', name: 'Welcome Message', preview: 'Welcome! Thank you for your interest. How can I help you today?' },
-  { id: 't2', name: 'Follow-up', preview: 'Hi, just following up on our conversation. Do you have any questions?' },
-  { id: 't3', name: 'Meeting Confirmation', preview: 'Your meeting is confirmed. Looking forward to speaking with you!' },
-  { id: 't4', name: 'Payment Reminder', preview: 'This is a gentle reminder about the pending payment. Please let us know if you have any questions.' },
-  { id: 't5', name: 'Thank You', preview: 'Thank you for choosing us! We appreciate your trust and look forward to serving you.' },
-]
-
-// ── Main Component ─────────────────────────────────────────────────────────────
-export default function WhatsAppPage() {
-  const [interactions, setInteractions] = useState<Interaction[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [messageInput, setMessageInput] = useState('')
-  const [isSending, setIsSending] = useState(false)
-  const [showMobileChat, setShowMobileChat] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // ── Fetch WhatsApp interactions joined with leads ──
-  const fetchInteractions = useCallback(async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('interactions')
-      .select('*, lead:leads(id, full_name, company, phone_number)')
-      .eq('type', 'whatsapp')   // WhatsApp only
-      .order('created_at', { ascending: false })
-      .limit(500)
-    if (!error && data) {
-      setInteractions(data as Interaction[])
-      // Auto-select first conversation (only on initial load)
-      setSelectedLeadId(prev => {
-        if (prev) return prev
-        const first = (data as Interaction[]).find(i => i.lead_id)
-        return first?.lead_id ?? null
-      })
-    }
-    setIsLoading(false)
-  }, [])  // No selectedLeadId dep — prevents infinite loop
-
-  useEffect(() => {
-    fetchInteractions()
-    const supabase = createClient()
-    const channel = supabase
-      .channel('whatsapp-interactions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'interactions' }, fetchInteractions)
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [fetchInteractions])
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [interactions, selectedLeadId])
-
-  // ── Build conversations grouped by lead ──
-  const conversations: Conversation[] = (() => {
-    const byLead: Record<string, Interaction[]> = {}
-    interactions.forEach(i => {
-      if (!i.lead_id || !i.lead) return
-      if (!byLead[i.lead_id]) byLead[i.lead_id] = []
-      byLead[i.lead_id].push(i)
-    })
-    return Object.entries(byLead)
-      .map(([leadId, items]) => {
-        const sorted = [...items].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        return {
-          lead: sorted[0].lead!,
-          lastInteraction: sorted[0],
-          unreadCount: sorted.filter(i => i.direction === 'inbound').length,
-          allInteractions: [...items].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
-        }
-      })
-      .sort((a, b) => new Date(b.lastInteraction.created_at).getTime() - new Date(a.lastInteraction.created_at).getTime())
-  })()
-
-  const filteredConversations = conversations.filter(c =>
-    c.lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.lead.company || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.lead.phone_number || '').includes(searchQuery)
-  )
-
-  const selectedConversation = conversations.find(c => c.lead.id === selectedLeadId) || null
-  const selectedMessages = selectedConversation?.allInteractions || []
-
-  // ── Send via real Meta API (mock-safe) ──
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedLeadId || isSending) return
-    setIsSending(true)
-    const conv = conversations.find(c => c.lead.id === selectedLeadId)
-    const phone = conv?.lead.phone_number || ''
-    try {
-      const res = await fetch('/api/whatsapp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: phone, message: messageInput.trim(), leadId: selectedLeadId }),
-      })
-      const json = await res.json()
-      if (!res.ok) { toast.error(json.error || 'Send failed'); setIsSending(false); return }
-      if (json.mock && json.metaError) {
-        // Token exists but is expired/invalid — still logged to CRM
-        toast.warning(`⚠️ ${json.metaError} — message logged to CRM only. Refresh your Meta token.`)
-      } else if (json.mock) {
-        toast.info('Logged to CRM (WhatsApp API not configured — add META_WHATSAPP_TOKEN)')
-      }
-      setMessageInput('')
-    } catch (e) {
-      toast.error('Network error sending message')
-    }
-    setIsSending(false)
-  }
-
-  const isConfigured = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_META_CONFIGURED === 'true')
-    : false
-
-  // ── Not configured: show setup screen instead of broken UI ──
-  if (!isConfigured) {
+  if (!companyId) {
     return (
-      <div className="flex flex-col min-h-screen">
-        <CRMHeader
-          title="WhatsApp Business"
-          subtitle="Not connected"
-        />
-        <main className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-lg w-full space-y-6">
-            {/* Status card */}
-            <div className="text-center space-y-3">
-              <div className="size-16 rounded-2xl border-2 border-dashed border-border flex items-center justify-center mx-auto">
-                <MessageSquare className="size-8 text-muted-foreground/50" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold">WhatsApp Business not connected</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Connect the Meta WhatsApp Business API to send and receive messages directly from the CRM.
-                </p>
-              </div>
-            </div>
-
-            {/* Setup steps */}
-            <div className="rounded-xl border border-border divide-y divide-border">
-              {[
-                { step: '1', label: 'Get a Meta WhatsApp Business account', done: false, detail: 'Apply at business.whatsapp.com for API access' },
-                { step: '2', label: 'Create a Meta App on Meta Developers', done: false, detail: 'developers.facebook.com → Create App → Business type' },
-                { step: '3', label: 'Add your Phone Number ID and Access Token', done: false, detail: 'Found under WhatsApp → API Setup in your Meta app' },
-                { step: '4', label: 'Paste credentials in Integrations settings', done: false, detail: 'Dashboard → Integrations → WhatsApp Business API section' },
-                { step: '5', label: 'Add META_WHATSAPP_TOKEN to your .env file', done: false, detail: 'Required for the server to send outbound messages' },
-              ].map(s => (
-                <div key={s.step} className="flex items-start gap-3 p-4">
-                  <div className={`size-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${
-                    s.done ? 'bg-foreground text-background' : 'border border-border text-muted-foreground'
-                  }`}>
-                    {s.done ? <CheckCircle2 className="size-3.5" /> : s.step}
-                  </div>
-                  <div>
-                    <p className={`text-sm font-medium ${s.done ? 'line-through text-muted-foreground' : ''}`}>{s.label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{s.detail}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA buttons */}
-            <div className="flex gap-3">
-              <a href="/dashboard/integrations" className="flex-1">
-                <Button className="w-full" size="lg">
-                  <Settings className="size-4 mr-2" />
-                  Open Integration Settings
-                </Button>
-              </a>
-              <a href="https://business.whatsapp.com" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="lg">
-                  <ExternalLink className="size-4 mr-2" />
-                  Meta Docs
-                </Button>
-              </a>
-            </div>
-
-            <p className="text-xs text-center text-muted-foreground">
-              Already configured? Messages logged without the API are still visible below once the token is set.
-            </p>
-          </div>
-        </main>
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <p className="text-zinc-500 text-sm">Complete onboarding to access WhatsApp.</p>
       </div>
     )
   }
 
+  // Check if WhatsApp is connected for this company
+  const { data: waConfig } = await (svc as any)
+    .from('company_whatsapp')
+    .select('phone_number, display_name')
+    .eq('company_id', companyId)
+    .eq('is_active', true)
+    .single()
+
+  const isConnected = !!waConfig
+
+  // Fetch leads that have WhatsApp message history (for conversation list)
+  let leads: WALead[] = []
+  if (isConnected) {
+    const { data: msgs } = await (svc as any)
+      .from('whatsapp_messages')
+      .select('lead_id, message_text, created_at, direction')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+
+    // Get unique lead IDs with latest message
+    const leadMap = new Map<string, { last_message: string; last_message_at: string }>()
+    for (const msg of (msgs ?? [])) {
+      if (msg.lead_id && !leadMap.has(msg.lead_id)) {
+        leadMap.set(msg.lead_id, {
+          last_message: msg.message_text ?? '',
+          last_message_at: msg.created_at,
+        })
+      }
+    }
+
+    if (leadMap.size > 0) {
+      const leadIds = Array.from(leadMap.keys())
+      const { data: leadRows } = await (svc as any)
+        .from('leads')
+        .select('id, full_name, phone')
+        .in('id', leadIds)
+        .eq('company_id', companyId)
+
+      leads = (leadRows ?? []).map((l: any) => ({
+        id: l.id,
+        full_name: l.full_name,
+        phone: l.phone,
+        ...leadMap.get(l.id),
+      }))
+
+      // Sort by latest message
+      leads.sort((a, b) =>
+        new Date(b.last_message_at ?? 0).getTime() - new Date(a.last_message_at ?? 0).getTime()
+      )
+    }
+  }
+
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <CRMHeader
-        title="WhatsApp Business"
-        subtitle={isLoading ? 'Loading…' : `${conversations.length} conversations · real-time`}
-      />
-
-      <div className="flex-1 flex overflow-hidden">
-        {/* ── Conversations List ── */}
-        <div className={cn(
-          'w-full md:w-80 lg:w-96 border-r flex flex-col bg-background',
-          showMobileChat && 'hidden md:flex'
-        )}>
-          <div className="p-4 border-b">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                placeholder="Search conversations…"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
-                <Loader2 className="size-5 animate-spin" /> Loading…
-              </div>
-            ) : filteredConversations.length === 0 ? (
-              <div className="py-16 text-center px-4">
-                <MessageSquare className="mx-auto size-10 text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">No WhatsApp conversations yet.</p>
-                <p className="text-xs text-muted-foreground mt-1">Interactions logged as 'whatsapp' type will appear here.</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {filteredConversations.map(conv => {
-                  const avgSentiment = conv.allInteractions.reduce((s, i) => s + (i.sentiment_score || 0), 0) / conv.allInteractions.length || null
-                  return (
-                    <button
-                      key={conv.lead.id}
-                      onClick={() => { setSelectedLeadId(conv.lead.id); setShowMobileChat(true) }}
-                      className={cn(
-                        'w-full p-4 text-left hover:bg-muted/50 transition-colors',
-                        selectedLeadId === conv.lead.id && 'bg-muted'
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="relative">
-                          <Avatar className="size-12">
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {getInitials(conv.lead.full_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium truncate">{conv.lead.full_name}</span>
-                            <span className="text-xs text-muted-foreground">{timeAgo(conv.lastInteraction.created_at)}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {(conv.lead.company && conv.lead.company !== 'N/A' && conv.lead.company.toLowerCase() !== 'na') 
-                              ? conv.lead.company 
-                              : (conv.lead.phone_number || '—')}
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-sm text-muted-foreground truncate pr-2">
-                              {conv.lastInteraction.direction === 'outbound' ? '✓ ' : ''}{getMessageText(conv.lastInteraction).slice(0, 40)}
-                            </span>
-                            {conv.allInteractions.filter(i => i.direction === 'inbound').length > 0 && (
-                              <Badge className="size-5 p-0 flex items-center justify-center text-xs shrink-0">
-                                {conv.allInteractions.filter(i => i.direction === 'inbound').length}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="mt-1">
-                            <Badge variant="outline" className={cn('text-xs', getSentimentColor(avgSentiment))}>
-                              {getSentimentLabel(avgSentiment)}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </ScrollArea>
+    <div className="flex flex-col h-screen overflow-hidden bg-zinc-950">
+      {/* Page header */}
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-800/80 shrink-0">
+        <div className="size-8 rounded-xl bg-[#25D366]/10 border border-[#25D366]/20 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" className="size-4 fill-[#25D366]" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.847L.057 23.882l6.196-1.624A11.937 11.937 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.804 9.804 0 01-5.002-1.368l-.36-.214-3.68.965.981-3.594-.235-.37A9.819 9.819 0 012.182 12C2.182 6.578 6.578 2.182 12 2.182S21.818 6.578 21.818 12 17.422 21.818 12 21.818z" />
+          </svg>
         </div>
-
-        {/* ── Chat Area ── */}
-        {selectedConversation ? (
-          <div className={cn('flex-1 flex flex-col', !showMobileChat && 'hidden md:flex')}>
-            {/* Chat Header */}
-            <div className="border-b px-4 py-3 flex items-center justify-between bg-background">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden"
-                  onClick={() => setShowMobileChat(false)}
-                >
-                  <ArrowLeft className="size-5" />
-                </Button>
-                <Avatar className="size-10">
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {getInitials(selectedConversation.lead.full_name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium">{selectedConversation.lead.full_name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {selectedConversation.lead.phone_number || selectedConversation.lead.company || '—'}
-                    {' · '}{selectedMessages.length} messages
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon">
-                  <Phone className="size-4" />
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="size-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>View Lead Profile</DropdownMenuItem>
-                    <DropdownMenuItem>Add to Task</DropdownMenuItem>
-                    <DropdownMenuItem>Export Chat</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">Block Contact</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4 bg-[#f0f2f5] dark:bg-muted/30">
-              <div className="space-y-4 max-w-3xl mx-auto">
-                {selectedMessages.map(message => {
-                  const text = getMessageText(message)
-                  const isOut = message.direction === 'outbound'
-                  const aiExtracted = message.ai_extracted_data as Record<string, unknown> | null
-                  const aiSuggestion = typeof aiExtracted?.suggestion === 'string' ? aiExtracted.suggestion : null
-
-                  return (
-                    <div key={message.id} className={cn('flex', isOut ? 'justify-end' : 'justify-start')}>
-                      <div className={cn(
-                        'max-w-[75%] rounded-lg px-4 py-2 shadow-sm',
-                        isOut ? 'bg-emerald-100 dark:bg-emerald-900/40 text-foreground' : 'bg-white dark:bg-card text-foreground'
-                      )}>
-                        {message.type === 'voice' && (
-                          <div className="flex items-center gap-2 p-1 mb-1">
-                            <Mic className="size-4 text-primary" />
-                            <span className="text-xs text-muted-foreground">Voice message</span>
-                          </div>
-                        )}
-                        <p className="text-sm whitespace-pre-wrap">{text}</p>
-                        <div className="flex items-center justify-end gap-1 mt-1">
-                          <span className="text-xs text-muted-foreground">{formatTime(message.created_at)}</span>
-                          {isOut && <CheckCheck className="size-4 text-muted-foreground" />}
-                        </div>
-                        {aiSuggestion && (
-                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs flex items-start gap-2">
-                            <Bot className="size-4 text-blue-600 shrink-0 mt-0.5" />
-                            <span className="text-blue-700 dark:text-blue-300">{aiSuggestion}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-
-            {/* Quick Replies */}
-            <div className="border-t px-4 py-2 bg-background">
-              <ScrollArea className="w-full">
-                <div className="flex gap-2 pb-2">
-                  {quickReplies.map((reply, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      className="whitespace-nowrap text-xs"
-                      onClick={() => setMessageInput(reply)}
-                    >
-                      {reply}
-                    </Button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-
-            {/* Message Input */}
-            <div className="border-t p-4 bg-background">
-              <div className="flex items-end gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <Paperclip className="size-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem><Image className="mr-2 size-4" />Photo &amp; Video</DropdownMenuItem>
-                    <DropdownMenuItem><FileText className="mr-2 size-4" />Document</DropdownMenuItem>
-                    <DropdownMenuItem><MapPin className="mr-2 size-4" />Location</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <div className="flex-1">
-                  <Textarea
-                    placeholder="Type a message…"
-                    value={messageInput}
-                    onChange={e => setMessageInput(e.target.value)}
-                    className="min-h-[44px] max-h-32 resize-none"
-                    rows={1}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage() }
-                    }}
-                  />
-                </div>
-                {messageInput ? (
-                  <Button size="icon" onClick={handleSendMessage} disabled={isSending}>
-                    {isSending ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
-                  </Button>
-                ) : (
-                  <Button size="icon" variant="ghost">
-                    <Mic className="size-5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="hidden md:flex flex-1 items-center justify-center bg-muted/30">
-            <div className="text-center">
-              <MessageSquare className="mx-auto size-16 text-muted-foreground/50" />
-              <h3 className="mt-4 text-lg font-medium">Select a conversation</h3>
-              <p className="text-sm text-muted-foreground">
-                {isLoading ? 'Loading conversations…' : conversations.length === 0 ? 'No WhatsApp conversations found in database.' : 'Choose a contact to start messaging'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Right Panel — Templates & Lead Info ── */}
-        <div className="hidden xl:block w-80 border-l bg-background">
-          <Tabs defaultValue="templates" className="h-full flex flex-col">
-            <TabsList className="w-full justify-start rounded-none border-b px-4 h-12">
-              <TabsTrigger value="templates">Templates</TabsTrigger>
-              <TabsTrigger value="info">Lead Info</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="templates" className="flex-1 p-4 space-y-4 mt-0">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Message Templates</h4>
-                <p className="text-xs text-muted-foreground">Click to use a pre-approved template</p>
-              </div>
-              <div className="space-y-2">
-                {templateMessages.map(template => (
-                  <Card
-                    key={template.id}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => setMessageInput(template.preview)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="font-medium text-sm">{template.name}</div>
-                      <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{template.preview}</div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="info" className="flex-1 p-4 mt-0">
-              {selectedConversation ? (
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <Avatar className="size-20 mx-auto">
-                      <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                        {getInitials(selectedConversation.lead.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <h3 className="mt-3 font-semibold">{selectedConversation.lead.full_name}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedConversation.lead.company || '—'}</p>
-                  </div>
-                  <Separator />
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Phone</div>
-                      <div className="text-sm font-medium">{selectedConversation.lead.phone_number || '—'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Total Interactions</div>
-                      <div className="text-sm font-medium">{selectedMessages.length} messages</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Avg Sentiment</div>
-                      {(() => {
-                        const avg = selectedMessages.reduce((s, i) => s + (i.sentiment_score || 0), 0) / selectedMessages.length || null
-                        return (
-                          <Badge variant="outline" className={cn('mt-1', getSentimentColor(avg))}>
-                            {getSentimentLabel(avg)}
-                          </Badge>
-                        )
-                      })()}
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Last Message</div>
-                      <div className="text-sm font-medium">{timeAgo(selectedConversation.lastInteraction.created_at)}</div>
-                    </div>
-                  </div>
-                  <Separator />
-                  <Button className="w-full" variant="outline">
-                    <User className="mr-2 size-4" />
-                    View Full Profile
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                  Select a conversation
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+        <div>
+          <h1 className="text-sm font-bold text-white">WhatsApp Business</h1>
+          <p className="text-xs text-zinc-500">
+            {isConnected
+              ? `Connected · ${waConfig.phone_number}`
+              : 'Not connected'}
+          </p>
         </div>
+      </div>
+
+      {/* Inbox */}
+      <div className="flex-1 overflow-hidden">
+        <WhatsAppInboxClient
+          companyId={companyId}
+          isConnected={isConnected}
+          waPhone={waConfig?.phone_number}
+          initialLeads={leads}
+        />
       </div>
     </div>
   )

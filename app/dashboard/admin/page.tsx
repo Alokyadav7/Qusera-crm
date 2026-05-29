@@ -1,127 +1,185 @@
 'use client'
-
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { CRMHeader } from '@/components/crm/crm-header'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Shield, Users, Building2, ScrollText, Loader2 } from 'lucide-react'
-import type { AdminUser, Role } from '@/lib/types/client'
-import type { Lead } from '@/hooks/use-realtime-leads'
+import {
+  Building2, Users, CreditCard, Settings, TrendingUp, Loader2,
+  CheckCircle2, Circle, Plug, FileText, UserPlus
+} from 'lucide-react'
+import Link from 'next/link'
 
-// Lazy-loaded tab components
-import { UserManagementTable } from '@/components/crm/admin/user-management-table'
-import { RoleManagementTable } from '@/components/crm/admin/role-management-table'
-import { ClientRegistryTable } from '@/components/crm/admin/client-registry-table'
-import { AuditLogTable } from '@/components/crm/admin/audit-log-table'
+interface CompanyStats {
+  totalMembers: number
+  activeMembers: number
+  totalLeads: number
+  totalDeals: number
+  planName: string
+  setupComplete: boolean
+  passwordChanged: boolean
+  profileComplete: boolean
+  teamAdded: boolean
+  integrationConnected: boolean
+  firstLead: boolean
+  firstDeal: boolean
+}
 
-export default function AdminPage() {
-  const [users, setUsers] = useState<AdminUser[]>([])
-  const [roles, setRoles] = useState<Role[]>([])
-  const [clients, setClients] = useState<Lead[]>([])
-  const [auditLogs, setAuditLogs] = useState<any[]>([])
+export default function CompanyAdminPage() {
+  const [stats, setStats] = useState<CompanyStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('users')
+  const [companyName, setCompanyName] = useState('')
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true)
-    try {
-      // Fetch users from admin API
-      const usersRes = await fetch('/api/admin/users')
-      if (usersRes.ok) {
-        const { users: u } = await usersRes.json()
-        setUsers(u ?? [])
-      }
-
+  useEffect(() => {
+    async function load() {
       const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
 
-      // Fetch all system roles
-      const { data: rolesData } = await supabase
-        .from('roles')
-        .select('*')
-        .order('name')
-      setRoles(rolesData ?? [])
+      // Get company
+      const { data: memberData } = await (supabase as any)
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single()
+      const cid = memberData?.company_id
+      if (!cid) { setLoading(false); return }
 
-      // Fetch clients
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('*, contacts:client_contacts(*), addresses:client_addresses(*)')
-        .order('created_at', { ascending: false })
-      setClients((clientsData as any) ?? [])
+      const [
+        { data: company },
+        { count: totalMembers },
+        { count: activeMembers },
+        { count: totalLeads },
+        { count: totalDeals },
+        { data: profile },
+        { data: integrations },
+      ] = await Promise.all([
+        (supabase as any).from('companies').select('name, plan_id, setup_complete').eq('id', cid).single(),
+        (supabase as any).from('company_members').select('*', { count: 'exact', head: true }).eq('company_id', cid),
+        (supabase as any).from('company_members').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true),
+        supabase.from('leads').select('*', { count: 'exact', head: true }),
+        (supabase as any).from('deals').select('*', { count: 'exact', head: true }),
+        (supabase as any).from('profiles').select('onboarding_completed').eq('id', user.id).single(),
+        (supabase as any).from('company_integrations').select('integration_type, is_active').eq('company_id', cid),
+      ])
 
-      // Fetch audit logs (last 100)
-      const { data: logsData } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100)
-      setAuditLogs(logsData ?? [])
-    } finally {
+      setCompanyName(company?.name ?? '')
+      setStats({
+        totalMembers: totalMembers ?? 0,
+        activeMembers: activeMembers ?? 0,
+        totalLeads: totalLeads ?? 0,
+        totalDeals: totalDeals ?? 0,
+        planName: company?.plan_id ?? 'basic',
+        setupComplete: !!company?.setup_complete,
+        passwordChanged: !!profile?.onboarding_completed,
+        profileComplete: !!company?.name,
+        teamAdded: (totalMembers ?? 0) > 1,
+        integrationConnected: (integrations ?? []).some((i: any) => i.is_active),
+        firstLead: (totalLeads ?? 0) > 0,
+        firstDeal: (totalDeals ?? 0) > 0,
+      })
       setLoading(false)
     }
+    load()
   }, [])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  const statCards = stats ? [
+    { label: 'Total Employees', value: stats.totalMembers, icon: Users, href: '/dashboard/admin/team', color: 'text-blue-600' },
+    { label: 'Active Members', value: stats.activeMembers, icon: Users, href: '/dashboard/admin/team', color: 'text-emerald-600' },
+    { label: 'Total Leads', value: stats.totalLeads, icon: TrendingUp, href: '/dashboard/leads', color: 'text-amber-600' },
+    { label: 'Deals', value: stats.totalDeals, icon: CreditCard, href: '/dashboard/deals', color: 'text-violet-600' },
+  ] : []
 
-  const stats = [
-    { label: 'Total Users', value: users.length, icon: Users, color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/30' },
-    { label: 'Active Roles', value: roles.length, icon: Shield, color: 'text-purple-600 bg-purple-50 dark:bg-purple-950/30' },
-    { label: 'Clients', value: clients.length, icon: Building2, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30' },
-    { label: 'Audit Events', value: auditLogs.length, icon: ScrollText, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/30' },
+  const quickLinks = [
+    { label: 'Add Employee', desc: 'Invite team members', href: '/dashboard/admin/team', icon: UserPlus },
+    { label: 'Company Settings', desc: 'Branding, timezone, domain', href: '/dashboard/admin/settings', icon: Settings },
+    { label: 'Billing & Plan', desc: 'Subscription, invoices, usage', href: '/dashboard/admin/billing', icon: CreditCard },
+    { label: 'Integrations', desc: 'Email, WhatsApp, SMS', href: '/dashboard/admin/integrations', icon: Plug },
+    { label: 'Audit Logs', desc: 'Organization activity trail', href: '/dashboard/admin/audit-logs', icon: FileText },
   ]
 
+  const setupChecklist = stats ? [
+    { label: 'Password changed', done: stats.passwordChanged },
+    { label: 'Company profile complete', done: stats.profileComplete },
+    { label: 'Team members added', done: stats.teamAdded },
+    { label: 'First integration connected', done: stats.integrationConnected },
+    { label: 'First lead created', done: stats.firstLead },
+    { label: 'First deal created', done: stats.firstDeal },
+  ] : []
+  const completedCount = setupChecklist.filter(i => i.done).length
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <CRMHeader
-        title="Admin Panel"
-        subtitle="Manage users, roles, clients, and system audit logs"
-      />
+    <div className="p-6 space-y-6 max-w-4xl">
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Building2 className="size-6" />
+          {companyName ? `${companyName} — ` : ''}Company Admin
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">Manage your workspace, team, billing and integrations</p>
+      </div>
 
-      <main className="flex-1 p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto w-full">
-        {/* Stats bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {stats.map(s => (
-            <div key={s.label} className="rounded-xl border border-border/50 bg-card p-4 flex items-center gap-3 shadow-sm">
-              <div className={`size-10 rounded-lg flex items-center justify-center ${s.color}`}>
-                <s.icon className="size-5" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-xl font-bold">{loading ? '—' : s.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Main tabs */}
-        {loading ? (
-          <div className="flex items-center justify-center py-24 gap-3 text-muted-foreground">
-            <Loader2 className="size-6 animate-spin" />
-            <span>Loading admin data…</span>
+      {loading ? <Loader2 className="size-6 animate-spin text-muted-foreground" /> : (
+        <>
+          {/* Stat Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {statCards.map(c => (
+              <Link key={c.label} href={c.href} className="border rounded-xl p-5 bg-card hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm text-muted-foreground">{c.label}</p>
+                  <c.icon className={`size-5 ${c.color}`} />
+                </div>
+                <p className="text-3xl font-bold">{c.value}</p>
+              </Link>
+            ))}
           </div>
-        ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="users" className="gap-2"><Users className="size-4" />Users ({users.length})</TabsTrigger>
-              <TabsTrigger value="roles" className="gap-2"><Shield className="size-4" />Roles ({roles.length})</TabsTrigger>
-              <TabsTrigger value="clients" className="gap-2"><Building2 className="size-4" />Clients ({clients.length})</TabsTrigger>
-              <TabsTrigger value="audit" className="gap-2"><ScrollText className="size-4" />Audit Log</TabsTrigger>
-            </TabsList>
 
-            <TabsContent value="users">
-              <UserManagementTable users={users} roles={roles} onRefresh={fetchAll} />
-            </TabsContent>
-            <TabsContent value="roles">
-              <RoleManagementTable roles={roles} users={users} onRefresh={fetchAll} />
-            </TabsContent>
-            <TabsContent value="clients">
-              <ClientRegistryTable clients={clients as any} onRefresh={fetchAll} />
-            </TabsContent>
-            <TabsContent value="audit">
-              <AuditLogTable logs={auditLogs} users={users} />
-            </TabsContent>
-          </Tabs>
-        )}
-      </main>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Setup Checklist */}
+            {!stats?.setupComplete && (
+              <div className="border rounded-xl bg-card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="font-semibold text-sm">Onboarding Checklist</p>
+                  <span className="text-xs text-muted-foreground">{completedCount}/6 complete</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5 mb-4">
+                  <div
+                    className="bg-primary rounded-full h-1.5 transition-all"
+                    style={{ width: `${(completedCount / 6) * 100}%` }}
+                  />
+                </div>
+                <ul className="space-y-2.5">
+                  {setupChecklist.map(item => (
+                    <li key={item.label} className="flex items-center gap-2.5 text-sm">
+                      {item.done ? (
+                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                      ) : (
+                        <Circle className="size-4 text-muted-foreground/40 shrink-0" />
+                      )}
+                      <span className={item.done ? 'text-muted-foreground line-through' : 'text-foreground'}>
+                        {item.label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Quick Links */}
+            <div className="grid gap-2.5">
+              {quickLinks.map(l => (
+                <Link key={l.href} href={l.href} className="flex items-center gap-4 p-4 border rounded-xl bg-card hover:shadow-md transition-shadow">
+                  <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <l.icon className="size-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{l.label}</p>
+                    <p className="text-xs text-muted-foreground">{l.desc}</p>
+                  </div>
+                  <span className="ml-auto text-muted-foreground">→</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

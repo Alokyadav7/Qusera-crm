@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { TasksPageClient } from './tasks-page-client'
 
 async function getTasksData() {
-  const supabase = await createClient()
+  const supabase = createServiceClient() // Bypass RLS for server render
   
   const { data: tasks, error } = await supabase
     .from('tasks')

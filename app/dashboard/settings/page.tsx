@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -53,7 +53,7 @@ export default function SettingsPage() {
     setUser(currentUser)
 
     // Load profile
-    const { data: prof } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single()
+    const { data: prof } = await (supabase as any).from('profiles').select('*').eq('id', currentUser.id).single()
     if (prof) {
       setProfile({
         company_name: prof.company_name || '',
@@ -67,7 +67,7 @@ export default function SettingsPage() {
     }
 
     // Fetch team members sharing the same company name
-    let query = supabase
+    let query = (supabase as any)
       .from('profiles')
       .select('id, email, full_name, role, created_at')
       .order('created_at', { ascending: true })
@@ -108,7 +108,7 @@ export default function SettingsPage() {
     setLoading(true)
     const supabase = createClient()
     if (!user) { setLoading(false); return }
-    const { error } = await supabase.from('profiles').upsert({
+    const { error } = await (supabase as any).from('profiles').upsert({
       id: user.id,
       email: user.email,
       ...profile,
@@ -132,10 +132,10 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: [inviteEmail],
-          subject: `You've been invited to OrbitCRM`,
+          subject: `You've been invited to KlinqCRM`,
           html: `
             <div style="font-family: sans-serif; padding: 24px; color: #333;">
-              <h2>You've been invited to join OrbitCRM</h2>
+              <h2>You've been invited to join KlinqCRM</h2>
               <p style="font-size: 14px; line-height: 1.5; color: #555;">${user?.email} has invited you to collaborate as a <strong>${inviteRole}</strong>.</p>
               <p style="margin: 24px 0;">
                 <a href="${typeof window !== 'undefined' ? window.location.origin : ''}/login" 
@@ -424,7 +424,7 @@ export default function SettingsPage() {
                                 className="size-8 text-muted-foreground hover:text-destructive transition-colors rounded-lg"
                                 onClick={async () => {
                                   const supabase = createClient()
-                                  const { error } = await supabase
+                                  const { error } = await (supabase as any)
                                     .from('profiles')
                                     .update({ company_name: null, role: 'member' })
                                     .eq('id', member.id)
@@ -551,7 +551,7 @@ export default function SettingsPage() {
                 <div className="p-4 bg-muted/10 rounded-2xl border border-border/40 flex gap-3">
                   <ShieldAlert className="size-5 text-primary shrink-0 mt-0.5" />
                   <p className="text-xs text-muted-foreground leading-normal">
-                    <strong>Multi-Tenant Isolation Security:</strong> OrbitCRM utilizes Row Level Security (RLS) policies 
+                    <strong>Multi-Tenant Isolation Security:</strong> KlinqCRM utilizes Row Level Security (RLS) policies 
                     enforced on the database schema layer. Authenticated JWT payloads verify `auth.uid() = user_id` for every transaction. 
                     All data is encrypted in transit using TLS 1.3 and at rest with AES-256 standards.
                   </p>
@@ -611,7 +611,7 @@ export default function SettingsPage() {
                         disabled={plan.current}
                         onClick={async () => {
                           if (plan.name === 'Enterprise') {
-                            window.open('mailto:sales@orbitcrm.in')
+                            window.open('mailto:sales@KlinqCRM.in')
                             return
                           }
                           const amountMap: Record<string, number> = { Starter: 99900, Growth: 249900 }

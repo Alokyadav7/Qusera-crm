@@ -17,7 +17,6 @@ import {
 } from 'lucide-react'
 import { useRealtimeLeads } from '@/hooks/use-realtime-leads'
 import type { Lead } from '@/hooks/use-realtime-leads'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 // ── Stage config ──────────────────────────────────────────────────────────────
@@ -203,31 +202,29 @@ export default function PipelinePage() {
   const handleAddLead = useCallback(async () => {
     if (!addModal || !form.full_name) return
     setSaving(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSaving(false); return }
-
-    const { data: inserted, error } = await supabase.from('leads').insert({
-      user_id: user.id,
-      full_name: form.full_name,
-      company: form.company || null,
-      phone_number: form.phone_number || null,
-      deal_value: form.deal_value ? Number(form.deal_value) : null,
-      status: addModal,
-      buying_intent: 'medium',
-      sentiment_score: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }).select().single()
-
-    if (error) {
-      toast.error('Failed to add lead: ' + error.message)
-    } else if (inserted) {
-      // Instantly add the new card to the kanban without waiting for refetch
-      refetch()
-      toast.success(`Lead "${form.full_name}" added successfully`)
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: form.full_name,
+          company: form.company || null,
+          phone_number: form.phone_number || null,
+          deal_value: form.deal_value ? Number(form.deal_value) : null,
+          status: addModal,
+          buying_intent: 'medium',
+        }),
+      })
+      if (res.ok) {
+        refetch()
+        toast.success(`Lead "${form.full_name}" added successfully`)
+      } else {
+        const err = await res.json()
+        toast.error('Failed to add lead: ' + (err.error || 'Unknown error'))
+      }
+    } catch (err: any) {
+      toast.error('Failed to add lead: ' + err.message)
     }
-
     setAddModal(null)
     setForm({ full_name: '', company: '', phone_number: '', deal_value: '' })
     setSaving(false)

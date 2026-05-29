@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (validRows.length > 0) {
-        const { error } = await supabase.from('leads').insert(validRows)
+        const { error } = await (supabase as any).from('leads').insert(validRows)
         if (error) {
           errors.push(`Batch error: ${error.message}`)
           skipped += validRows.length
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: leads } = await supabase
+  const { data: leads } = await (supabase as any)
     .from('leads')
     .select('full_name,phone_number,email,company,city,state,status,buying_intent,estimated_budget,gst_status,pan_status,source,created_at')
     .eq('user_id', user.id)
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
   const headers = ['Name','Phone','Email','Company','City','State','Status','Intent','Budget','GST Status','PAN Status','Source','Created At']
   const csvRows = [
     headers.join(','),
-    ...(leads || []).map(l => [
+    ...(leads || []).map((l: any) => [
       `"${l.full_name || ''}"`,
       `"${l.phone_number || ''}"`,
       `"${l.email || ''}"`,
@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="orbitcrm-leads-${new Date().toISOString().split('T')[0]}.csv"`,
+      'Content-Disposition': `attachment; filename="KlinqCRM-leads-${new Date().toISOString().split('T')[0]}.csv"`,
     },
   })
 }

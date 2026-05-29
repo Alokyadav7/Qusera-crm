@@ -47,7 +47,7 @@ export function PersonalNotesWidget() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('interactions')
         .select('id, content_raw, created_at, ai_extracted_data')
         .eq('type', 'text')
@@ -83,7 +83,7 @@ export function PersonalNotesWidget() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setAdding(false); return }
 
-    const { error } = await supabase.from('interactions').insert({
+    const { error } = await (supabase as any).from('interactions').insert({
       user_id: user.id,
       lead_id: null,
       type: 'text',
@@ -107,7 +107,7 @@ export function PersonalNotesWidget() {
   const deleteNote = async (id: string) => {
     setDeletingId(id)
     const supabase = createClient()
-    const { error } = await supabase.from('interactions').delete().eq('id', id)
+    const { error } = await (supabase as any).from('interactions').delete().eq('id', id)
     if (error) toast.error('Delete failed')
     else setNotes(prev => prev.filter(n => n.id !== id))
     setDeletingId(null)
@@ -116,7 +116,7 @@ export function PersonalNotesWidget() {
   const togglePin = async (note: Note) => {
     const supabase = createClient()
     const pinned = !note.ai_extracted_data?.pinned
-    await supabase.from('interactions').update({
+    await (supabase as any).from('interactions').update({
       ai_extracted_data: { ...note.ai_extracted_data, pinned },
     }).eq('id', note.id)
     setNotes(prev => prev.map(n =>

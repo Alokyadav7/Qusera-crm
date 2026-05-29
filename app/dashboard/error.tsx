@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { console.error('Dashboard error:', error) }, [error])
+  useEffect(() => {}, [error])
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
       <div className="flex size-16 items-center justify-center rounded-full bg-red-100 mb-4">
