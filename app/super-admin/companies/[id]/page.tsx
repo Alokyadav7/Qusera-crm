@@ -1,10 +1,11 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
-import { PageHeader, Section, StatCard, StatusBadge } from '@/components/super-admin/ui'
+import { Section, StatCard, StatusBadge } from '@/components/super-admin/ui'
 import { CompanyActionsBar } from '@/components/super-admin/company-actions-bar'
+import { CompanyCRUDPanel } from '@/components/super-admin/company-crud-panel'
 import { FeatureFlagToggles } from '@/components/super-admin/feature-flag-toggles'
-import { Users, Activity, CreditCard, Settings } from 'lucide-react'
-import { formatDistanceToNow, format } from 'date-fns'
+import { Activity } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 
 async function getCompanyDetail(id: string) {
   const svc = createServiceClient()
@@ -29,7 +30,15 @@ async function getCompanyDetail(id: string) {
 
   if (!company) return null
 
-  return { company, members: members ?? [], leadCount: leadCount ?? 0, subscription, featureOverrides: featureOverrides ?? [], recentEvents: recentEvents ?? [], usageSummary: usageSummary ?? [] }
+  return {
+    company,
+    members: members ?? [],
+    leadCount: leadCount ?? 0,
+    subscription,
+    featureOverrides: featureOverrides ?? [],
+    recentEvents: recentEvents ?? [],
+    usageSummary: usageSummary ?? [],
+  }
 }
 
 export default async function CompanyDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -37,70 +46,49 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
   const data = await getCompanyDetail(id)
   if (!data) notFound()
 
-  const { company, members, leadCount, subscription, featureOverrides, recentEvents, usageSummary } = data
-  const activeMembers = members.filter(m => m.is_active).length
+  const { company, members, leadCount, subscription, featureOverrides, recentEvents } = data
+  const activeMembers = members.filter((m: any) => m.is_active).length
 
   return (
-    <div className="p-6 max-w-[1400px]">
-      <div className="flex items-start justify-between mb-6">
+    <div className="p-6 xl:p-10 max-w-[1400px] space-y-6">
+      {/* Page title row */}
+      <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-white text-lg font-semibold">{company.name}</h1>
-            <StatusBadge
-              label={company.status}
-              variant={company.status === 'active' ? 'green' : company.status === 'trial' ? 'yellow' : company.status === 'suspended' ? 'red' : 'gray'}
-            />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-400 text-[10px] font-semibold tracking-wider uppercase mb-2">
+            Companies / Detail
           </div>
-          <p className="text-white/35 text-sm">{company.slug} · Created {formatDistanceToNow(new Date(company.created_at), { addSuffix: true })}</p>
+          <h1 className="text-2xl font-black text-white tracking-tight">{company.name}</h1>
+          <p className="text-zinc-500 text-xs mt-0.5">
+            {company.slug} · Created {formatDistanceToNow(new Date(company.created_at), { addSuffix: true })}
+          </p>
         </div>
+        {/* Existing quick actions: impersonate, suspend/activate, reset trial */}
         <CompanyActionsBar company={company} />
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      {/* KPI Stats row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Active Members" value={activeMembers} sub={`${members.length} total`} />
         <StatCard label="Total Leads" value={leadCount} />
         <StatCard label="Plan" value={subscription?.plan?.display_name ?? 'Free'} sub={subscription?.status ?? 'no subscription'} />
         <StatCard label="MRR" value={subscription?.mrr ? `₹${subscription.mrr}` : '₹0'} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Members */}
-        <Section title="Team Members" className="lg:col-span-1">
-          {members.length === 0 ? (
-            <div className="px-4 py-6 text-center text-white/25 text-sm">No members</div>
-          ) : (
-            <div className="divide-y divide-white/[0.05]">
-              {members.slice(0, 8).map((m, i) => (
-                <div key={i} className="px-4 py-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="size-6 rounded-full bg-white/10 flex items-center justify-center">
-                      <Users className="size-3 text-white/40" />
-                    </div>
-                    <span className="text-white/60 text-xs font-mono">{m.user_id.slice(0, 8)}…</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge label={m.role} variant="gray" />
-                    {!m.is_active && <StatusBadge label="inactive" variant="red" />}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
+      {/* CRUD Panel: Edit company + Members management */}
+      <CompanyCRUDPanel company={company} />
 
-        {/* Feature Flags */}
-        <Section title="Feature Overrides" className="lg:col-span-1">
+      {/* Bottom grid: Feature Flags + Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Section title="Feature Overrides">
           <FeatureFlagToggles companyId={company.id} overrides={featureOverrides} />
         </Section>
 
-        {/* Activity */}
-        <Section title="Recent Activity" className="lg:col-span-1">
+        <Section title="Recent Activity">
           {recentEvents.length === 0 ? (
-            <div className="px-4 py-6 text-center text-white/25 text-sm">No activity</div>
+            <div className="px-4 py-8 text-center text-zinc-600 text-sm">No activity yet</div>
           ) : (
-            <div className="divide-y divide-white/[0.05]">
-              {recentEvents.map((e, i) => (
+            <div className="divide-y divide-white/[0.04]">
+              {recentEvents.map((e: any, i: number) => (
                 <div key={i} className="px-4 py-2.5">
                   <p className="text-white/60 text-xs">{e.event_type.replace('.', ' · ')}</p>
                   {e.resource_label && <p className="text-white/30 text-[11px]">{e.resource_label}</p>}

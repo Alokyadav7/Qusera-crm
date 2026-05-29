@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -211,9 +211,13 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
 
 
   const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch {
+      // ignore
+    }
+    window.location.replace('/login')
   }
 
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
