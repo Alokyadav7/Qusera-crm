@@ -1,12 +1,14 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
+function getRazorpay(): Razorpay {
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret',
+  })
+}
 
 // Plan pricing map — keep in sync with your plans table
 const PLAN_PRICES: Record<string, { amount: number; name: string }> = {
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create Razorpay order
+    const razorpay = getRazorpay()
     const order = await razorpay.orders.create({
       amount: plan.amount,
       currency: 'INR',
