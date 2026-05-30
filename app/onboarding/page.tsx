@@ -1,4 +1,6 @@
-﻿import { createClient } from '@/lib/supabase/server'
+﻿export const dynamic = 'force-dynamic'
+
+import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { OnboardingWizard } from '@/components/crm/onboarding-wizard'

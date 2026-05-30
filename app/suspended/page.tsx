@@ -1,4 +1,6 @@
-﻿import Link from 'next/link'
+﻿export const dynamic = 'force-dynamic'
+
+import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import { AlertOctagon, Mail, ArrowLeft } from 'lucide-react'
