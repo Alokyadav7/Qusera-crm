@@ -7,12 +7,22 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 import {
   Users, UserPlus, Loader2, Mail, UserX, Shield,
-  Phone, Briefcase
+  Phone, Briefcase, RefreshCw, Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, isPast } from 'date-fns'
+
+interface PendingInvite {
+  id: string
+  invited_email: string
+  invited_name: string | null
+  role: string
+  expires_at: string
+  created_at: string
+}
 
 const ROLES = ['owner', 'admin', 'manager', 'sales_rep', 'field_agent']
 const ROLE_COLORS: Record<string, string> = {
@@ -47,6 +57,20 @@ export default function AdminTeamPage() {
     email: '', name: '', phone: '', role: 'sales_rep', department: '',
   })
   const [inviting, setInviting] = useState(false)
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([])
+  const [resendingId, setResendingId] = useState<string | null>(null)
+
+  const loadInvites = useCallback(async () => {
+    if (!companyId) return
+    const supabase = createClient()
+    const { data } = await (supabase as any)
+      .from('invites')
+      .select('id, invited_email, invited_name, role, expires_at, created_at')
+      .eq('company_id', companyId)
+      .is('accepted_at', null)
+      .order('created_at', { ascending: false })
+    setPendingInvites(data ?? [])
+  }, [companyId])
 
   const loadMembers = useCallback(async () => {
     const supabase = createClient()
@@ -79,6 +103,15 @@ export default function AdminTeamPage() {
       profile: Array.isArray(m.profiles) ? m.profiles[0] : m.profiles,
     })))
     setLoading(false)
+
+    // Load pending invites after getting cid
+    const { data: inviteData } = await (supabase as any)
+      .from('invites')
+      .select('id, invited_email, invited_name, role, expires_at, created_at')
+      .eq('company_id', cid)
+      .is('accepted_at', null)
+      .order('created_at', { ascending: false })
+    setPendingInvites(inviteData ?? [])
   }, [])
 
   useEffect(() => { loadMembers() }, [loadMembers])
@@ -149,6 +182,29 @@ export default function AdminTeamPage() {
     })
     if (res.ok) toast.success(`Password reset email sent to ${email}`)
     else toast.error('Failed to send reset email')
+  }
+
+  async function handleResendInvite(invite: PendingInvite) {
+    if (!companyId) return
+    setResendingId(invite.id)
+    const res = await fetch('/api/invites/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: invite.invited_email,
+        full_name: invite.invited_name,
+        role: invite.role,
+        company_id: companyId,
+      }),
+    })
+    if (res.ok) {
+      toast.success(`Invite resent to ${invite.invited_email}`)
+      loadInvites()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error || 'Failed to resend invite')
+    }
+    setResendingId(null)
   }
 
   const initials = (name: string | null | undefined) => {
@@ -265,6 +321,78 @@ export default function AdminTeamPage() {
                 </tbody>
               </table>
             )}
+          </div>
+        )}
+
+        {/* Pending Invites Section */}
+        {pendingInvites.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold flex items-center gap-2">
+                <Clock className="size-4 text-muted-foreground" />
+                Pending Invitations
+                <Badge variant="secondary" className="text-xs">{pendingInvites.length}</Badge>
+              </p>
+              <Button variant="ghost" size="sm" onClick={loadInvites} className="h-7 gap-1">
+                <RefreshCw className="size-3" /> Refresh
+              </Button>
+            </div>
+            <div className="border rounded-xl bg-card overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    {['Email', 'Role', 'Sent', 'Expiry', 'Action'].map(h => (
+                      <th key={h} className="px-4 py-2.5 text-left text-xs text-muted-foreground font-medium">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingInvites.map(invite => {
+                    const expired = isPast(new Date(invite.expires_at))
+                    return (
+                      <tr key={invite.id} className="border-b last:border-0 hover:bg-muted/20">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="font-medium">{invite.invited_email}</p>
+                            {invite.invited_name && <p className="text-xs text-muted-foreground">{invite.invited_name}</p>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                            {invite.role.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(invite.created_at), { addSuffix: true })}
+                        </td>
+                        <td className="px-4 py-3">
+                          {expired ? (
+                            <Badge variant="destructive" className="text-[10px]">Expired</Badge>
+                          ) : (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">
+                              {formatDistanceToNow(new Date(invite.expires_at), { addSuffix: true })}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            variant="outline" size="sm"
+                            onClick={() => handleResendInvite(invite)}
+                            disabled={resendingId === invite.id}
+                            className="h-7 text-xs gap-1"
+                          >
+                            {resendingId === invite.id
+                              ? <Loader2 className="size-3 animate-spin" />
+                              : <Mail className="size-3" />}
+                            {expired ? 'Re-invite' : 'Resend'}
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

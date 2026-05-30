@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     // Send invite email via Gmail SMTP
-    const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login`
+    const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://klinqcrm.in'}/login`
     const { data: inviterProfile } = await (supabase as any)
       .from('profiles')
       .select('full_name')

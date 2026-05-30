@@ -325,14 +325,14 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
         </SidebarGroup>
 
         {/* Admin Panels - role gated */}
-        {(userRole === 'company_admin' || userRole === 'sales_manager' || isSuperAdmin) && (
+        {(['owner', 'admin', 'manager'].includes(userRole ?? '') || isSuperAdmin) && (
           <>
             <SidebarSeparator />
             <SidebarGroup>
               <SidebarGroupLabel>Admin Panels</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {(userRole === 'company_admin' || isSuperAdmin) && (
+                  {(['owner', 'admin'].includes(userRole ?? '') || isSuperAdmin) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin') && !pathname.includes('/audit-logs') && !pathname.includes('/api')}>
                         <Link href="/dashboard/admin">

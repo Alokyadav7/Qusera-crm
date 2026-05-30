@@ -1,200 +1,346 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
-  Building2, Users, TrendingUp, Shield, CheckCircle, XCircle,
+  Building2, Users, AlertCircle, AlertTriangle, Info,
   UserPlus, FileText, Settings, CreditCard, BarChart3, Activity,
-  ArrowRight, Calendar, Terminal
+  ArrowRight, CheckCircle2, Loader2, RefreshCw
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { toast } from 'sonner'
 
-interface Company {
-  id: string
-  name: string
-  logo_url: string | null
-  status: string | null
-  created_at: string
-  setup_complete: boolean | null
-  plan_id: string | null
+interface OverviewData {
+  stats: {
+    totalCompanies: number
+    activeCompanies: number
+    trialCompanies: number
+    suspendedCompanies: number
+    totalUsers: number
+  }
+  alerts: {
+    id: string
+    severity: string
+    title: string
+    company_name: string | null
+    created_at: string
+  }[]
+  activity: {
+    id: string
+    action: string
+    company_name: string
+    created_at: string
+  }[]
+  health: {
+    healthy: number
+    warning: number
+    critical: number
+  }
 }
 
-interface Stats {
-  totalCompanies: number
-  totalUsers: number
-  totalLeads: number
-  newThisMonth: number
-  actionsThisMonth: number
+function actionIcon(action: string) {
+  if (action.includes('suspend')) return '⚠'
+  if (action.includes('onboard') || action.includes('created')) return '↑'
+  if (action.includes('impersonat')) return '→'
+  if (action.includes('invite') || action.includes('accepted')) return '✓'
+  if (action.includes('fail') || action.includes('error')) return '✕'
+  return '·'
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  active:    'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase',
-  trial:     'bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase',
-  suspended: 'bg-red-500/10 text-red-400 border border-red-500/20 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase',
-  canceled:  'bg-zinc-800 text-zinc-400 border border-zinc-700 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase',
-}
+export function SuperAdminOverviewClient({ adminName }: { adminName: string }) {
+  const [data, setData] = useState<OverviewData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [resolving, setResolving] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-export function SuperAdminOverviewClient({
-  adminName,
-  stats,
-  recentCompanies,
-}: {
-  adminName: string
-  stats: Stats
-  recentCompanies: Company[]
-}) {
-  const quickLinks = [
-    { href: '/super-admin/companies', label: 'All Companies', icon: Building2, desc: 'Manage instances, active slots & domains' },
-    { href: '/super-admin/onboard-company', label: 'Onboard Company', icon: UserPlus, desc: 'Provision a new customer instance' },
-    { href: '/super-admin/analytics', label: 'Platform Analytics', icon: BarChart3, desc: 'View global activity logs & usage metrics' },
-    { href: '/super-admin/audit-logs', label: 'Audit Trail Logs', icon: FileText, desc: 'Trace system actions & configuration edits' },
-    { href: '/super-admin/billing', label: 'Finance & Invoices', icon: CreditCard, desc: 'Track subscriptions, tier fees & payments' },
-    { href: '/super-admin/settings', label: 'Settings Control', icon: Settings, desc: 'Alter thresholds, defaults & configurations' },
+  const fetchData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    try {
+      const res = await fetch('/api/super-admin/overview')
+      if (res.ok) {
+        setData(await res.json())
+        if (isRefresh) toast.success('Dashboard refreshed')
+      }
+    } catch {
+      toast.error('Failed to load overview data')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  useEffect(() => { fetchData() }, [])
+
+  async function resolveAlert(alertId: string) {
+    setResolving(alertId)
+    try {
+      const res = await fetch(`/api/super-admin/alerts/${alertId}/resolve`, { method: 'POST' })
+      if (res.ok) {
+        toast.success('Alert resolved')
+        setData(prev => prev ? { ...prev, alerts: prev.alerts.filter(a => a.id !== alertId) } : prev)
+      }
+    } finally {
+      setResolving(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black gap-2 text-zinc-500 text-xs font-mono">
+        <Loader2 className="size-4 animate-spin text-zinc-400" />
+        Loading...
+      </div>
+    )
+  }
+
+  if (!data) return null
+
+  const { stats, alerts, activity, health } = data
+  const totalHealth = (health.healthy + health.warning + health.critical) || 1
+
+  const quickActions = [
+    { href: '/super-admin/onboard-company', label: '+ Onboard New Company', icon: UserPlus },
+    { href: '/super-admin/audit-logs', label: '→ View Audit Logs', icon: FileText },
+    { href: '/super-admin/settings', label: '⚙ Platform Settings', icon: Settings },
+    { href: '/super-admin/companies', label: '↗ All Companies', icon: Building2 },
   ]
 
   return (
-    <div className="p-8 xl:p-12 space-y-8 max-w-[1500px] relative overflow-hidden">
-      {/* Decorative ambient backgrounds */}
-      <div className="absolute right-[5%] top-[-10%] w-[600px] h-[600px] rounded-full bg-violet-600/[0.03] blur-[150px] pointer-events-none" />
-      <div className="absolute left-[20%] bottom-[-10%] w-[600px] h-[600px] rounded-full bg-emerald-500/[0.02] blur-[180px] pointer-events-none" />
+    <div className="p-6 xl:p-10 space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100 selection:bg-zinc-800">
 
-      {/* Header Panel */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-6 relative z-10">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-400 text-[10px] font-semibold tracking-wider uppercase mb-2">
-            <Shield className="size-3 text-violet-400 animate-pulse" />
-            <span>Root Admin Console</span>
-          </div>
-          <h1 className="text-3xl font-black text-white tracking-tight font-display">
-            Platform Overview
-          </h1>
-          <p className="text-zinc-500 text-xs mt-1 font-sans">
-            Terminal authenticated for <span className="font-semibold text-zinc-300">{adminName}</span> · Active credentials verified
+          <p className="text-sm font-semibold uppercase tracking-wider text-zinc-400 mb-1">Overview</p>
+          <h1 className="text-2xl font-black text-white tracking-tight">Platform Overview</h1>
+          <p className="text-zinc-500 text-xs mt-0.5">
+            Signed in as <span className="text-zinc-300 font-semibold">{adminName}</span>
           </p>
         </div>
-        <Link
-          href="/super-admin/onboard-company"
-          className="inline-flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 text-zinc-950 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-black/10 cursor-pointer"
-        >
-          <UserPlus className="size-3.5" />
-          Onboard Company
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchData(true)}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 text-xs font-bold px-3 py-2 rounded border border-zinc-900 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <Link
+            href="/super-admin/onboard-company"
+            className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-bold px-3.5 py-2 rounded transition-all"
+          >
+            <UserPlus className="size-3.5" />
+            Onboard Company
+          </Link>
+        </div>
       </div>
 
-      {/* Stats Cards Section */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 relative z-10">
-        {[
-          { label: 'Total Companies', value: stats.totalCompanies, icon: Building2, color: 'text-violet-400 bg-violet-500/10 border-violet-500/20', sub: `+${stats.newThisMonth} new this month` },
-          { label: 'Active Members', value: stats.totalUsers, icon: Users, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', sub: 'Across active tenants' },
-          { label: 'Leads Processed', value: stats.totalLeads, icon: TrendingUp, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', sub: 'Total database count' },
-          { label: 'New Cohorts', value: stats.newThisMonth, icon: Activity, color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20', sub: 'Current cycle onboarding' },
-          { label: 'Audit Actions', value: stats.actionsThisMonth, icon: Terminal, color: 'text-rose-400 bg-rose-500/10 border-rose-500/20', sub: 'Logged system events' },
-        ].map(k => (
-          <div key={k.label} className="bg-zinc-900/35 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-5 hover:border-zinc-700/80 transition-all duration-300 group">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-zinc-400 text-xs font-semibold tracking-wide">{k.label}</span>
-              <div className={`p-2 rounded-xl border ${k.color}`}>
-                <k.icon className="size-4" />
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+        {/* LEFT: 2/3 */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Horizontal Metrics Bar */}
+          <div className="grid grid-cols-5 gap-px bg-zinc-900 border border-zinc-900 rounded overflow-hidden">
+            {[
+              { label: 'Total Companies', value: stats.totalCompanies },
+              { label: 'Active', value: stats.activeCompanies },
+              { label: 'Trial', value: stats.trialCompanies },
+              { label: 'Suspended', value: stats.suspendedCompanies },
+              { label: 'Total Users', value: stats.totalUsers },
+            ].map(s => (
+              <div key={s.label} className="bg-zinc-950 px-4 py-4">
+                <p className="text-2xl font-bold text-white">{s.value}</p>
+                <p className="text-xs text-zinc-500 mt-1">{s.label}</p>
               </div>
-            </div>
-            <p className="text-white text-3xl font-black tabular-nums tracking-tight font-display">{k.value.toLocaleString()}</p>
-            <p className="text-zinc-500 text-[10px] font-mono tracking-tight mt-1">{k.sub}</p>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Main Section Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-        {/* Recent Activity Table */}
-        <div className="lg:col-span-2 bg-zinc-900/35 backdrop-blur-xl border border-zinc-800/80 rounded-2xl overflow-hidden flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/80 bg-zinc-950/20">
+          {/* Platform Alerts */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-zinc-900 bg-zinc-900/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <p className="text-white text-sm font-bold tracking-tight font-display">Recent Onboarding Activity</p>
+                <AlertCircle className="size-4 text-zinc-400" />
+                <p className="text-sm font-semibold text-white">Platform Alerts</p>
               </div>
-              <Link href="/super-admin/companies" className="text-zinc-500 hover:text-white text-xs font-semibold transition-all flex items-center gap-1">
-                View All <ArrowRight className="size-3" />
-              </Link>
+              {alerts.length > 0 ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-950/30 text-red-400 border border-red-900/40">
+                  {alerts.length} active
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono text-zinc-600">All clear</span>
+              )}
             </div>
-            
-            {recentCompanies.length === 0 ? (
-              <div className="py-20 text-center text-zinc-500 text-sm font-light">
-                <Building2 className="size-10 mx-auto mb-3 text-zinc-600 opacity-60" />
-                No companies currently onboarded onto the node.
+
+            {alerts.length === 0 ? (
+              <div className="py-10 flex flex-col items-center gap-2 text-center">
+                <CheckCircle2 className="size-6 text-zinc-700" />
+                <p className="text-zinc-600 text-xs font-mono">No active alerts — platform healthy</p>
               </div>
             ) : (
-              <div className="divide-y divide-zinc-800/60">
-                {recentCompanies.map(co => (
-                  <div key={co.id} className="flex items-center gap-4 px-6 py-4 hover:bg-white/[0.01] transition-colors group">
-                    <div className="size-10 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center shrink-0 shadow-inner">
-                      {co.logo_url ? (
-                        <img src={co.logo_url} alt="" className="size-7 rounded object-cover" />
-                      ) : (
-                        <Building2 className="size-5 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-zinc-200 text-sm font-bold truncate group-hover:text-white transition-colors">{co.name}</p>
-                      <div className="flex items-center gap-1.5 mt-1 text-zinc-500 text-[10px] font-mono">
-                        <Calendar className="size-3" />
-                        <span>
-                          {formatDistanceToNow(new Date(co.created_at), { addSuffix: true })}
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-900 bg-zinc-900/5">
+                    <th className="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">Severity</th>
+                    <th className="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">Alert</th>
+                    <th className="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">Company</th>
+                    <th className="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500">Time</th>
+                    <th className="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-zinc-500 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900">
+                  {alerts.map(alert => (
+                    <tr key={alert.id} className="hover:bg-zinc-900/10 transition-colors">
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase ${
+                          alert.severity === 'critical' ? 'text-red-400'
+                          : alert.severity === 'warning' ? 'text-amber-400'
+                          : 'text-blue-400'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                          {alert.severity}
                         </span>
-                      </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-zinc-200 font-medium">{alert.title}</td>
+                      <td className="px-4 py-3 text-xs text-zinc-500 font-mono">{alert.company_name ?? '—'}</td>
+                      <td className="px-4 py-3 text-xs text-zinc-500 font-mono whitespace-nowrap">
+                        {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => resolveAlert(alert.id)}
+                          disabled={resolving === alert.id}
+                          className="text-[10px] font-bold text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1.5 rounded transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {resolving === alert.id ? 'Resolving...' : 'Resolve'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-zinc-900 bg-zinc-900/10 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="size-4 text-zinc-400" />
+                <p className="text-sm font-semibold text-white">Recent Activity</p>
+              </div>
+              <Link href="/super-admin/audit-logs" className="text-xs text-zinc-500 hover:text-white flex items-center gap-1 transition-colors">
+                View all <ArrowRight className="size-3" />
+              </Link>
+            </div>
+            {activity.length === 0 ? (
+              <div className="py-10 text-center text-zinc-600 text-xs font-mono">No recent activity</div>
+            ) : (
+              <div className="divide-y divide-zinc-900">
+                {activity.map(log => (
+                  <div key={log.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-900/10 transition-colors">
+                    <span className="text-zinc-500 text-sm font-mono w-4 shrink-0">{actionIcon(log.action)}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs text-zinc-300 font-mono">{log.action}</span>
+                      <span className="text-zinc-600 text-xs mx-1.5">—</span>
+                      <span className="text-xs text-zinc-400 font-semibold">{log.company_name}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {/* Setup status pill */}
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border ${
-                        co.setup_complete 
-                          ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10'
-                          : 'bg-amber-500/5 text-amber-400 border-amber-500/10'
-                      }`}>
-                        {co.setup_complete ? 'Setup Complete' : 'In Wizard'}
-                      </span>
-                      <span className={STATUS_STYLE[co.status ?? 'trial'] ?? STATUS_STYLE.trial}>
-                        {co.status ?? 'trial'}
-                      </span>
-                      <Link
-                        href={`/super-admin/companies/${co.id}`}
-                        className="text-zinc-500 hover:text-white hover:bg-zinc-800/60 text-xs px-2.5 py-1.5 rounded-lg border border-transparent hover:border-zinc-700/60 transition-all font-semibold"
-                      >
-                        Configure →
-                      </Link>
-                    </div>
+                    <span className="text-[10px] text-zinc-600 font-mono shrink-0 whitespace-nowrap">
+                      {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          <div className="p-4 border-t border-zinc-800/40 bg-zinc-950/10 text-center text-xs text-zinc-500">
-            Node status operational · Isolated boundaries enforced
-          </div>
         </div>
 
-        {/* Quick Access Card */}
-        <div className="bg-zinc-900/35 backdrop-blur-xl border border-zinc-800/80 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-zinc-800/80 bg-zinc-950/20">
-            <p className="text-white text-sm font-bold tracking-tight font-display">System Quick Access</p>
-          </div>
-          <div className="p-4 space-y-2">
-            {quickLinks.map(ql => (
-              <Link
-                key={ql.href}
-                href={ql.href}
-                className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl hover:bg-white/[0.02] border border-transparent hover:border-zinc-800/60 transition-all group cursor-pointer"
-              >
-                <div className="size-9 rounded-xl bg-zinc-950 border border-zinc-850 flex items-center justify-center shrink-0 shadow-md shadow-black/10 group-hover:bg-zinc-900 group-hover:border-zinc-700 transition-all">
-                  <ql.icon className="size-4.5 text-zinc-500 group-hover:text-violet-400 transition-colors" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-zinc-200 text-xs font-bold group-hover:text-white transition-colors">{ql.label}</p>
-                  <p className="text-zinc-500 text-[10px] mt-0.5 leading-relaxed font-sans font-light">{ql.desc}</p>
-                </div>
-                <ArrowRight className="size-3.5 text-zinc-600 ml-auto group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+        {/* RIGHT: 1/3 */}
+        <div className="space-y-4">
+
+          {/* Company Health Summary */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-white">Company Health</p>
+              <Link href="/super-admin/companies?health=critical" className="text-xs text-zinc-500 hover:text-white transition-colors">
+                View all →
               </Link>
-            ))}
+            </div>
+            {[
+              { label: 'Healthy', count: health.healthy, color: 'bg-emerald-500', dot: 'bg-emerald-400' },
+              { label: 'Warning', count: health.warning, color: 'bg-amber-500', dot: 'bg-amber-400' },
+              { label: 'Critical', count: health.critical, color: 'bg-red-500', dot: 'bg-red-400' },
+            ].map(row => {
+              const pct = Math.round((row.count / totalHealth) * 100)
+              return (
+                <div key={row.label} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-2 text-zinc-300">
+                      <span className={`w-1.5 h-1.5 rounded-full ${row.dot}`} />
+                      {row.label}
+                    </span>
+                    <span className="font-bold text-zinc-200">{row.count}</span>
+                  </div>
+                  <div className="h-1 bg-zinc-900 rounded-full overflow-hidden">
+                    <div className={`h-full ${row.color} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })}
           </div>
+
+          {/* Quick Actions */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-zinc-900 bg-zinc-900/10">
+              <p className="text-sm font-semibold text-white">Quick Actions</p>
+            </div>
+            <div className="p-2 space-y-1">
+              {quickActions.map(qa => (
+                <Link
+                  key={qa.href}
+                  href={qa.href}
+                  className="flex items-center gap-3 px-3 py-2 rounded hover:bg-zinc-900 border border-transparent hover:border-zinc-800 text-sm text-zinc-300 hover:text-white transition-all group"
+                >
+                  <qa.icon className="size-4 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
+                  <span>{qa.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Platform Status */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-zinc-900 bg-zinc-900/10">
+              <p className="text-sm font-semibold text-white">Platform Status</p>
+            </div>
+            <div className="p-4 space-y-2 text-xs">
+              <Link href="/super-admin/monitoring" className="text-[10px] text-zinc-500 hover:text-white transition-colors float-right">
+                Details →
+              </Link>
+              {[
+                { label: 'Database', ok: true },
+                { label: 'Auth Service', ok: true },
+                { label: 'Background Jobs', ok: true },
+                { label: 'API Routes', ok: true },
+              ].map(s => (
+                <div key={s.label} className="flex items-center justify-between">
+                  <span className="text-zinc-400">{s.label}</span>
+                  <span className={`flex items-center gap-1 font-medium ${s.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${s.ok ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                    {s.ok ? 'Online' : 'Error'}
+                  </span>
+                </div>
+              ))}
+              <div className="pt-1 border-t border-zinc-900">
+                <Link href="/super-admin/monitoring" className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors">
+                  View full service status →
+                </Link>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

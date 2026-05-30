@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (existing) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://klinqcrm.in'
       return NextResponse.json({ token: (existing as any).token, url: `${appUrl}/portal/${(existing as any).token}` })
     }
 

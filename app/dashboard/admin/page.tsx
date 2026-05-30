@@ -55,8 +55,8 @@ export default function CompanyAdminPage() {
         (supabase as any).from('companies').select('name, plan_id, setup_complete').eq('id', cid).single(),
         (supabase as any).from('company_members').select('*', { count: 'exact', head: true }).eq('company_id', cid),
         (supabase as any).from('company_members').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true),
-        supabase.from('leads').select('*', { count: 'exact', head: true }),
-        (supabase as any).from('deals').select('*', { count: 'exact', head: true }),
+        supabase.from('leads').select('*', { count: 'exact', head: true }).eq('company_id' as any, cid),
+        (supabase as any).from('deals').select('*', { count: 'exact', head: true }).eq('company_id', cid),
         (supabase as any).from('profiles').select('onboarding_completed').eq('id', user.id).single(),
         (supabase as any).from('company_integrations').select('integration_type, is_active').eq('company_id', cid),
       ])

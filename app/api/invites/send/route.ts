@@ -95,7 +95,7 @@ export const POST = withTenantAuth(
       return NextResponse.json({ error: 'Failed to create invite: ' + error?.message }, { status: 500 })
     }
 
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/invite/${invite.token}`
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://klinqcrm.in'}/invite/${invite.token}`
 
     // Queue email (non-blocking)
     await enqueueJob({

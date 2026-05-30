@@ -1,8 +1,3 @@
--- ============================================================
--- Qwix CRM — SMS Messages Table Migration
--- ADDITIVE — safe to re-run (IF NOT EXISTS)
--- ============================================================
-
 -- ── SMS Messages ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS sms_messages (
   id              uuid        DEFAULT gen_random_uuid() PRIMARY KEY,

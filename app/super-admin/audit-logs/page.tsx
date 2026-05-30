@@ -1,9 +1,10 @@
 import { createServiceClient } from '@/lib/supabase/service'
-import { PageHeader } from '@/components/super-admin/ui'
 import { format } from 'date-fns'
 import { Suspense } from 'react'
 import { AuditLogsFilters } from './audit-logs-filters'
 import { Calendar, Shield, Terminal } from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
 
 async function getAuditLogs(searchParams: { company?: string; action?: string; from?: string; to?: string }) {
   const svc = createServiceClient()
@@ -48,36 +49,33 @@ export default async function SuperAdminAuditLogsPage({
   const { logs, companies, uniqueActions } = await getAuditLogs(sp)
 
   const ACTION_COLOR: Record<string, string> = {
-    'company.onboarded': 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase',
-    'company.suspended': 'bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase',
-    'company.activated': 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase',
-    'company.deleted': 'bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase',
-    'user.invited': 'bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase',
-    'user.deactivated': 'bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase',
+    'company.onboarded': 'text-emerald-405 border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+    'company.suspended': 'text-red-405 border-red-500/20 bg-red-500/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+    'company.activated': 'text-emerald-405 border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+    'company.deleted': 'text-red-405 border-red-500/20 bg-red-500/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+    'user.invited': 'text-zinc-300 border-zinc-800 bg-zinc-900 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+    'user.deactivated': 'text-red-405 border-red-500/20 bg-red-500/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
   }
 
   return (
-    <div className="p-8 xl:p-12 space-y-8 max-w-[1500px] relative overflow-hidden">
-      {/* Decorative ambient backgrounds */}
-      <div className="absolute right-[5%] top-[-10%] w-[600px] h-[600px] rounded-full bg-violet-600/[0.02] blur-[140px] pointer-events-none" />
-      <div className="absolute left-[15%] bottom-[-10%] w-[600px] h-[600px] rounded-full bg-emerald-500/[0.01] blur-[160px] pointer-events-none" />
-
+    <div className="p-6 xl:p-10 space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100 selection:bg-zinc-800">
+      
       {/* Header Panel */}
-      <div className="border-b border-zinc-900 pb-6 relative z-10">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-zinc-400 text-[10px] font-semibold tracking-wider uppercase mb-2">
-          <Shield className="size-3 text-violet-400" />
-          <span>Security & Events</span>
+      <div className="border-b border-zinc-900 pb-5">
+        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-bold tracking-wider uppercase mb-2 select-none">
+          <Shield className="size-3 text-zinc-350" />
+          <span>Platform Trail</span>
         </div>
-        <h1 className="text-3xl font-black text-white tracking-tight font-display">
-          Audit Trail Logs
+        <h1 className="text-2xl font-black text-white tracking-tight font-display select-none">
+          Audit Logs Ledger
         </h1>
-        <p className="text-zinc-500 text-xs mt-1">
-          Historical log records, configuration changes, instance events and tenant system activity
+        <p className="text-zinc-500 text-xs mt-0.5">
+          Comprehensive, non-repudiation ledger recording system mutations, settings overrides, and tenant context switches
         </p>
       </div>
 
-      <div className="relative z-10">
-        <Suspense fallback={<div className="h-20 bg-zinc-900/35 border border-zinc-800 rounded-2xl animate-pulse mb-6" />}>
+      <div>
+        <Suspense fallback={<div className="h-14 bg-zinc-950 border border-zinc-900 rounded animate-pulse" />}>
           <AuditLogsFilters
             companies={companies as any[]}
             uniqueActions={uniqueActions}
@@ -86,56 +84,56 @@ export default async function SuperAdminAuditLogsPage({
         </Suspense>
       </div>
 
-      {/* Audit Logs Table Glass Panel */}
-      <div className="bg-zinc-900/35 backdrop-blur-xl border border-zinc-800/80 rounded-2xl overflow-hidden relative z-10">
+      {/* Audit Logs Table */}
+      <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
         {logs.length === 0 ? (
-          <div className="py-20 text-center text-zinc-500 text-sm font-light">
-            <Terminal className="size-12 text-zinc-650 mb-3 mx-auto opacity-70" />
-            <p className="text-zinc-400 font-bold">No entries found</p>
-            <p className="text-zinc-650 text-xs mt-1">Clear filters or retry scanning the system ledger.</p>
+          <div className="py-20 text-center space-y-3">
+            <Terminal className="size-10 text-zinc-600 mx-auto opacity-70" />
+            <p className="text-zinc-400 text-xs font-bold font-mono">No trail logs matched query bounds</p>
+            <p className="text-zinc-650 text-[11px]">Adjust criteria filters or reset parameters.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-zinc-800 bg-zinc-950/20 text-[10px] font-bold text-zinc-500 tracking-wider uppercase">
-                  <th className="px-6 py-4">Timestamp</th>
-                  <th className="px-6 py-4">Tenant Scope</th>
-                  <th className="px-6 py-4">Action Event</th>
-                  <th className="px-6 py-4">Target Resource</th>
-                  <th className="px-6 py-4">Log Details</th>
+                <tr className="border-b border-zinc-900 bg-zinc-900/5 text-[9px] font-bold text-zinc-550 tracking-wider uppercase">
+                  <th className="px-5 py-3">Timestamp</th>
+                  <th className="px-5 py-3">Tenant Scope</th>
+                  <th className="px-5 py-3">Event Action</th>
+                  <th className="px-5 py-3">Target Resource</th>
+                  <th className="px-5 py-3">Log Details Payload</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/50">
+              <tbody className="divide-y divide-zinc-900">
                 {logs.map((log: any) => (
-                  <tr key={log.id} className="hover:bg-white/[0.01] transition-colors group">
+                  <tr key={log.id} className="hover:bg-zinc-900/10 transition-colors group">
                     {/* Timestamp */}
-                    <td className="px-6 py-4.5 text-zinc-450 text-xs font-mono whitespace-nowrap">
+                    <td className="px-5 py-3.5 text-zinc-500 text-xs font-mono whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        <Calendar className="size-3.5 text-zinc-500" />
+                        <Calendar className="size-3.5 text-zinc-650" />
                         <span>{format(new Date(log.created_at), 'dd MMM yyyy, HH:mm')}</span>
                       </div>
                     </td>
 
                     {/* Scope */}
-                    <td className="px-6 py-4.5 text-zinc-350 text-xs font-semibold">
-                      {(log.companies as any)?.name ?? (log.company_id ? log.company_id.slice(0, 8) + '…' : 'Platform System')}
+                    <td className="px-5 py-3.5 text-zinc-300 text-xs font-bold">
+                      {(log.companies as any)?.name ?? (log.company_id ? log.company_id.slice(0, 8) + '…' : 'System Node')}
                     </td>
 
                     {/* Action */}
-                    <td className="px-6 py-4.5">
-                      <span className={ACTION_COLOR[log.action] ?? 'bg-zinc-800 text-zinc-450 border border-zinc-700 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase'}>
+                    <td className="px-5 py-3.5">
+                      <span className={ACTION_COLOR[log.action] ?? 'text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider'}>
                         {log.action}
                       </span>
                     </td>
 
                     {/* Resource */}
-                    <td className="px-6 py-4.5 text-zinc-300 text-xs font-mono">
+                    <td className="px-5 py-3.5 text-zinc-400 text-xs font-mono">
                       {log.resource}
                     </td>
 
                     {/* Details */}
-                    <td className="px-6 py-4.5 text-zinc-500 text-[11px] font-mono max-w-xs truncate group-hover:text-zinc-400 transition-colors">
+                    <td className="px-5 py-3.5 text-zinc-550 text-[10.5px] font-mono max-w-sm truncate group-hover:text-zinc-400 transition-colors">
                       {typeof log.details === 'object' ? JSON.stringify(log.details) : String(log.details ?? '')}
                     </td>
                   </tr>

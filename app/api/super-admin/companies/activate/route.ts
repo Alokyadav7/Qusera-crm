@@ -53,10 +53,10 @@ export async function POST(req: NextRequest) {
   if (ownerMember) {
     const { data: { user: ownerAuth } } = await svc.auth.admin.getUserById(ownerMember.user_id)
     if (ownerAuth?.email) {
-      const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://app.klinqcrm.com'}/login`
+      const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://klinqcrm.in'}/login`
       sendEmail({
         to: ownerAuth.email,
-        subject: 'Your Klinq CRM access has been restored ✅',
+        subject: 'Your KlinqCRM workspace access has been restored ✅',
         html: companyReactivatedEmailHtml({
           companyName: company.name,
           loginUrl,

@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     company_id: company.id,
     is_active: true,
   }).eq('id', newUserId)
-  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://app.klinqcrm.com'}/login`
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://klinqcrm.in'}/login`
 
   // Send onboarding email via Gmail SMTP — don't block if it fails
   sendEmail({

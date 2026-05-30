@@ -1,6 +1,4 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Migration: notifications table + lead_score_history table
--- ─────────────────────────────────────────────────────────────────────────────
 
 -- 1. NOTIFICATIONS TABLE
 -- Real DB-backed notifications with read/unread state, type, and metadata.
@@ -32,10 +30,8 @@ CREATE POLICY "Users see own notifications"
 CREATE INDEX IF NOT EXISTS notifications_user_unread_idx
   ON public.notifications (user_id, is_read, created_at DESC);
 
--- ─────────────────────────────────────────────────────────────────────────────
 -- 2. LEAD SCORE HISTORY TABLE
 -- Stores each scoring event with the score, reasons, and delta vs previous.
--- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.lead_score_history (
   id             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   lead_id        uuid NOT NULL REFERENCES public.leads(id) ON DELETE CASCADE,

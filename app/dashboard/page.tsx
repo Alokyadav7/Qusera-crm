@@ -1,4 +1,4 @@
-﻿import { createServiceClient } from '@/lib/supabase/service'
+import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import { CRMHeader } from '@/components/crm/crm-header'
 import { DashboardStats } from '@/components/crm/dashboard-stats'
@@ -13,7 +13,7 @@ import { PersonalNotesWidget } from '@/components/crm/personal-notes-widget'
 import Link from 'next/link'
 
 async function getDashboardData() {
-  const supabase = createServiceClient() // Bypass RLS for server render
+  const supabase = createServiceClient()
   const sessionClient = await createClient()
 
   const today = new Date()
@@ -24,15 +24,40 @@ async function getDashboardData() {
   // Get current user for scoped queries
   const { data: { user } } = await sessionClient.auth.getUser()
   const userId = user?.id
-
-  // Get profile name
-  let userName = 'User'
-  if (userId) {
-    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', userId as any).single()
-    if ((profile as any)?.full_name) userName = (profile as any).full_name
+  if (!userId) {
+    return {
+      userName: 'User',
+      pendingTasks: 0,
+      leads: [],
+      tasks: [],
+      interactions: [],
+      stats: { totalLeads: 0, newLeadsToday: 0, tasksToday: 0, completedTasks: 0, totalRevenue: 0, conversionRate: 0 },
+      pipelineData: { new: 0, contacted: 0, interested: 0, verified: 0, negotiation: 0, closed_won: 0, closed_lost: 0 }
+    }
   }
 
-  // Fetch all dashboard data in parallel
+  // Resolve company_id — all queries MUST be scoped to this company
+  const [profileRes, memberRes] = await Promise.all([
+    supabase.from('profiles').select('full_name').eq('id', userId as any).single(),
+    (supabase as any).from('company_members').select('company_id').eq('user_id', userId).eq('is_active', true).single(),
+  ])
+
+  const userName = (profileRes.data as any)?.full_name || 'User'
+  const companyId: string | null = memberRes.data?.company_id ?? null
+
+  if (!companyId) {
+    return {
+      userName,
+      pendingTasks: 0,
+      leads: [],
+      tasks: [],
+      interactions: [],
+      stats: { totalLeads: 0, newLeadsToday: 0, tasksToday: 0, completedTasks: 0, totalRevenue: 0, conversionRate: 0 },
+      pipelineData: { new: 0, contacted: 0, interested: 0, verified: 0, negotiation: 0, closed_won: 0, closed_lost: 0 }
+    }
+  }
+
+  // All queries scoped to this company only — no cross-tenant data
   const [
     { count: pendingTasks },
     { data: leads },
@@ -46,33 +71,44 @@ async function getDashboardData() {
     { count: closedLostCount }
   ] = await Promise.all([
     supabase.from('tasks').select('*', { count: 'exact', head: true })
+      .eq('company_id' as any, companyId)
       .eq('is_completed', false)
       .gte('due_date', today.toISOString())
       .lt('due_date', tomorrow.toISOString()),
-    supabase.from('leads').select('*').order('sentiment_score', { ascending: false }).limit(10),
-    supabase.from('leads').select('status'),
+    supabase.from('leads').select('*')
+      .eq('company_id' as any, companyId)
+      .order('sentiment_score', { ascending: false }).limit(10),
+    supabase.from('leads').select('status')
+      .eq('company_id' as any, companyId),
     supabase.from('tasks').select('*, lead:leads(full_name, company)')
+      .eq('company_id' as any, companyId)
       .eq('is_completed', false)
       .order('due_date', { ascending: true })
       .limit(5),
     supabase.from('interactions').select('*, lead:leads(full_name, company)')
+      .eq('company_id' as any, companyId)
       .order('created_at', { ascending: false })
       .limit(5),
-    supabase.from('leads').select('*', { count: 'exact', head: true }),
     supabase.from('leads').select('*', { count: 'exact', head: true })
+      .eq('company_id' as any, companyId),
+    supabase.from('leads').select('*', { count: 'exact', head: true })
+      .eq('company_id' as any, companyId)
       .gte('created_at', today.toISOString()),
     supabase.from('tasks').select('*', { count: 'exact', head: true })
+      .eq('company_id' as any, companyId)
       .eq('is_completed', true),
     supabase.from('leads').select('deal_value, estimated_budget, status')
+      .eq('company_id' as any, companyId)
       .eq('status', 'closed_won'),
     supabase.from('leads').select('*', { count: 'exact', head: true })
+      .eq('company_id' as any, companyId)
       .eq('status', 'closed_lost'),
   ])
-  
+
   const totalRevenue = closedDeals?.reduce((sum, deal) => sum + (Number(deal.deal_value) || Number(deal.estimated_budget) || 0), 0) || 0
   const closedWonCount = closedDeals?.length || 0
   const conversionRate = totalLeads && totalLeads > 0 ? (closedWonCount / totalLeads) * 100 : 0
-  
+
   const pipelineData = {
     new: pipelineLeads?.filter(l => l.status === 'new').length || 0,
     contacted: pipelineLeads?.filter(l => l.status === 'contacted').length || 0,
@@ -82,7 +118,7 @@ async function getDashboardData() {
     closed_won: closedWonCount,
     closed_lost: closedLostCount || 0
   }
-  
+
   return {
     userName,
     pendingTasks: pendingTasks || 0,
@@ -157,20 +193,20 @@ function EmptyStateOnboarding({ userName }: { userName: string }) {
 export default async function DashboardPage() {
   const data = await getDashboardData()
   const hasData = data.stats.totalLeads > 0 || data.tasks.length > 0
-  
+
   return (
     <div className="flex flex-col min-h-screen">
-      <CRMHeader 
-        title="Dashboard" 
-        subtitle={data.pendingTasks > 0 
+      <CRMHeader
+        title="Dashboard"
+        subtitle={data.pendingTasks > 0
           ? `Welcome back, ${data.userName}! You have ${data.pendingTasks} pending task${data.pendingTasks === 1 ? '' : 's'} today.`
           : `Welcome back, ${data.userName}! You're all caught up for today.`
         }
       />
-      
+
       <main className="flex-1 p-4 md:p-6 md:pt-8 space-y-6 max-w-[1600px] mx-auto w-full relative">
         <div className="absolute right-0 top-0 size-96 bg-primary/5 blur-[100px] -z-10 rounded-full" />
-        
+
         {/* Stats Overview */}
         <DashboardStats stats={data.stats} />
 
@@ -187,7 +223,7 @@ export default async function DashboardPage() {
               <div className="lg:col-span-4 animate-fade-in-up delay-100">
                 <VoiceRecorderWidget />
               </div>
-              
+
               {/* Row 2: Priority Leads (4 cols) + Tasks (4 cols) + Recent Interactions (4 cols) */}
               <div className="lg:col-span-4 animate-fade-in-up delay-150">
                 <LeadPriorityList leads={data.leads as any} />
@@ -198,7 +234,7 @@ export default async function DashboardPage() {
               <div className="lg:col-span-4 animate-fade-in-up delay-250">
                 <RecentInteractions interactions={data.interactions} />
               </div>
-              
+
               {/* Row 3: Pipeline Chart (5 cols) + Route Planner (4 cols) + Personal Notes (3 cols) */}
               <div className="lg:col-span-5 animate-fade-in-up delay-300">
                 <PipelineChart data={data.pipelineData} />

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     expires_at: newExpiry,
   }).eq('id', inviteId)
 
-  const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/invite/${newToken}`
+  const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://klinqcrm.in'}/invite/${newToken}`
   const company = invite.company as any
 
   // Queue resend email

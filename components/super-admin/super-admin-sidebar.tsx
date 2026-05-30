@@ -2,122 +2,146 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
-  LayoutDashboard, Building2, CreditCard, BarChart3,
-  ChevronRight, Shield, LogOut, UserPlus, FileText, Settings, Loader2
+  LayoutDashboard,
+  Building2,
+  Activity,
+  FileText,
+  HelpCircle,
+  BarChart3,
+  CreditCard,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Shield,
+  Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 
-const NAV_ITEMS = [
+interface SuperAdminSidebarProps {
+  collapsed: boolean
+  onToggle: (val: boolean) => void
+  adminEmail: string | null
+}
+
+const NAV_GROUPS = [
   {
-    label: 'Platform',
+    label: 'Overview',
     items: [
-      { href: '/super-admin', label: 'Overview', icon: LayoutDashboard, exact: true },
-      { href: '/super-admin/companies', label: 'Companies', icon: Building2 },
-      { href: '/super-admin/onboard-company', label: 'Onboard Company', icon: UserPlus },
+      { href: '/super-admin', label: 'Overview', icon: LayoutDashboard, exact: true }
     ]
   },
   {
-    label: 'Monitoring',
+    label: 'Companies',
     items: [
-      { href: '/super-admin/analytics', label: 'Analytics', icon: BarChart3 },
-      { href: '/super-admin/audit-logs', label: 'Audit Logs', icon: FileText },
+      { href: '/super-admin/companies', label: 'Companies', icon: Building2, exact: false },
+      { href: '/super-admin/onboard-company', label: 'Onboard Company', icon: Settings, exact: false }
+    ]
+  },
+  {
+    label: 'Operations',
+    items: [
+      { href: '/super-admin/monitoring', label: 'Monitoring', icon: Activity, exact: false },
+      { href: '/super-admin/audit-logs', label: 'Audit Logs', icon: FileText, exact: false },
+      { href: '/super-admin/support', label: 'Support Center', icon: HelpCircle, exact: false }
+    ]
+  },
+  {
+    label: 'Analytics',
+    items: [
+      { href: '/super-admin/analytics', label: 'Platform Analytics', icon: BarChart3, exact: false }
     ]
   },
   {
     label: 'Finance',
     items: [
-      { href: '/super-admin/billing', label: 'Billing', icon: CreditCard },
+      { href: '/super-admin/billing', label: 'Billing', icon: CreditCard, exact: false }
     ]
   },
   {
     label: 'Configuration',
     items: [
-      { href: '/super-admin/settings', label: 'Platform Settings', icon: Settings },
+      { href: '/super-admin/settings', label: 'Platform Settings', icon: Settings, exact: false }
     ]
-  },
+  }
 ]
 
-export function SuperAdminSidebar() {
+export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdminSidebarProps) {
   const pathname = usePathname()
-  const [userEmail, setUserEmail] = useState<string | null>(null)
   const [signingOut, setSigningOut] = useState(false)
-
-  useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => {
-      setUserEmail(data.user?.email ?? null)
-    })
-  }, [])
 
   async function handleSignOut() {
     if (signingOut) return
     setSigningOut(true)
     try {
-      // Sign out on the Supabase client to clear local token storage
       await createClient().auth.signOut()
-    } catch {
-      // ignore — still redirect
-    }
-    // Hard full-page redirect — this busts Next.js router cache AND
-    // lets the server middleware see a cleared cookie and redirect to /login
+    } catch {}
     window.location.replace('/login')
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-zinc-950/70 backdrop-blur-xl border-r border-zinc-900/60 flex flex-col z-40 shadow-xl shadow-black/30">
-      {/* Decorative Top Glow */}
-      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
-
+    <aside
+      className={cn(
+        'fixed left-0 top-0 h-screen bg-zinc-950 border-r border-zinc-900 flex flex-col z-40 transition-all duration-200 select-none shrink-0',
+        collapsed ? 'w-16' : 'w-64'
+      )}
+    >
       {/* Brand Header */}
-      <div className="h-16 flex items-center gap-3 px-5 border-b border-zinc-900/60 relative overflow-hidden">
-        <div className="size-8 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-lg shadow-black/40 border border-white/20 relative overflow-hidden">
-          <Shield className="size-[18px] text-zinc-950 z-10" />
-          <div className="absolute inset-0 bg-gradient-to-tr from-zinc-200 to-white" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-white text-sm font-black tracking-tight">Klinq CRM</p>
-          <div className="flex items-center gap-1 mt-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse shrink-0" />
-            <p className="text-zinc-500 text-[9px] font-bold tracking-widest uppercase">Platform Node</p>
+      <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-900">
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <div className="size-7 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+            <Shield className="size-4 text-zinc-300" />
           </div>
+          {!collapsed && (
+            <div className="min-w-0 leading-none">
+              <span className="text-zinc-200 text-xs font-bold tracking-tight block">Klinq Ops</span>
+              <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase block mt-0.5">Control Node</span>
+            </div>
+          )}
         </div>
-        <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/5 rounded-full blur-xl pointer-events-none" />
+        <button
+          onClick={() => onToggle(!collapsed)}
+          className="p-1 hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 rounded border border-transparent hover:border-zinc-800 transition-all cursor-pointer shrink-0"
+        >
+          {collapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
+        </button>
       </div>
 
-      {/* Navigation Menu */}
-      <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-6">
-        {NAV_ITEMS.map(group => (
-          <div key={group.label} className="space-y-1.5">
-            <p className="text-zinc-600 text-[9px] font-black tracking-[0.25em] uppercase px-3">
-              {group.label}
-            </p>
-            <ul className="space-y-1">
+      {/* Navigation List */}
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-4">
+        {NAV_GROUPS.map(group => (
+          <div key={group.label} className="space-y-1">
+            {!collapsed && (
+              <p className="text-zinc-650 text-[9px] font-bold tracking-wider uppercase px-2 mb-1.5 select-none">
+                {group.label}
+              </p>
+            )}
+            <ul className="space-y-0.5">
               {group.items.map(item => {
                 const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      title={collapsed ? item.label : undefined}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all relative group/item',
+                        'flex items-center rounded-md text-xs transition-all relative group/item py-1.5',
+                        collapsed ? 'justify-center px-0' : 'px-2 gap-2.5',
                         active
-                          ? 'bg-white/[0.04] text-white border border-white/[0.08] shadow-sm'
-                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02] border border-transparent'
+                          ? 'bg-zinc-900 text-zinc-100 font-semibold border border-zinc-800'
+                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40 border border-transparent'
                       )}
                     >
-                      {active && (
-                        <span className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r bg-violet-500" />
-                      )}
-                      <item.icon className={cn(
-                        'size-4 shrink-0 transition-colors',
-                        active ? 'text-violet-400' : 'text-zinc-400 group-hover/item:text-zinc-200'
-                      )} />
-                      <span>{item.label}</span>
-                      {active && (
-                        <ChevronRight className="size-3.5 ml-auto text-zinc-500" />
-                      )}
+                      <item.icon
+                        className={cn(
+                          'size-4 shrink-0 transition-colors',
+                          active ? 'text-zinc-200' : 'text-zinc-550 group-hover/item:text-zinc-300'
+                        )}
+                      />
+                      {!collapsed && <span>{item.label}</span>}
                     </Link>
                   </li>
                 )
@@ -127,34 +151,30 @@ export function SuperAdminSidebar() {
         ))}
       </nav>
 
-      {/* User Footer Panel */}
-      <div className="p-4 border-t border-zinc-900/60 space-y-3">
-        {/* Logged-in user info */}
-        {userEmail && (
-          <div className="flex items-center gap-2.5 px-3 py-2.5 bg-zinc-900/60 rounded-xl border border-zinc-800/60">
-            <div className="size-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-              <Shield className="size-3.5 text-violet-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Signed in as</p>
-              <p className="text-[11px] font-bold text-zinc-300 truncate">{userEmail}</p>
-            </div>
+      {/* Footer Profile & Signout */}
+      <div className="p-3 border-t border-zinc-900 space-y-2">
+        {adminEmail && !collapsed && (
+          <div className="px-2.5 py-2 bg-zinc-900/30 rounded border border-zinc-900 min-w-0">
+            <p className="text-[9px] font-mono text-zinc-550 uppercase block select-none">Signed in as</p>
+            <p className="text-[10px] font-mono text-zinc-400 truncate mt-0.5">{adminEmail}</p>
           </div>
         )}
 
-        {/* Sign out button */}
         <button
           onClick={handleSignOut}
           disabled={signingOut}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/[0.06] hover:bg-red-500/[0.12] text-red-400 hover:text-red-300 text-xs font-bold rounded-xl border border-red-500/20 hover:border-red-500/30 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group"
-          id="super-admin-signout-btn"
+          className={cn(
+            'w-full flex items-center justify-center text-zinc-500 hover:text-zinc-300 bg-zinc-900/10 hover:bg-zinc-900 border border-zinc-900 hover:border-zinc-800 text-[10px] font-bold py-2 rounded transition-all cursor-pointer disabled:opacity-50',
+            collapsed ? 'px-0' : 'px-3 gap-2'
+          )}
+          title={collapsed ? 'Sign Out' : undefined}
         >
           {signingOut ? (
             <Loader2 className="size-3.5 animate-spin" />
           ) : (
-            <LogOut className="size-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <LogOut className="size-3.5 shrink-0" />
           )}
-          {signingOut ? 'Signing out…' : 'Sign Out'}
+          {!collapsed && <span>Sign Out</span>}
         </button>
       </div>
     </aside>

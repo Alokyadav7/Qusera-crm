@@ -7,27 +7,27 @@ import { CompanyProvider } from '@/lib/company-context'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Klinq CRM — Smart CRM for Sales Teams',
-    template: '%s | Klinq CRM'
+    default: 'KlinqCRM — Smart CRM for Indian Sales Teams',
+    template: '%s | KlinqCRM'
   },
-  description: "Klinq CRM — The intelligent multi-tenant CRM platform for modern sales teams. Manage leads, deals, team, and integrations in one place.",
-  keywords: ['CRM', 'Klinq CRM', 'Sales CRM', 'Lead Management', 'WhatsApp CRM', 'Team CRM'],
-  authors: [{ name: 'Klinq CRM' }],
-  creator: 'Klinq CRM',
-  metadataBase: new URL('https://klinq.app'),
+  description: "KlinqCRM — The CRM built for growing Indian businesses. Manage leads, deals, WhatsApp, SMS, and Email conversations in one place.",
+  keywords: ['CRM', 'KlinqCRM', 'Indian CRM', 'Sales CRM', 'Lead Management', 'WhatsApp CRM', 'Team CRM', 'klinqcrm.in'],
+  authors: [{ name: 'KlinqCRM Technologies Pvt. Ltd.' }],
+  creator: 'KlinqCRM',
+  metadataBase: new URL('https://klinqcrm.in'),
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://klinq.app',
-    siteName: 'Klinq CRM',
-    title: 'Klinq CRM — Smart CRM for Modern Teams',
-    description: 'Manage your entire sales pipeline, team, and customer communication from one platform.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Klinq CRM' }]
+    url: 'https://klinqcrm.in',
+    siteName: 'KlinqCRM',
+    title: 'KlinqCRM — The CRM built for growing Indian businesses',
+    description: 'Manage leads, close deals, and stay on top of every WhatsApp, SMS, and Email conversation — all in one place.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'KlinqCRM' }]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Klinq CRM',
-    description: 'Smart CRM for modern sales teams.',
+    title: 'KlinqCRM',
+    description: 'The CRM built for growing Indian businesses.',
     images: ['/og-image.png']
   },
   icons: {

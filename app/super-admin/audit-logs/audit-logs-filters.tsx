@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Search, Download, Filter, RefreshCw, XCircle } from 'lucide-react'
+import { Download, Filter, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Company { id: string; name: string }
@@ -62,44 +62,44 @@ export function AuditLogsFilters({
     toast.success('Audit logs exported successfully')
   }
 
-  const selectCls = "w-full sm:w-auto bg-zinc-950/60 border border-zinc-850 rounded-xl px-4 py-2 text-xs text-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/[0.04] focus:border-zinc-700 min-w-[170px] transition-all"
-  const inputCls = "w-full sm:w-auto bg-zinc-950/60 border border-zinc-850 rounded-xl px-4 py-2 text-xs text-zinc-300 focus:outline-none focus:ring-2 focus:ring-white/[0.04] focus:border-zinc-700 transition-all font-mono"
+  const selectCls = "w-full sm:w-auto bg-zinc-950 border border-zinc-900 rounded px-3 py-1.5 text-xs text-zinc-350 focus:outline-none focus:border-zinc-800 transition-colors min-w-[170px]"
+  const inputCls = "w-full sm:w-auto bg-zinc-950 border border-zinc-900 rounded px-3 py-1.5 text-xs text-zinc-350 focus:outline-none focus:border-zinc-800 transition-colors font-mono"
 
   return (
-    <div className="flex flex-wrap items-end gap-4 bg-zinc-900/20 backdrop-blur border border-zinc-850 p-5 rounded-2xl mb-6 relative z-10">
+    <div className="flex flex-wrap items-end gap-4 bg-zinc-950 border border-zinc-900 p-4.5 rounded relative z-10">
       {/* Company filter */}
       <div className="w-full sm:w-auto">
-        <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Tenant Company</p>
+        <p className="text-zinc-550 text-[10px] font-bold uppercase tracking-wider mb-1.5">Tenant Company</p>
         <select value={company} onChange={e => setCompany(e.target.value)} className={selectCls}>
-          <option value="" className="bg-zinc-950 text-zinc-400">All Company Slots</option>
+          <option value="" className="bg-zinc-950">All Company Slots</option>
           {companies.map(c => <option key={c.id} value={c.id} className="bg-zinc-950">{c.name}</option>)}
         </select>
       </div>
 
       {/* Action filter */}
       <div className="w-full sm:w-auto">
-        <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Log Event Action</p>
+        <p className="text-zinc-550 text-[10px] font-bold uppercase tracking-wider mb-1.5">Log Event Action</p>
         <select value={action} onChange={e => setAction(e.target.value)} className={selectCls}>
-          <option value="" className="bg-zinc-950 text-zinc-400">All Actions</option>
+          <option value="" className="bg-zinc-950">All Actions</option>
           {uniqueActions.map(a => <option key={a} value={a} className="bg-zinc-950">{a}</option>)}
         </select>
       </div>
 
       {/* Date range */}
       <div className="w-full sm:w-auto">
-        <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">From Date</p>
+        <p className="text-zinc-550 text-[10px] font-bold uppercase tracking-wider mb-1.5">From Date</p>
         <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={inputCls} />
       </div>
       
       <div className="w-full sm:w-auto">
-        <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">To Date</p>
+        <p className="text-zinc-550 text-[10px] font-bold uppercase tracking-wider mb-1.5">To Date</p>
         <input type="date" value={to} onChange={e => setTo(e.target.value)} className={inputCls} />
       </div>
 
-      <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+      <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
         <button
           onClick={applyFilters}
-          className="flex items-center gap-1.5 bg-white hover:bg-zinc-150 text-zinc-950 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md shadow-black/10"
+          className="flex items-center justify-center gap-1.5 bg-zinc-100 hover:bg-white text-zinc-950 text-[11px] font-bold px-3.5 py-2 rounded transition-colors cursor-pointer"
         >
           <Filter className="size-3.5" />
           Apply Filters
@@ -108,7 +108,7 @@ export function AuditLogsFilters({
         {(company || action || from || to) && (
           <button 
             onClick={clearFilters} 
-            className="flex items-center gap-1 text-zinc-400 hover:text-white text-xs font-bold transition-colors cursor-pointer px-2 py-2"
+            className="flex items-center justify-center gap-1 text-zinc-400 hover:text-white text-[11px] font-bold transition-colors cursor-pointer px-2.5 py-2"
           >
             <XCircle className="size-3.5" />
             Clear
@@ -117,15 +117,15 @@ export function AuditLogsFilters({
         
         <button
           onClick={exportCSV}
-          className="flex items-center gap-1.5 text-zinc-400 hover:text-white bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/80 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer ml-auto sm:ml-2"
+          className="flex items-center justify-center gap-1.5 text-zinc-400 hover:text-white bg-zinc-950 hover:bg-zinc-900 border border-zinc-900 text-[11px] font-bold px-3.5 py-2 rounded transition-colors cursor-pointer ml-auto sm:ml-2"
         >
           <Download className="size-3.5" />
           Export CSV
         </button>
       </div>
 
-      <div className="ml-auto text-zinc-500 text-[10px] font-mono tracking-tight self-end pb-2.5 hidden xl:block">
-        {logs.length} indexed entries loaded
+      <div className="ml-auto text-zinc-550 text-[10px] font-mono tracking-tight self-end pb-2 hidden xl:block select-none">
+        {logs.length} indexed records
       </div>
     </div>
   )

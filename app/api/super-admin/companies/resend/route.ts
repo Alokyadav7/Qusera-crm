@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   if (!adminEmail) return NextResponse.json({ error: 'Admin email not found' }, { status: 404 })
 
-  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://app.klinqcrm.com'}/login`
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://klinqcrm.in'}/login`
 
   // Send onboarding email via Gmail SMTP
   const result = await sendEmail({

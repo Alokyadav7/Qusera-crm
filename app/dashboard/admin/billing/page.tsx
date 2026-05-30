@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CRMHeader } from '@/components/crm/crm-header'
@@ -36,6 +36,8 @@ export default function AdminBillingPage() {
   const [userName, setUserName]   = useState('')
   const [loading, setLoading]   = useState(true)
   const [upgrading, setUpgrading] = useState<string | null>(null)
+  const [leadsCount, setLeadsCount] = useState(0)
+  const [seatsCount, setSeatsCount] = useState(0)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -58,12 +60,16 @@ export default function AdminBillingPage() {
 
     if (!cid) { setLoading(false); return }
 
-    const [subRes, invRes] = await Promise.all([
+    const [subRes, invRes, leadsRes, seatsRes] = await Promise.all([
       (supabase as any).from('subscriptions').select('*').eq('company_id', cid).single(),
       (supabase as any).from('invoices').select('*').eq('company_id', cid).order('created_at', { ascending: false }).limit(10),
+      supabase.from('leads').select('*', { count: 'exact', head: true }).eq('company_id' as any, cid),
+      (supabase as any).from('company_members').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true),
     ])
     setSub(subRes.data ?? null)
     setInvoices(invRes.data ?? [])
+    setLeadsCount(leadsRes.count ?? 0)
+    setSeatsCount(seatsRes.count ?? 0)
     setLoading(false)
   }, [])
 
@@ -219,8 +225,8 @@ export default function AdminBillingPage() {
             {/* ── Usage ── */}
             <div className="grid grid-cols-3 gap-4">
               {[
-                { label: 'Leads Used', value: '—', icon: TrendingUp },
-                { label: 'Team Seats', value: '—', icon: CreditCard },
+                { label: 'Leads Used', value: String(leadsCount), icon: TrendingUp },
+                { label: 'Team Seats', value: String(seatsCount), icon: CreditCard },
                 { label: 'Workspaces', value: '1', icon: CheckCircle2 },
               ].map(m => (
                 <div key={m.label} className="border rounded-xl p-4 bg-card text-center">

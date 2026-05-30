@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -72,7 +72,7 @@ export function Navigation() {
           </Button>
           <Button asChild className="h-8 px-4 text-xs font-semibold rounded bg-foreground text-background hover:bg-foreground/90 shadow-sm">
             <Link href="/login">
-              Get Started
+              Request Access
             </Link>
           </Button>
         </div>
@@ -114,7 +114,7 @@ export function Navigation() {
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
               </Button>
               <Button asChild className="w-full rounded h-9 text-xs font-semibold bg-foreground text-background hover:bg-foreground/90">
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Get started free</Link>
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Request Access</Link>
               </Button>
             </div>
           </nav>
@@ -182,7 +182,10 @@ export function Footer() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>© 2026 KlinqCRM Technologies Pvt. Ltd. All rights reserved.</p>
+          <div className="space-y-1">
+            <p>© 2026 KlinqCRM Technologies Pvt. Ltd. All rights reserved.</p>
+            <p className="text-[10px] text-muted-foreground/60 font-mono tracking-wide">powered by Qusera</p>
+          </div>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-emerald-500" />

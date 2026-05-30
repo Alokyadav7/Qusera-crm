@@ -1,11 +1,3 @@
--- ============================================================
--- Qwix CRM — 001: Auth & Access Control Schema
--- Full consolidated migration — tables + RLS policies
--- Run in: Supabase SQL Editor
--- Safe to re-run (uses IF NOT EXISTS + DROP IF EXISTS for policies)
--- ============================================================
-
--- ── 1. platform_admins ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS platform_admins (
   id         uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id    uuid        REFERENCES auth.users ON DELETE CASCADE NOT NULL UNIQUE,
@@ -21,7 +13,6 @@ DROP POLICY IF EXISTS "service_role_only_platform_admins" ON platform_admins;
 CREATE POLICY "service_role_only_platform_admins" ON platform_admins FOR ALL
   USING (auth.role() = 'service_role');
 
--- ── 2. companies ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS companies (
   id                       uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
   name                     text        NOT NULL,

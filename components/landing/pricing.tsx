@@ -10,7 +10,7 @@ const PLANS = [
     monthly: '999',
     annual: '799',
     desc: 'Perfect for small teams getting started',
-    cta: 'Start free trial',
+    cta: 'Request Access',
     href: '/login',
     popular: false,
     features: [
@@ -30,7 +30,7 @@ const PLANS = [
     monthly: '2,499',
     annual: '1,999',
     desc: 'Best for growing sales teams',
-    cta: 'Start free trial',
+    cta: 'Request Access',
     href: '/login',
     popular: true,
     features: [

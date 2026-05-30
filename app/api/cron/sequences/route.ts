@@ -1,7 +1,6 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { Resend } = require('resend')
+import { sendEmail } from '@/lib/email'
 
 /**
  * POST /api/cron/sequences
@@ -38,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     if (fetchErr) throw fetchErr
 
-    const resend = new Resend(process.env.RESEND_API_KEY)
+    // Using Gmail SMTP sendEmail helper (Resend not installed)
 
     for (const enrollment of (enrollments as any[]) ?? []) {
       try {
@@ -75,7 +74,7 @@ export async function POST(req: NextRequest) {
 
         // Build unsubscribe token
         const unsubToken = Buffer.from(`${enrollment.id}:unsub`).toString('base64url')
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://klinqcrm.in'
         const unsubLink = `${appUrl}/api/sequences/unsubscribe?token=${unsubToken}`
 
         // Send email
@@ -86,8 +85,7 @@ export async function POST(req: NextRequest) {
               <a href="${unsubLink}" style="color:#999">Unsubscribe</a>
              </p>`
 
-        await resend.emails.send({
-          from: `${(step as any).from_name || 'Klinq CRM'} <${(step as any).from_email || process.env.RESEND_FROM_EMAIL || 'noreply@KlinqCRM.com'}>`,
+        await sendEmail({
           to: toEmail,
           subject: (step as any).subject.replace(/\{\{name\}\}/gi, toName),
           html,

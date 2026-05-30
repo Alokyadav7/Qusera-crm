@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Save } from 'lucide-react'
+import { Loader2, Save, Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import { useRef } from 'react'
 
 const TIMEZONES = [
   'Asia/Kolkata', 'Asia/Dubai', 'Asia/Singapore', 'Asia/Tokyo',
@@ -18,7 +19,9 @@ const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD']
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [companyId, setCompanyId] = useState<string | null>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState({
     name: '',
     timezone: 'Asia/Kolkata',
@@ -76,6 +79,28 @@ export default function AdminSettingsPage() {
   const f = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [key]: e.target.value }))
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !companyId) return
+    if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return }
+    setUploading(true)
+    try {
+      const supabase = createClient()
+      const ext = file.name.split('.').pop() ?? 'png'
+      const path = `${companyId}/logo-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('company-logos')
+        .upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) { toast.error('Upload failed: ' + upErr.message); return }
+      const { data: { publicUrl } } = supabase.storage.from('company-logos').getPublicUrl(path)
+      setForm(p => ({ ...p, logo_url: publicUrl }))
+      toast.success('Logo uploaded! Click Save Settings to apply.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <CRMHeader title="Company Settings" subtitle="Branding, localization, tax details, and workspace configuration" />
@@ -93,8 +118,28 @@ export default function AdminSettingsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Logo URL <span className="text-muted-foreground text-xs">(paste Supabase storage URL)</span></Label>
-                <Input value={form.logo_url} onChange={f('logo_url')} placeholder="https://..." />
+                <Label>Company Logo</Label>
+                <div className="flex gap-2">
+                  <Input value={form.logo_url} onChange={f('logo_url')} placeholder="https://... (paste URL or upload below)" className="flex-1" />
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploading}
+                    className="shrink-0 gap-1.5"
+                  >
+                    {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+                    {uploading ? 'Uploading…' : 'Upload'}
+                  </Button>
+                </div>
                 {form.logo_url && (
                   <img src={form.logo_url} alt="Logo preview" className="h-10 w-auto mt-2 rounded border object-contain" />
                 )}

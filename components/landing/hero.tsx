@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,32 +40,32 @@ export function HeroSection() {
 
           {/* Headline */}
           <h1 className="font-sans text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl text-balance text-foreground leading-[1.1]">
-            The CRM that listens.
+            The CRM built for growing Indian businesses.
           </h1>
 
           {/* Sub */}
-          <p className="mt-6 max-w-xl text-base text-muted-foreground leading-relaxed">
-            Record updates by voice. Let AI automatically extract contact data, log follow-ups, and update your pipeline. Built for real sales teams.
+          <p className="mt-6 max-w-2xl text-base text-muted-foreground leading-relaxed">
+            Manage leads, close deals, and stay on top of every WhatsApp, SMS, and Email conversation — all in one place.
           </p>
 
           {/* CTAs */}
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
             <Button size="lg" asChild className="h-10 px-6 text-xs font-semibold rounded-lg bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-all">
               <Link href="/login">
-                Start free trial
+                Sign in to Workspace
                 <ArrowRight className="ml-2 size-3.5" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="h-10 px-6 text-xs font-semibold rounded-lg border-border hover:bg-muted/40 transition-all">
-              <Link href="#features">
-                See features
+              <Link href="/login">
+                Request Access
               </Link>
             </Button>
           </div>
 
           <div className="mt-6 flex items-center gap-4 text-[11px] text-muted-foreground/80">
-            <span className="flex items-center gap-1"><Check className="size-3 text-foreground" /> 14-day free trial</span>
-            <span className="flex items-center gap-1"><Check className="size-3 text-foreground" /> No credit card required</span>
+            <span className="flex items-center gap-1"><Check className="size-3 text-foreground" /> Invite-only access</span>
+            <span className="flex items-center gap-1"><Check className="size-3 text-foreground" /> Dedicated company onboarding</span>
           </div>
         </div>
 

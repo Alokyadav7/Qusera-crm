@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { SuperAdminSidebar } from '@/components/super-admin/super-admin-sidebar'
+import { SuperAdminLayoutClient } from '@/components/super-admin/super-admin-layout-client'
 
 export const metadata = {
   title: 'Platform Admin — CRM',
@@ -32,12 +32,8 @@ export default async function SuperAdminLayout({ children }: { children: React.R
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-white/10 selection:text-white">
-      <SuperAdminSidebar />
-      <main className="ml-64 min-h-screen relative z-10">
-        {children}
-      </main>
-    </div>
-
+    <SuperAdminLayoutClient adminEmail={user.email ?? null}>
+      {children}
+    </SuperAdminLayoutClient>
   )
 }

@@ -79,18 +79,18 @@ export function CTASection() {
             Ready to upgrade your sales process?
           </h2>
           <p className="text-sm text-muted-foreground mb-8 max-w-sm mx-auto">
-            Get started for free. No credit card required. Cancel anytime.
+            Access is by invitation only. Request a workspace onboarding session today.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button size="lg" asChild className="h-10 px-6 text-xs font-semibold rounded-lg bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-all">
               <Link href="/login">
-                Get started free
+                Request Access
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="h-10 px-6 text-xs font-semibold rounded-lg border-border hover:bg-muted/40 transition-all">
               <Link href="/login">
-                Contact sales
+                Book a Demo
               </Link>
             </Button>
           </div>
