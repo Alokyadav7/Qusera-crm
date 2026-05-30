@@ -84,10 +84,11 @@ function ForgotPasswordContent() {
           />
         ) : (
           <div className="flex items-center gap-2">
-            <div className="size-7 rounded-md bg-zinc-950 flex items-center justify-center">
-              <span className="text-white font-extrabold text-xs">K</span>
-            </div>
-            <span className="font-semibold text-sm tracking-tight text-zinc-900">Klinq CRM</span>
+            <img
+              src="/Klinqcrm-logo.png"
+              alt="Klinq CRM Logo"
+              className="h-10 w-auto object-contain"
+            />
           </div>
         )}
 

@@ -22,21 +22,19 @@ export const metadata: Metadata = {
     siteName: 'KlinqCRM',
     title: 'KlinqCRM — The CRM built for growing Indian businesses',
     description: 'Manage leads, close deals, and stay on top of every WhatsApp, SMS, and Email conversation — all in one place.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'KlinqCRM' }]
+    images: [{ url: '/Klinqcrm-logo.png', width: 920, height: 920, alt: 'KlinqCRM' }]
   },
   twitter: {
     card: 'summary_large_image',
     title: 'KlinqCRM',
     description: 'The CRM built for growing Indian businesses.',
-    images: ['/og-image.png']
+    images: ['/Klinqcrm-logo.png']
   },
   icons: {
     icon: [
-      { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
-      { url: '/icon-dark-32x32.png', media: '(prefers-color-scheme: dark)' },
-      { url: '/icon.svg', type: 'image/svg+xml' }
+      { url: '/Klinqcrm-logo.png' }
     ],
-    apple: '/apple-icon.png'
+    apple: '/Klinqcrm-logo.png'
   }
 }
 

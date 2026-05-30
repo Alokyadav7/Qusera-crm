@@ -58,7 +58,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             {company?.logo_url ? (
               <img src={company.logo_url} alt={company.name} className="size-8 object-contain" />
             ) : (
-              <Shield className="size-6 text-zinc-400" />
+              <img src="/Klinqcrm-logo.png" alt="Klinq CRM" className="size-8 object-contain" />
             )}
           </div>
           <h1 className="text-zinc-900 font-semibold text-xl">{company?.name ?? 'Your Team'}</h1>

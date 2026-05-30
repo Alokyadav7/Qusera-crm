@@ -30,12 +30,11 @@ export function Navigation() {
       <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group z-10">
-          <div className="flex size-6 items-center justify-center rounded bg-foreground">
-            <Zap className="size-3.5 text-background" />
-          </div>
-          <span className="text-[14px] font-bold tracking-tight text-foreground">
-            KlinqCRM
-          </span>
+          <img
+            src="/Klinqcrm-logo.png"
+            alt="KlinqCRM Logo"
+            className="h-10 w-auto object-contain"
+          />
         </Link>
 
         {/* Desktop Nav */}
@@ -131,10 +130,11 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2 space-y-3">
             <Link href="/" className="flex items-center gap-2 group w-fit">
-              <div className="flex size-6 items-center justify-center rounded bg-foreground">
-                <Zap className="size-3.5 text-background" />
-              </div>
-              <span className="text-[14px] font-bold tracking-tight text-foreground">KlinqCRM</span>
+              <img
+                src="/Klinqcrm-logo.png"
+                alt="KlinqCRM Logo"
+                className="h-10 w-auto object-contain"
+              />
             </Link>
             <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
               India's first voice-native CRM for modern sales teams. Manage leads, track conversations, and close deals faster.

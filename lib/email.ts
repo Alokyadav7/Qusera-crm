@@ -52,6 +52,8 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
 // ─── Template helpers ─────────────────────────────────────────────────────────
 
 function baseWrapper(content: string, footerLine?: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://klinqcrm.in'
+  const logoUrl = `${baseUrl}/Klinqcrm-logo.png`
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,10 +70,7 @@ function baseWrapper(content: string, footerLine?: string): string {
           <!-- Header -->
           <tr>
             <td style="padding-bottom:24px;text-align:center;">
-              <div style="display:inline-flex;align-items:center;gap:8px;">
-                <span style="display:inline-block;width:10px;height:10px;background:#18181b;border-radius:50%;"></span>
-                <span style="font-size:18px;font-weight:800;color:#18181b;letter-spacing:-0.5px;">Klinq CRM</span>
-              </div>
+              <img src="${logoUrl}" alt="Klinq CRM" style="height:56px;width:auto;display:inline-block;" />
             </td>
           </tr>
 

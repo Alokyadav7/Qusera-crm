@@ -31,10 +31,11 @@ function LeftBrandingPanel() {
       <div className="relative z-10 flex flex-col justify-between h-full space-y-6 xl:space-y-8">
         {/* Top brand header */}
         <div className="flex items-center gap-3">
-          <div className="size-8 rounded-lg bg-white flex items-center justify-center border border-zinc-200 shadow-sm">
-            <span className="text-zinc-950 font-extrabold text-sm tracking-tight">K</span>
-          </div>
-          <span className="font-semibold text-lg tracking-tight text-zinc-100">Klinq CRM</span>
+          <img
+            src="/Klinqcrm-logo.png"
+            alt="Klinq CRM Logo"
+            className="h-12 w-auto object-contain"
+          />
         </div>
 
         {/* Central visual block */}
@@ -360,10 +361,11 @@ function LoginFormContent() {
           />
         ) : (
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="size-7 rounded-md bg-zinc-950 flex items-center justify-center">
-              <span className="text-white font-extrabold text-xs">K</span>
-            </div>
-            <span className="font-semibold text-sm tracking-tight text-zinc-900">Klinq CRM</span>
+            <img
+              src="/Klinqcrm-logo.png"
+              alt="Klinq CRM Logo"
+              className="h-10 w-auto object-contain"
+            />
           </div>
         )}
 

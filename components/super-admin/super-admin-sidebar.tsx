@@ -92,9 +92,11 @@ export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdmi
       {/* Brand Header */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-900">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="size-7 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
-            <Shield className="size-4 text-zinc-300" />
-          </div>
+          <img
+            src="/Klinqcrm-logo.png"
+            alt="Klinq Logo"
+            className="h-9 w-auto object-contain shrink-0"
+          />
           {!collapsed && (
             <div className="min-w-0 leading-none">
               <span className="text-zinc-200 text-xs font-bold tracking-tight block">Klinq Ops</span>
