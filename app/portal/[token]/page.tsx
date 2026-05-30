@@ -2,6 +2,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import { PortalPageClient } from './portal-client'
 
+export const dynamic = 'force-dynamic'
+
 interface Props { params: Promise<{ token: string }> }
 
 export default async function PortalPage({ params }: Props) {

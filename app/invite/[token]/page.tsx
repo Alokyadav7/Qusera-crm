@@ -2,6 +2,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { InviteAcceptForm } from './invite-accept-form'
 import { Shield, XCircle } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 async function getInviteByToken(token: string) {
   const svc = createServiceClient()
   const { data } = await svc

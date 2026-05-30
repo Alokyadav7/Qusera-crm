@@ -1,6 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { AutomationsPageClient } from './automations-page-client'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AutomationsPage() {
   const supabase = createServiceClient()
 

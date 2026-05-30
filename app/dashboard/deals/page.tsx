@@ -1,6 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { DealsPageClient } from './deals-page-client'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DealsPage() {
   const supabase = createServiceClient()
   const { data: deals } = await (supabase as any)
