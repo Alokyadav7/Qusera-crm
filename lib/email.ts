@@ -6,11 +6,15 @@ import nodemailer from 'nodemailer'
 // Get App Password: myaccount.google.com → Security → 2-Step Verification → App Passwords
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,           // SSL — required for port 465
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
+  connectionTimeout: 10_000,  // 10 s — fail fast instead of hanging
+  greetingTimeout: 10_000,
 })
 
 export interface SendEmailOptions {
