@@ -22,11 +22,10 @@ export function Navigation() {
   }, [])
 
   return (
-    <header className={`fixed top-0 z-50 w-full transition-all duration-200 ${
-      scrolled
+    <header className={`fixed top-0 z-50 w-full transition-all duration-200 ${scrolled
         ? 'bg-background/90 backdrop-blur-md border-b border-border'
         : 'bg-transparent'
-    }`}>
+      }`}>
       <div className="container mx-auto flex h-14 items-center justify-between px-4 md:px-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group z-10">
@@ -48,8 +47,11 @@ export function Navigation() {
           <Link href="/#integrations" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
             Integrations
           </Link>
-          <Link href="/#faq" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
-            FAQ
+          <Link href="/about" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            About
+          </Link>
+          <Link href="/contact" className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            Contact
           </Link>
         </nav>
 
@@ -66,10 +68,10 @@ export function Navigation() {
               {theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
             </Button>
           )}
-          <Button variant="ghost" asChild className="h-8 px-3 text-xs font-semibold">
+          <Button variant="ghost" asChild className="h-8 px-3 text-xs font-semibold hover:bg-emerald-600 hover:text-white transition-all">
             <Link href="/login">Sign in</Link>
           </Button>
-          <Button asChild className="h-8 px-4 text-xs font-semibold rounded bg-foreground text-background hover:bg-foreground/90 shadow-sm">
+          <Button asChild className="h-8 px-4 text-xs font-semibold rounded bg-foreground text-background hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
             <Link href="/login">
               Request Access
             </Link>
@@ -97,7 +99,10 @@ export function Navigation() {
               { label: 'Features', href: '/#features' },
               { label: 'Pricing', href: '/#pricing' },
               { label: 'Integrations', href: '/#integrations' },
-              { label: 'FAQ', href: '/#faq' },
+              { label: 'About', href: '/about' },
+              { label: 'Careers', href: '/careers' },
+              { label: 'Blog', href: '/blog' },
+              { label: 'Contact', href: '/contact' },
             ].map(item => (
               <Link
                 key={item.label}
@@ -109,10 +114,10 @@ export function Navigation() {
               </Link>
             ))}
             <div className="flex flex-col gap-2 pt-3 mt-2 border-t border-border">
-              <Button variant="outline" asChild className="w-full rounded h-9 text-xs font-semibold">
+              <Button variant="outline" asChild className="w-full rounded h-9 text-xs font-semibold hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all">
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Sign in</Link>
               </Button>
-              <Button asChild className="w-full rounded h-9 text-xs font-semibold bg-foreground text-background hover:bg-foreground/90">
+              <Button asChild className="w-full rounded h-9 text-xs font-semibold bg-foreground text-background hover:bg-emerald-600 hover:text-white transition-all">
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Request Access</Link>
               </Button>
             </div>
@@ -125,20 +130,30 @@ export function Navigation() {
 
 export function Footer() {
   return (
-    <footer className="border-t border-border py-12 bg-background">
+    <footer className="border-t border-border py-10 sm:py-12 bg-background">
       <div className="container mx-auto px-4 md:px-6">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-2 space-y-3">
-            <Link href="/" className="flex items-center gap-2 group w-fit">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-8">
+          <div className="col-span-2 lg:col-span-2 space-y-3">
+            <Link href="/" className="flex items-center gap-2 w-fit">
               <img
                 src="/Klinqcrm-logo.png"
                 alt="KlinqCRM Logo"
-                className="h-10 w-auto object-contain"
+                className="h-9 sm:h-10 w-auto object-contain"
               />
             </Link>
             <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
               India's first voice-native CRM for modern sales teams. Manage leads, track conversations, and close deals faster.
             </p>
+            {/* Badges inline on mobile */}
+            <div className="flex items-center gap-3 sm:hidden pt-1">
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                Made in India
+              </span>
+              <Badge variant="outline" className="text-[10px] font-mono border-border px-1.5 py-0">
+                SOC 2 Type II
+              </Badge>
+            </div>
           </div>
 
           {[
@@ -156,6 +171,7 @@ export function Footer() {
                 { label: 'About Us', href: '/about' },
                 { label: 'Careers', href: '/careers' },
                 { label: 'Blog', href: '/blog' },
+                { label: 'Contact', href: '/contact' },
               ]
             },
             {
@@ -181,12 +197,13 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <div className="space-y-1">
-            <p>© 2026 KlinqCRM Technologies Pvt. Ltd. All rights reserved.</p>
-            <p className="text-[10px] text-muted-foreground/60 font-mono tracking-wide">powered by Qusera</p>
+        <div className="mt-8 sm:mt-10 pt-5 sm:pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+          <div className="text-center sm:text-left space-y-0.5">
+            <p className="font-medium">© 2026 Klinq CRM by Qusera. All rights reserved.</p>
+            <p className="text-[10px] text-muted-foreground/50 font-mono tracking-wide">A product by Qusera Private Limited</p>
           </div>
-          <div className="flex items-center gap-3">
+          {/* Hidden on mobile — shown inside brand block */}
+          <div className="hidden sm:flex items-center gap-3">
             <span className="flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-emerald-500" />
               Made in India

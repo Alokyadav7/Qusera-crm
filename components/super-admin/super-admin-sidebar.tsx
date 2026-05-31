@@ -15,8 +15,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Shield,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -25,6 +25,7 @@ interface SuperAdminSidebarProps {
   collapsed: boolean
   onToggle: (val: boolean) => void
   adminEmail: string | null
+  onMobileClose?: () => void
 }
 
 const NAV_GROUPS = [
@@ -38,7 +39,8 @@ const NAV_GROUPS = [
     label: 'Companies',
     items: [
       { href: '/super-admin/companies', label: 'Companies', icon: Building2, exact: false },
-      { href: '/super-admin/onboard-company', label: 'Onboard Company', icon: Settings, exact: false }
+      { href: '/super-admin/onboard-company', label: 'Onboard Company', icon: Settings, exact: false },
+      { href: '/super-admin/demo-requests', label: 'Demo Requests', icon: Sparkles, exact: false },
     ]
   },
   {
@@ -69,7 +71,7 @@ const NAV_GROUPS = [
   }
 ]
 
-export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdminSidebarProps) {
+export function SuperAdminSidebar({ collapsed, onToggle, adminEmail, onMobileClose }: SuperAdminSidebarProps) {
   const pathname = usePathname()
   const [signingOut, setSigningOut] = useState(false)
 
@@ -85,7 +87,7 @@ export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdmi
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 h-screen bg-zinc-950 border-r border-zinc-900 flex flex-col z-40 transition-all duration-200 select-none shrink-0',
+        'h-screen bg-zinc-950 border-r border-zinc-900 flex flex-col z-40 transition-all duration-200 select-none shrink-0',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
@@ -104,9 +106,10 @@ export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdmi
             </div>
           )}
         </div>
+        {/* Only show collapse toggle on desktop */}
         <button
           onClick={() => onToggle(!collapsed)}
-          className="p-1 hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 rounded border border-transparent hover:border-zinc-800 transition-all cursor-pointer shrink-0"
+          className="hidden lg:flex p-1 hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 rounded border border-transparent hover:border-zinc-800 transition-all cursor-pointer shrink-0"
         >
           {collapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
         </button>
@@ -117,7 +120,7 @@ export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdmi
         {NAV_GROUPS.map(group => (
           <div key={group.label} className="space-y-1">
             {!collapsed && (
-              <p className="text-zinc-650 text-[9px] font-bold tracking-wider uppercase px-2 mb-1.5 select-none">
+              <p className="text-zinc-600 text-[9px] font-bold tracking-wider uppercase px-2 mb-1.5 select-none">
                 {group.label}
               </p>
             )}
@@ -129,6 +132,7 @@ export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdmi
                     <Link
                       href={item.href}
                       title={collapsed ? item.label : undefined}
+                      onClick={onMobileClose}
                       className={cn(
                         'flex items-center rounded-md text-xs transition-all relative group/item py-1.5',
                         collapsed ? 'justify-center px-0' : 'px-2 gap-2.5',
@@ -140,7 +144,7 @@ export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdmi
                       <item.icon
                         className={cn(
                           'size-4 shrink-0 transition-colors',
-                          active ? 'text-zinc-200' : 'text-zinc-550 group-hover/item:text-zinc-300'
+                          active ? 'text-zinc-200' : 'text-zinc-500 group-hover/item:text-zinc-300'
                         )}
                       />
                       {!collapsed && <span>{item.label}</span>}
@@ -157,7 +161,7 @@ export function SuperAdminSidebar({ collapsed, onToggle, adminEmail }: SuperAdmi
       <div className="p-3 border-t border-zinc-900 space-y-2">
         {adminEmail && !collapsed && (
           <div className="px-2.5 py-2 bg-zinc-900/30 rounded border border-zinc-900 min-w-0">
-            <p className="text-[9px] font-mono text-zinc-550 uppercase block select-none">Signed in as</p>
+            <p className="text-[9px] font-mono text-zinc-500 uppercase block select-none">Signed in as</p>
             <p className="text-[10px] font-mono text-zinc-400 truncate mt-0.5">{adminEmail}</p>
           </div>
         )}

@@ -362,6 +362,13 @@
 .wave-bar:nth-child(5) { animation-delay: 0.30s; }
 .wave-bar:nth-child(6) { animation-delay: 0.15s; }
 
+/* Hide scrollbar utility (for horizontally scrollable rows on mobile) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

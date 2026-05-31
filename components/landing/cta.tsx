@@ -1,7 +1,8 @@
 "use client"
-import { ArrowRight, Users, Clock, BarChart3, CheckCircle2 } from 'lucide-react'
+import { useState } from 'react'
+import { Users, Clock, BarChart3, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
+import { DemoModal } from './demo-modal'
 
 const INTEGRATIONS = [
   { name: 'WhatsApp Business', cat: 'Communication', emoji: '💬' },
@@ -14,7 +15,7 @@ const INTEGRATIONS = [
 
 export function IntegrationsSection() {
   return (
-    <section id="integrations" className="py-20 bg-background border-t border-border/60">
+    <section id="integrations" className="py-14 sm:py-20 bg-background border-t border-border/60">
       <div className="container mx-auto px-4 md:px-6">
         <div className="mx-auto max-w-2xl text-center mb-12">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-muted/30 text-[11px] font-medium text-muted-foreground uppercase tracking-widest mb-6">
@@ -28,7 +29,7 @@ export function IntegrationsSection() {
           </p>
         </div>
 
-        <div className="mx-auto max-w-3xl grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="mx-auto max-w-3xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           {INTEGRATIONS.map((item, idx) => (
             <div key={idx} className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-card">
               <div className="flex size-8 items-center justify-center rounded-lg bg-muted text-lg">{item.emoji}</div>
@@ -41,11 +42,12 @@ export function IntegrationsSection() {
         </div>
 
         <div className="mt-8 text-center">
-          <Button variant="link" asChild className="text-xs font-semibold text-muted-foreground hover:text-foreground">
-            <Link href="/api-docs">
-              Read the developer API docs →
-            </Link>
-          </Button>
+          <p className="text-xs text-muted-foreground">
+            And many more via our open REST API →{' '}
+            <a href="/api-docs" className="font-semibold underline underline-offset-2 hover:text-foreground transition-colors">
+              Read the docs
+            </a>
+          </p>
         </div>
       </div>
     </section>
@@ -60,42 +62,63 @@ const STATS = [
 ]
 
 export function CTASection() {
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalIntent, setModalIntent] = useState<'demo' | 'trial'>('demo')
+
+  function openModal(intent: 'demo' | 'trial') {
+    setModalIntent(intent)
+    setModalOpen(true)
+  }
+
   return (
-    <section className="py-20 bg-background border-t border-border/60">
-      <div className="container mx-auto px-4 md:px-6">
-        {/* Stats Grid */}
-        <div className="mx-auto max-w-3xl mb-16 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {STATS.map(s => (
-            <div key={s.label} className="flex flex-col items-start p-5 border border-border/50 bg-card rounded-xl">
-              <span className="text-2xl font-bold tracking-tight text-foreground">{s.val}</span>
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">{s.label}</span>
-            </div>
-          ))}
-        </div>
+    <>
+      <DemoModal open={modalOpen} onClose={() => setModalOpen(false)} defaultIntent={modalIntent} />
 
-        {/* CTA Block */}
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-foreground mb-4">
-            Ready to upgrade your sales process?
-          </h2>
-          <p className="text-sm text-muted-foreground mb-8 max-w-sm mx-auto">
-            Access is by invitation only. Request a workspace onboarding session today.
-          </p>
+      <section className="py-14 sm:py-20 bg-background border-t border-border/60">
+        <div className="container mx-auto px-4 md:px-6">
+          {/* Stats Grid */}
+          <div className="mx-auto max-w-3xl mb-12 sm:mb-16 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {STATS.map(s => (
+              <div key={s.label} className="flex flex-col items-start p-5 border border-border/50 bg-card rounded-xl">
+                <span className="text-2xl font-bold tracking-tight text-foreground">{s.val}</span>
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">{s.label}</span>
+              </div>
+            ))}
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button size="lg" asChild className="h-10 px-6 text-xs font-semibold rounded-lg bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-all">
-              <Link href="/login">
-                Request Access
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild className="h-10 px-6 text-xs font-semibold rounded-lg border-border hover:bg-muted/40 transition-all">
-              <Link href="/login">
+          {/* CTA Block */}
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-foreground mb-4">
+              Ready to upgrade your sales process?
+            </h2>
+            <p className="text-sm text-muted-foreground mb-8 max-w-sm mx-auto">
+              Access is by invitation only. Request a workspace onboarding session today. We verify every request — no fake signups.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button
+                size="lg"
+                onClick={() => openModal('demo')}
+                className="w-full sm:w-auto h-11 px-6 text-sm font-semibold rounded-lg bg-foreground text-background hover:bg-emerald-600 hover:text-white shadow-sm transition-all cursor-pointer"
+              >
                 Book a Demo
-              </Link>
-            </Button>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => openModal('trial')}
+                className="w-full sm:w-auto h-11 px-6 text-sm font-semibold rounded-lg border-border hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all cursor-pointer"
+              >
+                Start Free Trial
+              </Button>
+            </div>
+
+            <p className="mt-4 text-[11px] text-muted-foreground/70">
+              🔒 Email OTP verified · No spam · Response within 24 hours
+            </p>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   )
 }

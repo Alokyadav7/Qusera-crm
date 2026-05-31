@@ -46,7 +46,7 @@ export function FeaturesSection() {
   const cat = CATEGORIES.find(c => c.id === active)!
 
   return (
-    <section id="features" className="py-20 bg-background border-t border-border/60">
+    <section id="features" className="py-14 sm:py-20 bg-background border-t border-border/60">
       <div className="container mx-auto px-4 md:px-6">
         {/* Header */}
         <div className="mx-auto max-w-2xl text-center mb-12">
@@ -62,12 +62,12 @@ export function FeaturesSection() {
         </div>
 
         {/* Tab Pills */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12 border-b border-border/40 pb-6 max-w-2xl mx-auto">
+        <div className="flex overflow-x-auto sm:flex-wrap justify-start sm:justify-center gap-2 mb-8 sm:mb-12 border-b border-border/40 pb-4 sm:pb-6 max-w-2xl mx-auto scrollbar-hide px-1">
           {CATEGORIES.map(c => (
             <button
               key={c.id}
               onClick={() => setActive(c.id)}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 active === c.id
                   ? 'bg-foreground text-background shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
@@ -80,7 +80,7 @@ export function FeaturesSection() {
         </div>
 
         {/* Feature Grid */}
-        <div className="mx-auto max-w-4xl grid sm:grid-cols-2 gap-6">
+        <div className="mx-auto max-w-4xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           {cat.features.map(f => (
             <div
               key={f.title}

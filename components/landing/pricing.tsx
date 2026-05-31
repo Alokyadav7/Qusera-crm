@@ -1,8 +1,8 @@
 "use client"
-import { Check, Minus, ArrowRight } from 'lucide-react'
+import { Check, Minus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
 import { useState } from 'react'
+import { DemoModal } from './demo-modal'
 
 const PLANS = [
   {
@@ -11,7 +11,6 @@ const PLANS = [
     annual: '799',
     desc: 'Perfect for small teams getting started',
     cta: 'Request Access',
-    href: '/login',
     popular: false,
     features: [
       { t: 'Up to 5 users', ok: true },
@@ -31,7 +30,6 @@ const PLANS = [
     annual: '1,999',
     desc: 'Best for growing sales teams',
     cta: 'Request Access',
-    href: '/login',
     popular: true,
     features: [
       { t: 'Up to 25 users', ok: true },
@@ -51,7 +49,6 @@ const PLANS = [
     annual: 'Custom',
     desc: 'For large orgs with custom needs',
     cta: 'Contact sales',
-    href: '/login',
     popular: false,
     features: [
       { t: 'Unlimited users', ok: true },
@@ -69,9 +66,13 @@ const PLANS = [
 
 export function PricingSection() {
   const [annual, setAnnual] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalIntent, setModalIntent] = useState<'demo' | 'trial'>('trial')
 
   return (
-    <section id="pricing" className="py-20 bg-background border-t border-border/60">
+    <section id="pricing" className="py-14 sm:py-20 bg-background border-t border-border/60">
+      <DemoModal open={modalOpen} onClose={() => setModalOpen(false)} defaultIntent={modalIntent} />
+
       <div className="container mx-auto px-4 md:px-6">
         {/* Header */}
         <div className="mx-auto max-w-2xl text-center mb-12">
@@ -89,13 +90,13 @@ export function PricingSection() {
           <div className="mt-6 inline-flex items-center gap-2 p-1 rounded-lg border border-border bg-muted/20">
             <button
               onClick={() => setAnnual(false)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${!annual ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${!annual ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Monthly
             </button>
             <button
               onClick={() => setAnnual(true)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${annual ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${annual ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Annual
               <span className="text-[10px] font-bold text-foreground bg-foreground/10 px-1 rounded-sm">-20%</span>
@@ -104,7 +105,7 @@ export function PricingSection() {
         </div>
 
         {/* Cards */}
-        <div className="mx-auto max-w-4xl grid gap-6 lg:grid-cols-3">
+        <div className="mx-auto max-w-4xl grid gap-5 md:grid-cols-3">
           {PLANS.map(plan => (
             <div
               key={plan.name}
@@ -152,16 +153,17 @@ export function PricingSection() {
 
               <div className="pt-4 border-t border-border/40 mt-4">
                 <Button
-                  asChild
-                  className={`w-full h-9 rounded-lg font-semibold text-xs transition-all ${
+                  onClick={() => {
+                    setModalIntent(plan.name === 'Enterprise' ? 'demo' : 'trial')
+                    setModalOpen(true)
+                  }}
+                  className={`w-full h-9 rounded-lg font-semibold text-xs transition-all cursor-pointer ${
                     plan.popular
-                      ? 'bg-foreground text-background hover:bg-foreground/90'
-                      : 'bg-muted text-foreground hover:bg-muted/75'
+                      ? 'bg-foreground text-background hover:bg-emerald-600 hover:text-white'
+                      : 'bg-muted text-foreground hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
                   }`}
                 >
-                  <Link href={plan.href}>
-                    {plan.cta}
-                  </Link>
+                  {plan.cta}
                 </Button>
               </div>
             </div>

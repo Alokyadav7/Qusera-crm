@@ -180,7 +180,7 @@ export default function CompaniesPage() {
   const suspendedCount = companies.filter(c => c.status === 'suspended').length
 
   return (
-    <div className="p-6 xl:p-10 space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100">
+    <div className="p-4 sm:p-6 xl:p-10 space-y-5 sm:space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100">
 
       {/* ── Page Header ─────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-zinc-900 pb-6">
@@ -209,14 +209,15 @@ export default function CompaniesPage() {
             className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-semibold px-3 py-2 rounded transition-all cursor-pointer"
           >
             <Download className="size-3.5" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
           </button>
           <Link
             href="/super-admin/onboard-company"
-            className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-zinc-100 text-zinc-900 text-[11px] font-bold px-3.5 py-2 rounded transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-zinc-100 text-zinc-900 text-[11px] font-bold px-3.5 py-2 rounded transition-all cursor-pointer whitespace-nowrap"
           >
             <Plus className="size-3.5" />
-            Onboard Company
+            <span className="hidden sm:inline">Onboard Company</span>
+            <span className="sm:hidden">Onboard</span>
           </Link>
         </div>
       </div>

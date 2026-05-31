@@ -48,8 +48,18 @@ const PUBLIC_PREFIXES = [
   '/auth/error',
   '/api/webhooks',
   '/api/auth',         // Auth API routes (reset-password etc)
+  '/api/contact',      // Public contact form submission
+  '/api/blog',         // Public blog subscribe
+  '/api/demo',         // Public demo OTP flow
   '/_next',
   '/favicon.ico',
+  // ── Public marketing pages ──────────────────────────────────────────────────
+  '/about',
+  '/contact',
+  '/careers',
+  '/blog',
+  '/privacy',
+  '/terms',
 ]
 
 // ── Main Proxy (Next.js 16 — replaces middleware) ───────────────────────────

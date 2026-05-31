@@ -99,25 +99,25 @@ export function SuperAdminOverviewClient({ adminName }: { adminName: string }) {
   const totalHealth = (health.healthy + health.warning + health.critical) || 1
 
   const quickActions = [
-    { href: '/super-admin/onboard-company', label: '+ Onboard New Company', icon: UserPlus },
-    { href: '/super-admin/audit-logs', label: '→ View Audit Logs', icon: FileText },
-    { href: '/super-admin/settings', label: '⚙ Platform Settings', icon: Settings },
-    { href: '/super-admin/companies', label: '↗ All Companies', icon: Building2 },
+    { href: '/super-admin/onboard-company', label: 'Onboard New Company', icon: UserPlus },
+    { href: '/super-admin/audit-logs', label: 'View Audit Logs', icon: FileText },
+    { href: '/super-admin/settings', label: 'Platform Settings', icon: Settings },
+    { href: '/super-admin/companies', label: 'All Companies', icon: Building2 },
   ]
 
   return (
-    <div className="p-6 xl:p-10 space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100 selection:bg-zinc-800">
+    <div className="p-4 sm:p-6 xl:p-10 space-y-5 sm:space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100 selection:bg-zinc-800">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-900 pb-5">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-zinc-400 mb-1">Overview</p>
-          <h1 className="text-2xl font-black text-white tracking-tight">Platform Overview</h1>
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">Overview</p>
+          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Platform Overview</h1>
           <p className="text-zinc-500 text-xs mt-0.5">
             Signed in as <span className="text-zinc-300 font-semibold">{adminName}</span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => fetchData(true)}
             disabled={refreshing}
@@ -131,7 +131,8 @@ export function SuperAdminOverviewClient({ adminName }: { adminName: string }) {
             className="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-bold px-3.5 py-2 rounded transition-all"
           >
             <UserPlus className="size-3.5" />
-            Onboard Company
+            <span className="hidden sm:inline">Onboard Company</span>
+            <span className="sm:hidden">Onboard</span>
           </Link>
         </div>
       </div>
@@ -143,19 +144,21 @@ export function SuperAdminOverviewClient({ adminName }: { adminName: string }) {
         <div className="lg:col-span-2 space-y-6">
 
           {/* Horizontal Metrics Bar */}
-          <div className="grid grid-cols-5 gap-px bg-zinc-900 border border-zinc-900 rounded overflow-hidden">
-            {[
-              { label: 'Total Companies', value: stats.totalCompanies },
-              { label: 'Active', value: stats.activeCompanies },
-              { label: 'Trial', value: stats.trialCompanies },
-              { label: 'Suspended', value: stats.suspendedCompanies },
-              { label: 'Total Users', value: stats.totalUsers },
-            ].map(s => (
-              <div key={s.label} className="bg-zinc-950 px-4 py-4">
-                <p className="text-2xl font-bold text-white">{s.value}</p>
-                <p className="text-xs text-zinc-500 mt-1">{s.label}</p>
-              </div>
-            ))}
+          <div className="overflow-x-auto -mx-1">
+            <div className="flex min-w-max sm:grid sm:min-w-0 sm:grid-cols-5 gap-px bg-zinc-900 border border-zinc-900 rounded overflow-hidden">
+              {[
+                { label: 'Total Companies', value: stats.totalCompanies },
+                { label: 'Active', value: stats.activeCompanies },
+                { label: 'Trial', value: stats.trialCompanies },
+                { label: 'Suspended', value: stats.suspendedCompanies },
+                { label: 'Total Users', value: stats.totalUsers },
+              ].map(s => (
+                <div key={s.label} className="bg-zinc-950 px-4 py-4 min-w-[110px] sm:min-w-0">
+                  <p className="text-2xl font-bold text-white">{s.value}</p>
+                  <p className="text-xs text-zinc-500 mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Platform Alerts */}
@@ -194,11 +197,10 @@ export function SuperAdminOverviewClient({ adminName }: { adminName: string }) {
                   {alerts.map(alert => (
                     <tr key={alert.id} className="hover:bg-zinc-900/10 transition-colors">
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase ${
-                          alert.severity === 'critical' ? 'text-red-400'
-                          : alert.severity === 'warning' ? 'text-amber-400'
-                          : 'text-blue-400'
-                        }`}>
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase ${alert.severity === 'critical' ? 'text-red-400'
+                            : alert.severity === 'warning' ? 'text-amber-400'
+                              : 'text-blue-400'
+                          }`}>
                           <span className="w-1.5 h-1.5 rounded-full bg-current" />
                           {alert.severity}
                         </span>
