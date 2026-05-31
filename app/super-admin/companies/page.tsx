@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Search, Plus, Building2, Users, MoreHorizontal, RefreshCw,
-  Download, Play, Pause, Trash2, Mail, Eye, Calendar, Shield, HeartPulse
+  Download, Play, Pause, Trash2, Mail, Eye, Calendar, Shield,
+  TrendingUp, Activity, AlertTriangle
 } from 'lucide-react'
 import Link from 'next/link'
-import { formatDistanceToNow, format } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 
 type FilterStatus = 'all' | 'active' | 'trial' | 'suspended'
@@ -30,10 +31,10 @@ interface Company {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  active:    'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
-  trial:     'text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
-  suspended: 'text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
-  canceled:  'text-zinc-550 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+  active:    'text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+  trial:     'text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+  suspended: 'text-red-400 bg-red-500/10 border border-red-500/25 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+  canceled:  'text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
 }
 
 export default function CompaniesPage() {
@@ -66,11 +67,11 @@ export default function CompaniesPage() {
   }, [])
 
   const getHealthScore = (c: Company): { label: 'Healthy' | 'Warning' | 'Critical'; cls: string } => {
-    if (c.status === 'suspended') return { label: 'Critical', cls: 'text-red-400 border-red-500/20 bg-red-500/10' }
-    if (!c.setup_complete) return { label: 'Warning', cls: 'text-amber-400 border-amber-500/20 bg-amber-500/10' }
-    if ((c.member_count ?? 0) === 0) return { label: 'Critical', cls: 'text-red-400 border-red-500/20 bg-red-500/10' }
-    if ((c.member_count ?? 0) === 1) return { label: 'Warning', cls: 'text-amber-400 border-amber-500/20 bg-amber-500/10' }
-    return { label: 'Healthy', cls: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10' }
+    if (c.status === 'suspended') return { label: 'Critical', cls: 'text-red-400 border-red-500/25 bg-red-500/10' }
+    if (!c.setup_complete) return { label: 'Warning', cls: 'text-amber-400 border-amber-500/25 bg-amber-500/10' }
+    if ((c.member_count ?? 0) === 0) return { label: 'Critical', cls: 'text-red-400 border-red-500/25 bg-red-500/10' }
+    if ((c.member_count ?? 0) === 1) return { label: 'Warning', cls: 'text-amber-400 border-amber-500/25 bg-amber-500/10' }
+    return { label: 'Healthy', cls: 'text-emerald-400 border-emerald-500/25 bg-emerald-500/10' }
   }
 
   const filtered = companies.filter(c => {
@@ -166,47 +167,53 @@ export default function CompaniesPage() {
   }
 
   const FILTERS: { value: FilterStatus; label: string }[] = [
-    { value: 'all', label: 'All Slots' },
+    { value: 'all', label: 'All' },
     { value: 'active', label: 'Active' },
-    { value: 'trial', label: 'In Trial' },
+    { value: 'trial', label: 'Trial' },
     { value: 'suspended', label: 'Suspended' },
   ]
 
+  // Computed stats
+  const totalCompanies = companies.length
+  const activeCount = companies.filter(c => c.is_active && c.status !== 'suspended').length
+  const trialCount = companies.filter(c => c.status === 'trial').length
+  const suspendedCount = companies.filter(c => c.status === 'suspended').length
+
   return (
-    <div className="p-6 xl:p-10 space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100 selection:bg-zinc-800">
-      {/* Header Panel */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
+    <div className="p-6 xl:p-10 space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100">
+
+      {/* ── Page Header ─────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-zinc-900 pb-6">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-bold tracking-wider uppercase mb-2 select-none">
-            <Shield className="size-3 text-zinc-350" />
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-bold tracking-widest uppercase mb-2 select-none">
+            <Shield className="size-3" />
             <span>Corporate Instances</span>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight font-display select-none">
-            Tenant Companies
-          </h1>
-          <p className="text-zinc-500 text-xs mt-0.5">
-            Configure system states, isolate resources, track health indicators and impersonate workspaces
+          <h1 className="text-2xl font-black text-white tracking-tight">Tenant Companies</h1>
+          <p className="text-zinc-500 text-xs mt-1">
+            Configure system states, isolate resources, track health indicators and impersonate workspaces.
           </p>
         </div>
-        
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={fetchCompanies}
-            className="p-2 text-zinc-400 hover:text-white bg-zinc-950 hover:bg-zinc-900 border border-zinc-900 rounded transition-all cursor-pointer"
-            title="Refresh database"
+            disabled={loading}
+            className="p-2 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded transition-all cursor-pointer"
+            title="Refresh"
           >
             <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={exportCSV}
-            className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-white bg-zinc-955 hover:bg-zinc-900 border border-zinc-900 text-[11px] font-bold px-3 py-2 rounded transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-semibold px-3 py-2 rounded transition-all cursor-pointer"
           >
             <Download className="size-3.5" />
             Export CSV
           </button>
           <Link
             href="/super-admin/onboard-company"
-            className="inline-flex items-center justify-center gap-1.5 bg-zinc-100 hover:bg-white text-zinc-955 text-[11px] font-bold px-3.5 py-2 rounded transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-zinc-100 text-zinc-900 text-[11px] font-bold px-3.5 py-2 rounded transition-all cursor-pointer"
           >
             <Plus className="size-3.5" />
             Onboard Company
@@ -214,27 +221,45 @@ export default function CompaniesPage() {
         </div>
       </div>
 
-      {/* Filters & Search Control */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:max-w-xs group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-550 group-focus-within:text-zinc-300 transition-colors" />
+      {/* ── Stat Cards ───────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Tenants', value: totalCompanies, icon: Building2, color: 'text-zinc-300', bg: 'bg-zinc-900 border-zinc-800' },
+          { label: 'Active', value: activeCount, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/20' },
+          { label: 'In Trial', value: trialCount, icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/5 border-amber-500/20' },
+          { label: 'Suspended', value: suspendedCount, icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/5 border-red-500/20' },
+        ].map(stat => (
+          <div key={stat.label} className={`flex items-center gap-3 px-4 py-3 rounded border ${stat.bg}`}>
+            <stat.icon className={`size-4 shrink-0 ${stat.color}`} />
+            <div>
+              <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">{stat.label}</p>
+              <p className={`text-xl font-black ${stat.color}`}>{loading ? '—' : stat.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Search & Filter ──────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-600 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by name, slug or email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full bg-zinc-950 border border-zinc-900 rounded pl-9 pr-3 py-2 text-xs text-white placeholder:text-zinc-650 focus:outline-none focus:border-zinc-800 transition-colors"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded pl-9 pr-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700 transition-colors"
           />
         </div>
-        
-        <div className="flex items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-900 rounded w-full sm:w-auto">
+
+        <div className="flex items-center gap-1 p-0.5 bg-zinc-900 border border-zinc-800 rounded w-full sm:w-auto">
           {FILTERS.map(f => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
-              className={`flex-1 sm:flex-initial px-3 py-1 text-[11px] font-bold rounded transition-colors cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-3 py-1.5 text-[11px] font-bold rounded transition-colors cursor-pointer ${
                 filter === f.value
-                  ? 'bg-zinc-900 text-white'
+                  ? 'bg-zinc-700 text-white'
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -242,32 +267,42 @@ export default function CompaniesPage() {
             </button>
           ))}
         </div>
+
+        {filtered.length > 0 && (
+          <p className="text-zinc-600 text-xs ml-auto shrink-0">
+            {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+          </p>
+        )}
       </div>
 
-      {/* Main Companies Table-First Design */}
+      {/* ── Table ───────────────────────────────────────────── */}
       <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-zinc-500 text-xs font-mono gap-2">
+          <div className="flex items-center justify-center py-24 text-zinc-500 text-xs font-mono gap-2">
             <RefreshCw className="size-3.5 animate-spin text-zinc-400" />
-            <span>Fetching company clusters...</span>
+            <span>Fetching company clusters…</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-20 gap-3 text-center">
-            <Building2 className="size-10 text-zinc-600 opacity-60 mb-1" />
-            <p className="text-zinc-400 text-xs font-bold font-mono">No instances found</p>
-            <p className="text-zinc-650 text-[11px]">Adjust filters or onboard a new corporate container.</p>
+          <div className="flex flex-col items-center py-24 gap-3 text-center">
+            <Building2 className="size-10 text-zinc-700 mb-1" />
+            <p className="text-zinc-400 text-xs font-bold">No instances found</p>
+            <p className="text-zinc-600 text-[11px]">
+              {search || filter !== 'all'
+                ? 'Adjust your filters or search query.'
+                : 'Onboard your first corporate tenant to get started.'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-zinc-900 bg-zinc-900/5 text-[9px] font-bold text-zinc-550 tracking-wider uppercase">
-                  <th className="px-5 py-3">Company Profile</th>
-                  <th className="px-5 py-3">Health Score</th>
+                <tr className="border-b border-zinc-900 bg-zinc-900/30 text-[9px] font-bold text-zinc-500 tracking-widest uppercase">
+                  <th className="px-5 py-3">Company</th>
+                  <th className="px-5 py-3">Health</th>
                   <th className="px-5 py-3">Admin Owner</th>
                   <th className="px-5 py-3">Members</th>
-                  <th className="px-5 py-3">Tier Plan</th>
-                  <th className="px-5 py-3">System State</th>
+                  <th className="px-5 py-3">Plan</th>
+                  <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Onboarded</th>
                   <th className="px-5 py-3">Last Active</th>
                   <th className="px-5 py-3 text-right">Actions</th>
@@ -277,13 +312,17 @@ export default function CompaniesPage() {
                 {filtered.map(company => {
                   const health = getHealthScore(company)
                   return (
-                    <tr key={company.id} className="hover:bg-zinc-900/10 transition-colors group">
-                      {/* Profile */}
+                    <tr key={company.id} className="hover:bg-zinc-900/20 transition-colors group">
+
+                      {/* Company Profile */}
                       <td className="px-5 py-3.5">
-                        <Link href={`/super-admin/companies/${company.id}`} className="text-zinc-200 text-xs font-bold hover:text-white transition-colors">
+                        <Link
+                          href={`/super-admin/companies/${company.id}`}
+                          className="text-zinc-200 text-xs font-bold hover:text-white transition-colors"
+                        >
                           {company.name}
                         </Link>
-                        <p className="text-zinc-500 text-[10px] font-mono mt-0.5">{company.slug}</p>
+                        <p className="text-zinc-600 text-[10px] font-mono mt-0.5">{company.slug}</p>
                       </td>
 
                       {/* Health Score */}
@@ -300,55 +339,51 @@ export default function CompaniesPage() {
                         <p className="text-zinc-500 text-[10px] font-mono mt-0.5">{company.admin_email ?? '—'}</p>
                       </td>
 
-                      {/* Members Count */}
+                      {/* Members */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5 text-zinc-400">
-                          <Users className="size-3.5 text-zinc-550" />
+                          <Users className="size-3.5 text-zinc-600" />
                           <span className="text-xs font-bold text-zinc-300">{company.member_count ?? 0}</span>
                         </div>
                       </td>
 
-                      {/* Tier Plan */}
+                      {/* Plan */}
                       <td className="px-5 py-3.5">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-zinc-900 text-zinc-400 border border-zinc-800 select-none">
                           {company.subscription?.plan?.display_name ?? company.plan_id ?? 'Free'}
                         </span>
                       </td>
 
-                      {/* System State */}
+                      {/* Status */}
                       <td className="px-5 py-3.5">
                         <span className={STATUS_STYLE[company.status ?? 'trial'] ?? STATUS_STYLE.trial}>
                           {company.status ?? 'trial'}
                         </span>
                       </td>
 
-                      {/* Onboarded Date */}
+                      {/* Onboarded */}
                       <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-mono">
-                          <Calendar className="size-3 text-zinc-650" />
-                          <span>
-                            {formatDistanceToNow(new Date(company.created_at), { addSuffix: true })}
-                          </span>
+                        <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-mono">
+                          <Calendar className="size-3 text-zinc-700" />
+                          <span>{formatDistanceToNow(new Date(company.created_at), { addSuffix: true })}</span>
                         </div>
                       </td>
 
                       {/* Last Active */}
-                      <td className="px-5 py-3.5 text-zinc-500 text-xs font-mono">
-                        {company.last_active_at ? (
-                          formatDistanceToNow(new Date(company.last_active_at), { addSuffix: true })
-                        ) : (
-                          '—'
-                        )}
+                      <td className="px-5 py-3.5 text-zinc-500 text-[10px] font-mono">
+                        {company.last_active_at
+                          ? formatDistanceToNow(new Date(company.last_active_at), { addSuffix: true })
+                          : '—'}
                       </td>
 
-                      {/* Actions Panel */}
+                      {/* Actions */}
                       <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5 relative">
+                        <div className="flex items-center justify-end gap-1 relative">
                           <button
                             onClick={() => handleAction('view', company.id, company.name)}
                             disabled={actingOn === company.id}
-                            title="Impersonate and view company space"
-                            className="text-zinc-450 hover:text-white hover:bg-zinc-900 p-1.5 rounded border border-transparent hover:border-zinc-800 transition-all cursor-pointer"
+                            title="Impersonate workspace"
+                            className="text-zinc-500 hover:text-white hover:bg-zinc-800 p-1.5 rounded border border-transparent hover:border-zinc-700 transition-all cursor-pointer disabled:opacity-40"
                           >
                             <Eye className="size-3.5" />
                           </button>
@@ -356,7 +391,7 @@ export default function CompaniesPage() {
                           <div className="relative">
                             <button
                               onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === company.id ? null : company.id) }}
-                              className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-900 rounded transition-colors cursor-pointer"
+                              className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded transition-colors cursor-pointer"
                             >
                               <MoreHorizontal className="size-3.5" />
                             </button>
@@ -364,39 +399,39 @@ export default function CompaniesPage() {
                             {openMenu === company.id && (
                               <div
                                 onClick={e => e.stopPropagation()}
-                                className="absolute right-0 top-7 z-50 w-44 bg-zinc-950 border border-zinc-900 rounded shadow-xl py-1 text-xs text-left animate-fade-in"
+                                className="absolute right-0 top-8 z-50 w-44 bg-zinc-950 border border-zinc-800 rounded shadow-2xl py-1 text-xs text-left"
                               >
                                 {company.status !== 'suspended' ? (
                                   <button
                                     onClick={() => handleAction('suspend', company.id, company.name)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-amber-500 hover:bg-zinc-900 transition-colors cursor-pointer"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-amber-400 hover:bg-zinc-900 transition-colors cursor-pointer"
                                   >
-                                    <Pause className="size-3" />Suspend Space
+                                    <Pause className="size-3" /> Suspend Space
                                   </button>
                                 ) : (
                                   <button
                                     onClick={() => handleAction('activate', company.id, company.name)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-emerald-500 hover:bg-zinc-900 transition-colors cursor-pointer"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-emerald-400 hover:bg-zinc-900 transition-colors cursor-pointer"
                                   >
-                                    <Play className="size-3" />Activate Space
+                                    <Play className="size-3" /> Activate Space
                                   </button>
                                 )}
                                 <button
                                   onClick={() => handleAction('resend', company.id, company.name)}
                                   className="w-full flex items-center gap-2 px-3 py-2 text-zinc-300 hover:bg-zinc-900 transition-colors cursor-pointer"
                                 >
-                                  <Mail className="size-3" />Resend Invite
+                                  <Mail className="size-3" /> Resend Invite
                                 </button>
-                                <hr className="border-zinc-900 my-1" />
+                                <hr className="border-zinc-800 my-1" />
                                 <button
                                   onClick={() => {
-                                    if (confirm(`Soft delete ${company.name}? Retention active for 30 days.`)) {
+                                    if (confirm(`Soft delete ${company.name}? Data retained for 30 days.`)) {
                                       handleAction('delete', company.id, company.name)
                                     }
                                   }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                                 >
-                                  <Trash2 className="size-3" />Delete Tenant
+                                  <Trash2 className="size-3" /> Delete Tenant
                                 </button>
                               </div>
                             )}
