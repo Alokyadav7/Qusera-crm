@@ -230,7 +230,6 @@ function LoginFormContent() {
     const fd = new FormData(e.currentTarget)
     const email = fd.get('email') as string
     const password = fd.get('password') as string
-    const rememberMe = fd.get('rememberMe') === 'on'
 
     const supabase = createClient() as any
 
@@ -243,17 +242,21 @@ function LoginFormContent() {
       return
     }
 
-    // Dynamic checks on user session
     if (data?.user) {
       const userId = data.user.id
 
-      // Perform lookup for active/disabled profile state
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_active, is_super_admin')
-        .eq('id', userId)
-        .maybeSingle()
+      // Single parallel fetch — eliminates login slowness from sequential DB calls
+      const [profileRes, memberRes, platformAdminRes] = await Promise.all([
+        supabase.from('profiles').select('is_active, is_super_admin').eq('id', userId).maybeSingle(),
+        supabase.from('company_members').select('company:companies(id,status,suspension_reason)').eq('user_id', userId).maybeSingle(),
+        supabase.from('platform_admins').select('is_active').eq('user_id', userId).maybeSingle(),
+      ])
 
+      const profile = profileRes.data
+      const userCompany = (memberRes.data as any)?.company
+      const platformAdmin = platformAdminRes.data
+
+      // Check account active state
       if (profile && !profile.is_active) {
         await supabase.auth.signOut()
         setErrorMsg('Your account has been deactivated by the system administrator.')
@@ -261,40 +264,22 @@ function LoginFormContent() {
         return
       }
 
-      // Check if user belongs to an active company
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company:companies(id, status, suspension_reason)')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      const userCompany = (member as any)?.company
+      // Check company suspension
       if (userCompany && userCompany.status === 'suspended') {
         await supabase.auth.signOut()
         setErrorMsg(`Workspace suspended: ${userCompany.suspension_reason || 'Administrative hold'}`)
         setLoading(false)
         return
       }
-    }
 
-    // Set remember me session persistence settings optionally or let Supabase session cookie flow
-    router.refresh()
-    await new Promise(r => setTimeout(r, 100))
+      // Determine redirect: platform_admins table OR is_super_admin flag OR user metadata
+      const isSuperAdmin =
+        platformAdmin?.is_active === true ||
+        profile?.is_super_admin === true ||
+        data.user.user_metadata?.is_platform_admin === true ||
+        (data.user as any).app_metadata?.is_platform_admin === true
 
-    // Handle redirection depending on super admin status
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_super_admin')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (profile?.is_super_admin) {
-        router.push('/super-admin')
-      } else {
-        router.push('/dashboard')
-      }
+      router.push(isSuperAdmin ? '/super-admin' : '/dashboard')
     } else {
       router.push('/dashboard')
     }
