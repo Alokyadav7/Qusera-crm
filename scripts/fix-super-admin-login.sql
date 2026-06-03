@@ -13,10 +13,10 @@ CREATE TABLE IF NOT EXISTS platform_admins (
 );
 
 -- STEP 2: Set your super admin email here ↓
--- Replace 'klinqcrm@gmail.com' with your actual super-admin email
+-- Replace 'info@qusera.in' with your actual super-admin email
 DO $$
 DECLARE
-  v_email TEXT := 'klinqcrm@gmail.com';  -- ← CHANGE THIS TO YOUR SUPER ADMIN EMAIL
+  v_email TEXT := 'info@qusera.in';  -- ← CHANGE THIS TO YOUR SUPER ADMIN EMAIL
   v_user_id uuid;
 BEGIN
   SELECT id INTO v_user_id FROM auth.users WHERE email = v_email;
