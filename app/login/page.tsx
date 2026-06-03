@@ -279,9 +279,12 @@ function LoginFormContent() {
         data.user.user_metadata?.is_platform_admin === true ||
         (data.user as any).app_metadata?.is_platform_admin === true
 
-      router.push(isSuperAdmin ? '/super-admin' : '/dashboard')
+      // Use window.location.href (hard navigation) so the session cookie is fully
+      // committed before the server-side layout.tsx auth check reads it.
+      // router.push() is a soft nav that can race with cookie writing.
+      window.location.href = isSuperAdmin ? '/super-admin' : '/dashboard'
     } else {
-      router.push('/dashboard')
+      window.location.href = '/dashboard'
     }
   }
 
