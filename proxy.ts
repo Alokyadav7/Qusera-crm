@@ -148,11 +148,17 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── Fetch profile for routing decisions ────────────────────────────────────
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_super_admin, onboarding_completed, is_active')
-    .eq('id', user.id)
-    .single()
+  let profile: { is_super_admin: boolean | null; onboarding_completed: boolean | null; is_active: boolean | null } | null = null
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('is_super_admin, onboarding_completed, is_active')
+      .eq('id', user.id)
+      .maybeSingle()
+    profile = data
+  } catch {
+    profile = null
+  }
 
   // ── User deactivated ───────────────────────────────────────────────────────
   if (profile?.is_active === false) {
