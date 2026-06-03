@@ -34,7 +34,7 @@ function LeftBrandingPanel() {
           <img
             src="/Klinqcrm-logo.png"
             alt="Klinq CRM Logo"
-            className="h-12 w-auto object-contain"
+            className="h-14 w-auto object-contain"
           />
         </div>
 
@@ -233,59 +233,81 @@ function LoginFormContent() {
 
     const supabase = createClient() as any
 
-    // Sign in to Supabase
+    // ── Step 1: Sign in ──────────────────────────────────────────────────────
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setErrorMsg(error.message || 'Invalid email or password.')
+      if (error.message?.includes('Invalid login credentials')) {
+        setErrorMsg('Incorrect email or password.')
+      } else if (error.message?.includes('Email not confirmed')) {
+        setErrorMsg('Account not verified. Please contact your administrator.')
+      } else {
+        setErrorMsg(error.message || 'Login failed. Please try again.')
+      }
       setLoading(false)
       return
     }
 
-    if (data?.user) {
-      const userId = data.user.id
+    const user = data?.user
+    if (!user) {
+      setErrorMsg('Login failed. Please try again.')
+      setLoading(false)
+      return
+    }
 
-      // Single parallel fetch — eliminates login slowness from sequential DB calls
-      const [profileRes, memberRes, platformAdminRes] = await Promise.all([
-        supabase.from('profiles').select('is_active, is_super_admin').eq('id', userId).maybeSingle(),
-        supabase.from('company_members').select('company:companies(id,status,suspension_reason)').eq('user_id', userId).maybeSingle(),
-        supabase.from('platform_admins').select('is_active').eq('user_id', userId).maybeSingle(),
-      ])
+    // ── Step 2: Detect role from JWT — instant, no DB call needed ────────────
+    // app_metadata is set server-side and embedded in the JWT at login time.
+    const isSuperAdmin =
+      user.app_metadata?.is_platform_admin === true ||
+      user.user_metadata?.is_platform_admin === true
 
-      const profile = profileRes.data
-      const userCompany = (memberRes.data as any)?.company
-      const platformAdmin = platformAdminRes.data
+    if (isSuperAdmin) {
+      // Super admin — skip all DB checks, go straight to /super-admin
+      window.location.href = '/super-admin'
+      return // keep spinner until navigation completes
+    }
 
-      // Check account active state
-      if (profile && !profile.is_active) {
+    // ── Step 3: Company user — check suspension/active state ─────────────────
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_active, onboarding_completed, company_id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profile?.is_active === false) {
         await supabase.auth.signOut()
-        setErrorMsg('Your account has been deactivated by the system administrator.')
+        setErrorMsg('Your account has been deactivated. Please contact your administrator.')
         setLoading(false)
         return
       }
 
-      // Check company suspension
-      if (userCompany && userCompany.status === 'suspended') {
-        await supabase.auth.signOut()
-        setErrorMsg(`Workspace suspended: ${userCompany.suspension_reason || 'Administrative hold'}`)
-        setLoading(false)
-        return
+      if (profile?.company_id) {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('status, suspension_reason')
+          .eq('id', profile.company_id)
+          .maybeSingle()
+
+        if (company?.status === 'suspended') {
+          await supabase.auth.signOut()
+          setErrorMsg(`Workspace suspended: ${company.suspension_reason || 'Please contact support.'}`)
+          setLoading(false)
+          return
+        }
       }
 
-      // Determine redirect: platform_admins table OR is_super_admin flag OR user metadata
-      const isSuperAdmin =
-        platformAdmin?.is_active === true ||
-        profile?.is_super_admin === true ||
-        data.user.user_metadata?.is_platform_admin === true ||
-        (data.user as any).app_metadata?.is_platform_admin === true
+      // Redirect based on onboarding status
+      window.location.href = profile?.onboarding_completed === false
+        ? '/onboarding'
+        : '/dashboard'
 
-      // Use window.location.href (hard navigation) so the session cookie is fully
-      // committed before the server-side layout.tsx auth check reads it.
-      // router.push() is a soft nav that can race with cookie writing.
-      window.location.href = isSuperAdmin ? '/super-admin' : '/dashboard'
-    } else {
+    } catch {
+      // If DB check fails, go to /dashboard — proxy.ts handles further routing
       window.location.href = '/dashboard'
     }
+
+    // Keep loading=true — spinner shows until browser navigates
   }
 
   // OAuth Google Login integration
@@ -352,7 +374,7 @@ function LoginFormContent() {
             <img
               src="/Klinqcrm-logo.png"
               alt="Klinq CRM Logo"
-              className="h-10 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </div>
         )}

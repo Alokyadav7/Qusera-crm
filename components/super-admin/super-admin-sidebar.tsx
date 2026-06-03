@@ -16,10 +16,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Sparkles
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/client'
 
 interface SuperAdminSidebarProps {
   collapsed: boolean
@@ -32,8 +31,8 @@ const NAV_GROUPS = [
   {
     label: 'Overview',
     items: [
-      { href: '/super-admin', label: 'Overview', icon: LayoutDashboard, exact: true }
-    ]
+      { href: '/super-admin', label: 'Overview', icon: LayoutDashboard, exact: true },
+    ],
   },
   {
     label: 'Companies',
@@ -41,37 +40,42 @@ const NAV_GROUPS = [
       { href: '/super-admin/companies', label: 'Companies', icon: Building2, exact: false },
       { href: '/super-admin/onboard-company', label: 'Onboard Company', icon: Settings, exact: false },
       { href: '/super-admin/demo-requests', label: 'Demo Requests', icon: Sparkles, exact: false },
-    ]
+    ],
   },
   {
     label: 'Operations',
     items: [
       { href: '/super-admin/monitoring', label: 'Monitoring', icon: Activity, exact: false },
       { href: '/super-admin/audit-logs', label: 'Audit Logs', icon: FileText, exact: false },
-      { href: '/super-admin/support', label: 'Support Center', icon: HelpCircle, exact: false }
-    ]
+      { href: '/super-admin/support', label: 'Support', icon: HelpCircle, exact: false },
+    ],
   },
   {
     label: 'Analytics',
     items: [
-      { href: '/super-admin/analytics', label: 'Platform Analytics', icon: BarChart3, exact: false }
-    ]
+      { href: '/super-admin/analytics', label: 'Analytics', icon: BarChart3, exact: false },
+    ],
   },
   {
     label: 'Finance',
     items: [
-      { href: '/super-admin/billing', label: 'Billing', icon: CreditCard, exact: false }
-    ]
+      { href: '/super-admin/billing', label: 'Billing', icon: CreditCard, exact: false },
+    ],
   },
   {
-    label: 'Configuration',
+    label: 'Config',
     items: [
-      { href: '/super-admin/settings', label: 'Platform Settings', icon: Settings, exact: false }
-    ]
-  }
+      { href: '/super-admin/settings', label: 'Settings', icon: Settings, exact: false },
+    ],
+  },
 ]
 
-export function SuperAdminSidebar({ collapsed, onToggle, adminEmail, onMobileClose }: SuperAdminSidebarProps) {
+export function SuperAdminSidebar({
+  collapsed,
+  onToggle,
+  adminEmail,
+  onMobileClose,
+}: SuperAdminSidebarProps) {
   const pathname = usePathname()
   const [signingOut, setSigningOut] = useState(false)
 
@@ -79,108 +83,116 @@ export function SuperAdminSidebar({ collapsed, onToggle, adminEmail, onMobileClo
     if (signingOut) return
     setSigningOut(true)
     try {
-      await createClient().auth.signOut()
-    } catch {}
-    window.location.replace('/login')
+      // Server-side signout — clears the SSR session cookie so the proxy
+      // won't redirect back to /super-admin after logout.
+      await fetch('/api/auth/signout', { method: 'POST' })
+    } catch {
+      // ignore — still redirect
+    } finally {
+      window.location.href = '/login'
+    }
   }
 
   return (
     <aside
       className={cn(
-        'h-screen bg-zinc-950 border-r border-zinc-900 flex flex-col z-40 transition-all duration-200 select-none shrink-0',
-        collapsed ? 'w-16' : 'w-64'
+        'h-screen bg-zinc-950 border-r border-zinc-800 flex flex-col shrink-0 transition-all duration-200',
+        collapsed ? 'w-14' : 'w-[220px]'
       )}
     >
-      {/* Brand Header */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-900">
-        <div className="flex items-center gap-2.5 overflow-hidden">
+      {/* Brand */}
+      <div className="h-14 flex items-center justify-between px-3 border-b border-zinc-800 shrink-0">
+        <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
           <img
             src="/Klinqcrm-logo.png"
             alt="Klinq Logo"
-            className="h-9 w-auto object-contain shrink-0"
+            className="h-10 w-auto object-contain shrink-0"
           />
           {!collapsed && (
             <div className="min-w-0 leading-none">
-              <span className="text-zinc-200 text-xs font-bold tracking-tight block">Klinq Ops</span>
-              <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase block mt-0.5">Control Node</span>
+              <span className="text-zinc-100 text-xs font-semibold tracking-tight block truncate">
+                Control Center
+              </span>
+              <span className="text-[9px] text-zinc-600 font-mono tracking-widest uppercase block mt-0.5">
+                Platform Admin
+              </span>
             </div>
           )}
         </div>
-        {/* Only show collapse toggle on desktop */}
         <button
           onClick={() => onToggle(!collapsed)}
-          className="hidden lg:flex p-1 hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 rounded border border-transparent hover:border-zinc-800 transition-all cursor-pointer shrink-0"
+          className="hidden lg:flex p-1 text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800/60 rounded transition-all cursor-pointer shrink-0"
         >
           {collapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}
         </button>
       </div>
 
-      {/* Navigation List */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-4">
-        {NAV_GROUPS.map(group => (
-          <div key={group.label} className="space-y-1">
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label} className="space-y-0.5">
             {!collapsed && (
-              <p className="text-zinc-600 text-[9px] font-bold tracking-wider uppercase px-2 mb-1.5 select-none">
+              <p className="text-[9px] uppercase tracking-widest text-zinc-600 font-semibold px-2 mb-1 select-none">
                 {group.label}
               </p>
             )}
-            <ul className="space-y-0.5">
-              {group.items.map(item => {
-                const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      title={collapsed ? item.label : undefined}
-                      onClick={onMobileClose}
-                      className={cn(
-                        'flex items-center rounded-md text-xs transition-all relative group/item py-1.5',
-                        collapsed ? 'justify-center px-0' : 'px-2 gap-2.5',
-                        active
-                          ? 'bg-zinc-900 text-zinc-100 font-semibold border border-zinc-800'
-                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40 border border-transparent'
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          'size-4 shrink-0 transition-colors',
-                          active ? 'text-zinc-200' : 'text-zinc-500 group-hover/item:text-zinc-300'
-                        )}
-                      />
-                      {!collapsed && <span>{item.label}</span>}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
+            {group.items.map((item) => {
+              const active = item.exact
+                ? pathname === item.href
+                : pathname.startsWith(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={collapsed ? item.label : undefined}
+                  onClick={onMobileClose}
+                  className={cn(
+                    'flex items-center rounded text-xs transition-all duration-100',
+                    collapsed ? 'justify-center w-10 h-8 mx-auto' : 'gap-2.5 px-2 h-7',
+                    active
+                      ? 'bg-zinc-800 text-zinc-100'
+                      : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      'size-4 shrink-0',
+                      active ? 'text-zinc-200' : 'text-zinc-500'
+                    )}
+                  />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              )
+            })}
           </div>
         ))}
       </nav>
 
-      {/* Footer Profile & Signout */}
-      <div className="p-3 border-t border-zinc-900 space-y-2">
+      {/* Footer */}
+      <div className="border-t border-zinc-800 p-2 space-y-1 shrink-0">
         {adminEmail && !collapsed && (
-          <div className="px-2.5 py-2 bg-zinc-900/30 rounded border border-zinc-900 min-w-0">
-            <p className="text-[9px] font-mono text-zinc-500 uppercase block select-none">Signed in as</p>
+          <div className="px-2 py-1.5 rounded bg-zinc-900 border border-zinc-800 min-w-0 mb-1">
+            <p className="text-[9px] font-mono text-zinc-600 uppercase tracking-wider select-none">
+              Signed in as
+            </p>
             <p className="text-[10px] font-mono text-zinc-400 truncate mt-0.5">{adminEmail}</p>
           </div>
         )}
-
         <button
           onClick={handleSignOut}
           disabled={signingOut}
-          className={cn(
-            'w-full flex items-center justify-center text-zinc-500 hover:text-zinc-300 bg-zinc-900/10 hover:bg-zinc-900 border border-zinc-900 hover:border-zinc-800 text-[10px] font-bold py-2 rounded transition-all cursor-pointer disabled:opacity-50',
-            collapsed ? 'px-0' : 'px-3 gap-2'
-          )}
           title={collapsed ? 'Sign Out' : undefined}
+          className={cn(
+            'w-full flex items-center text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60 rounded transition-all cursor-pointer disabled:opacity-40',
+            collapsed ? 'justify-center w-10 h-8 mx-auto' : 'gap-2.5 px-2 h-7'
+          )}
         >
           {signingOut ? (
-            <Loader2 className="size-3.5 animate-spin" />
+            <Loader2 className="size-4 shrink-0 animate-spin" />
           ) : (
-            <LogOut className="size-3.5 shrink-0" />
+            <LogOut className="size-4 shrink-0" />
           )}
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span>Sign out</span>}
         </button>
       </div>
     </aside>

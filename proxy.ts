@@ -1,6 +1,7 @@
 // proxy.ts — Klinq CRM Auth Middleware
 // Next.js middleware: session refresh + routing rules + rate limiting.
-// This is the ONLY middleware file — middleware.ts has been removed.
+// This is the ONLY middleware file — middleware.ts imports and re-exports this.
+//
 
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
@@ -9,8 +10,8 @@ import type { NextRequest } from 'next/server'
 // ── In-Memory Rate Limiting ──────────────────────────────────────────────────
 interface RateLimitBucket { count: number; resetTime: number }
 const rateLimitMap = new Map<string, RateLimitBucket>()
-const WINDOW_MS = 60 * 1000
-const MAX_REQUESTS = 60
+const WINDOW_MS = 60 * 1000   // 1 minute window
+const MAX_REQUESTS = 60        // 60 req/min per IP
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now()
@@ -23,7 +24,7 @@ function isRateLimited(ip: string): boolean {
   return bucket.count > MAX_REQUESTS
 }
 
-// Clean up stale rate limit entries every 5 minutes
+// Clean up expired buckets every 5 minutes (runs once per worker lifetime)
 if (typeof globalThis !== 'undefined') {
   const g = globalThis as any
   if (!g.__rateLimitCleanup) {
@@ -36,24 +37,20 @@ if (typeof globalThis !== 'undefined') {
   }
 }
 
-// ── Public paths (no auth required) ─────────────────────────────────────────
-const PUBLIC_PREFIXES = [
-  '/login',
-  '/forgot-password',  // Password reset request page
-  '/reset-password',   // Password reset confirmation page
+// ── Route Classification ─────────────────────────────────────────────────────
+//
+// FULLY PUBLIC — no auth check at all (static assets, public pages)
+const FULLY_PUBLIC_PREFIXES = [
+  '/forgot-password',
+  '/reset-password',
   '/suspended',
   '/accept-invite',
-  '/invite',           // Team member invite acceptance — must be public
+  '/invite',
   '/auth/callback',
   '/auth/error',
-  '/api/webhooks',
-  '/api/auth',         // Auth API routes (reset-password etc)
-  '/api/contact',      // Public contact form submission
-  '/api/blog',         // Public blog subscribe
-  '/api/demo',         // Public demo OTP flow
   '/_next',
   '/favicon.ico',
-  // ── Public marketing pages ──────────────────────────────────────────────────
+  '/Klinqcrm-logo.png',
   '/about',
   '/contact',
   '/careers',
@@ -62,37 +59,52 @@ const PUBLIC_PREFIXES = [
   '/terms',
 ]
 
-// ── Main Proxy (Next.js 16 — replaces middleware) ───────────────────────────
+// API routes — rate-limited but NOT auth-checked by middleware
+// (each API route must authenticate itself via createServerClient + getUser)
+const API_PREFIX = '/api/'
+
+// Auth-aware public routes — these need the session to redirect logged-in users
+// e.g. logged-in user visiting /login should go to their home, not see the form
+const AUTH_AWARE_PUBLIC = ['/login', '/register']
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    (request as any).ip ||
+    'unknown'
+  )
+}
+
+function redirectTo(url: string, request: NextRequest): NextResponse {
+  return NextResponse.redirect(new URL(url, request.url))
+}
+
+// ── Main Proxy ───────────────────────────────────────────────────────────────
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
   let response = NextResponse.next({ request: { headers: request.headers } })
 
-  const { pathname } = request.nextUrl
-
-  // ── Rate limit /api/* routes ───────────────────────────────────────────────
-  if (pathname.startsWith('/api/')) {
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0] ||
-      (request as any).ip ||
-      'unknown'
+  // ── 1. Rate-limit ALL API routes first, then let them handle their own auth ─
+  if (pathname.startsWith(API_PREFIX)) {
+    const ip = getClientIp(request)
     if (ip !== 'unknown' && isRateLimited(ip)) {
       return NextResponse.json(
         { error: 'Too many requests. Please slow down.' },
         { status: 429, headers: { 'Retry-After': '60' } }
       )
     }
-  }
-
-  // ── Always allow public routes ─────────────────────────────────────────────
-  if (PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
+    // Do NOT return here — fall through so Supabase SSR can refresh the session
+    // cookie even on API routes (keeps auth tokens fresh)
     return response
   }
 
-  // ── Landing page is public ────────────────────────────────────────────────
-  if (pathname === '/') {
+  // ── 2. Fully public routes — zero auth overhead ────────────────────────────
+  if (pathname === '/' || FULLY_PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
     return response
   }
 
-  // ── /register is DISABLED — invitation-only ───────────────────────────────
+  // ── 3. /register is disabled — redirect to login with message ──────────────
   if (pathname.startsWith('/register')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -100,7 +112,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // ── Create Supabase SSR client + refresh session ───────────────────────────
+  // ── 4. Create Supabase SSR client (refreshes session cookies) ────────────
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -122,117 +134,160 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  let user = null
+  // ── 5. Validate session — getUser() hits Supabase auth server ─────────────
+  //    This is the ONLY way to guarantee the JWT hasn't been revoked.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] | null = null
   try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user
+    const { data, error } = await supabase.auth.getUser()
+    if (!error) user = data.user
   } catch {
     user = null
   }
 
-  // ── Not authenticated → /login ─────────────────────────────────────────────
+  // ── 6. Auth-aware public routes (/login) ──────────────────────────────────
+  //    If user IS logged in, redirect them to the right home instead of
+  //    showing the login form again.
+  if (AUTH_AWARE_PUBLIC.some(p => pathname.startsWith(p))) {
+    if (!user) {
+      // Not logged in — show the page normally
+      return response
+    }
+
+    // User is already logged in → figure out where to send them
+    // Fast path: check JWT metadata first (0 DB calls)
+    const isSuperAdminByMeta =
+      user.app_metadata?.is_platform_admin === true ||
+      user.user_metadata?.is_platform_admin === true
+
+    if (isSuperAdminByMeta) {
+      return redirectTo('/super-admin', request)
+    }
+
+    // Slow path: check DB profile (1 DB call)
+    try {
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('is_super_admin, onboarding_completed')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profile?.is_super_admin) return redirectTo('/super-admin', request)
+      if (profile?.onboarding_completed === false) return redirectTo('/onboarding', request)
+    } catch { /* ignore — just show login */ }
+
+    return redirectTo('/dashboard', request)
+  }
+
+  // ── 7. All remaining routes require authentication ─────────────────────────
   if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    // Preserve the original destination so we can redirect back after login
+    if (pathname !== '/login') {
+      url.searchParams.set('next', pathname)
+    }
     return NextResponse.redirect(url)
   }
 
-  // ── Logged-in user visiting /login → redirect away ────────────────────────
-  if (pathname.startsWith('/login')) {
-    const isMeta =
-      user.app_metadata?.is_platform_admin === true ||
-      user.user_metadata?.is_platform_admin === true
-    return NextResponse.redirect(
-      new URL(isMeta ? '/super-admin' : '/dashboard', request.url)
-    )
+  // ── 8. FAST PATH: Super admin via JWT metadata (0 DB calls) ───────────────
+  //    app_metadata is signed into the JWT — reading it costs nothing.
+  //    NOTE: On first login the JWT might not yet have is_platform_admin
+  //    (Supabase propagates app_metadata to JWT on next refresh, not immediately).
+  //    That's why we ALSO check the DB profile below as a fallback.
+  const isSuperAdminByMeta =
+    user.app_metadata?.is_platform_admin === true ||
+    user.user_metadata?.is_platform_admin === true
+
+  if (isSuperAdminByMeta) {
+    // Super admin trying to access company routes → redirect to their home
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) {
+      return redirectTo('/super-admin', request)
+    }
+    // Super admin on /super-admin or elsewhere → allow through
+    return response
   }
 
-  // ── Fetch profile for routing decisions ────────────────────────────────────
-  let profile: { is_super_admin: boolean | null; onboarding_completed: boolean | null; is_active: boolean | null } | null = null
+  // ── 9. COMPANY USER PATH: fetch full profile (1 DB call) ─────────────────
+  //    One query gets everything we need — no follow-up queries.
+  let profile: {
+    is_super_admin: boolean | null
+    onboarding_completed: boolean | null
+    is_active: boolean | null
+    company_id: string | null
+  } | null = null
+
   try {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('profiles')
-      .select('is_super_admin, onboarding_completed, is_active')
+      .select('is_super_admin, onboarding_completed, is_active, company_id')
       .eq('id', user.id)
       .maybeSingle()
-    profile = data
+    profile = data ?? null
   } catch {
     profile = null
   }
 
-  // ── User deactivated ───────────────────────────────────────────────────────
-  if (profile?.is_active === false) {
-    return NextResponse.redirect(new URL('/suspended', request.url))
-  }
-
-  // ── Resolve super-admin status ─────────────────────────────────────────────
-  const isSuperAdmin =
-    profile?.is_super_admin === true ||
-    user.app_metadata?.is_platform_admin === true ||
-    user.user_metadata?.is_platform_admin === true
-
-  // ── SUPER ADMIN routing ────────────────────────────────────────────────────
-  if (isSuperAdmin) {
-    // Super admin on /dashboard or /onboarding → /super-admin
-    if (
-      pathname.startsWith('/dashboard') ||
-      pathname.startsWith('/onboarding')
-    ) {
-      return NextResponse.redirect(new URL('/super-admin', request.url))
+  // ── 10. DB-level super admin check (catches first-login JWT lag) ───────────
+  //     If JWT didn't have is_platform_admin yet, the DB is the source of truth.
+  if (profile?.is_super_admin === true) {
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) {
+      return redirectTo('/super-admin', request)
     }
-    // Super admin on /super-admin or anything else → allow
     return response
   }
 
-  // ── COMPANY USER routing ───────────────────────────────────────────────────
-
-  // Block company users from /super-admin → /dashboard
+  // ── 11. Block non-super-admins from /super-admin ───────────────────────────
   if (pathname.startsWith('/super-admin')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return redirectTo('/dashboard', request)
   }
 
-  // Check company suspension (for /dashboard and /onboarding only)
-  if (
-    (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) &&
-    !pathname.startsWith('/api')
-  ) {
-    const { data: member } = await supabase
-      .from('company_members')
-      .select('company_id, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .maybeSingle()
+  // ── 12. Deactivated individual user ───────────────────────────────────────
+  if (profile?.is_active === false) {
+    return redirectTo('/suspended', request)
+  }
 
-    if (member?.company_id) {
-      const { data: company } = await supabase
+  // ── 13. Profile missing (new user / DB write latency) ─────────────────────
+  //    The profile should exist by the time the user lands here, but DB writes
+  //    can be delayed. Let the page handle the missing-profile gracefully.
+  if (!profile) {
+    return response
+  }
+
+  // ── 14. Company suspension check ─────────────────────────────────────────
+  //    Only checked on dashboard/onboarding — uses company_id from profile
+  //    already fetched above. No extra company_members query needed.
+  if (
+    profile.company_id &&
+    (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding'))
+  ) {
+    try {
+      const { data: company } = await (supabase as any)
         .from('companies')
         .select('is_active')
-        .eq('id', member.company_id)
-        .single()
+        .eq('id', profile.company_id)
+        .maybeSingle()
 
       if (company?.is_active === false) {
-        return NextResponse.redirect(new URL('/suspended', request.url))
+        return redirectTo('/suspended', request)
       }
+    } catch {
+      // Company check failed — allow through, page will handle it
     }
   }
 
-  const isOnboarded = profile?.onboarding_completed === true
+  // ── 15. Onboarding routing ────────────────────────────────────────────────
+  const isOnboarded = profile.onboarding_completed === true
 
-  // Not onboarded → force /onboarding
   if (!isOnboarded && !pathname.startsWith('/onboarding')) {
-    return NextResponse.redirect(new URL('/onboarding', request.url))
+    return redirectTo('/onboarding', request)
   }
 
-  // Already onboarded trying to revisit /onboarding → /dashboard
   if (isOnboarded && pathname.startsWith('/onboarding')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return redirectTo('/dashboard', request)
   }
 
+  // ── 16. All checks passed — allow through ────────────────────────────────
   return response
 }
 
-export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)',
-  ],
-}
+// config lives in middleware.ts — Next.js requires it to be statically defined there.

@@ -32,7 +32,7 @@ export function Navigation() {
           <img
             src="/Klinqcrm-logo.png"
             alt="KlinqCRM Logo"
-            className="h-10 w-auto object-contain"
+            className="h-12 w-auto object-contain"
           />
         </Link>
 
@@ -138,7 +138,7 @@ export function Footer() {
               <img
                 src="/Klinqcrm-logo.png"
                 alt="KlinqCRM Logo"
-                className="h-9 sm:h-10 w-auto object-contain"
+                className="h-11 sm:h-12 w-auto object-contain"
               />
             </Link>
             <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">

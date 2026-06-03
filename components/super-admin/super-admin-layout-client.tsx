@@ -28,9 +28,9 @@ export function SuperAdminLayoutClient({
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-black text-zinc-100 font-sans flex">
-        <div className="hidden lg:block w-64 bg-zinc-950 border-r border-zinc-800 shrink-0" />
-        <main className="flex-1 bg-black min-h-screen lg:pl-64">
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans flex">
+        <div className="hidden lg:block w-[220px] bg-zinc-950 border-r border-zinc-800 shrink-0" />
+        <main className="flex-1 bg-zinc-950 min-h-screen lg:pl-[220px]">
           {children}
         </main>
       </div>
@@ -38,17 +38,17 @@ export function SuperAdminLayoutClient({
   }
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100 font-sans flex relative">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans flex relative">
 
       {/* ── Mobile top bar ─────────────────────────────────────────────── */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-zinc-950 border-b border-zinc-900 flex items-center justify-between px-4">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between px-4">
         <div className="flex items-center gap-2.5">
-          <img src="/Klinqcrm-logo.png" alt="Klinq" className="h-8 w-auto object-contain" />
-          <span className="text-zinc-200 text-xs font-bold tracking-tight">Klinq Ops</span>
+          <img src="/Klinqcrm-logo.png" alt="Klinq" className="h-9 w-auto object-contain" />
+          <span className="text-zinc-200 text-xs font-semibold tracking-tight">Control Center</span>
         </div>
         <button
           onClick={() => setMobileOpen(v => !v)}
-          className="p-2 rounded border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 transition-all cursor-pointer"
+          className="p-1.5 rounded border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-all cursor-pointer"
           aria-label="Toggle menu"
         >
           {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
@@ -58,7 +58,7 @@ export function SuperAdminLayoutClient({
       {/* ── Mobile overlay backdrop ────────────────────────────────────── */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 z-40 bg-black/60"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -80,10 +80,10 @@ export function SuperAdminLayoutClient({
       {/* ── Main content ───────────────────────────────────────────────── */}
       <main
         className={`
-          flex-1 bg-black min-h-screen
+          flex-1 bg-zinc-950 min-h-screen
           pt-14 lg:pt-0
           transition-all duration-200
-          ${collapsed ? 'lg:pl-16' : 'lg:pl-64'}
+          ${collapsed ? 'lg:pl-14' : 'lg:pl-[220px]'}
         `}
       >
         {children}
