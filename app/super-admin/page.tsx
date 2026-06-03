@@ -9,13 +9,13 @@ export default async function SuperAdminPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // NOTE: Super-admin access is already validated in layout.tsx (platform_admins table + user metadata).
+  // We only need the profile to get the display name here.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_super_admin, full_name')
+    .select('full_name')
     .eq('id', user.id)
-    .single()
-
-  if (!(profile as any)?.is_super_admin) redirect('/dashboard')
+    .maybeSingle()
 
   return (
     <SuperAdminOverviewClient
@@ -23,3 +23,4 @@ export default async function SuperAdminPage() {
     />
   )
 }
+
