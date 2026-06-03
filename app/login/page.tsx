@@ -490,14 +490,15 @@ function LoginFormContent() {
         </button>
       </form>
 
-      {/* Horizontal Divider */}
+      {/* Horizontal Divider
       <div className="relative flex py-1 items-center">
         <div className="flex-grow border-t border-zinc-200"></div>
         <span className="flex-shrink mx-4 text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">or</span>
         <div className="flex-grow border-t border-zinc-200"></div>
       </div>
+      */}
 
-      {/* OAuth Continue with Google button */}
+      {/* OAuth Continue with Google button
       <button
         type="button"
         onClick={handleGoogleLogin}
@@ -508,7 +509,6 @@ function LoginFormContent() {
           <div className="size-3.5 animate-spin rounded-full border-2 border-zinc-500 border-t-transparent" />
         ) : (
           <>
-            {/* Minimal SVG Google Logo */}
             <svg className="size-4 mr-1 shrink-0" viewBox="0 0 24 24">
               <path
                 fill="#EA4335"
@@ -531,6 +531,7 @@ function LoginFormContent() {
           </>
         )}
       </button>
+      */}
 
       <p className="text-center text-xs text-zinc-400 dark:text-zinc-500 leading-relaxed font-light mt-4">
         Don&apos;t have an account? Your company admin will send you an invite link to join.
