@@ -27,6 +27,8 @@ interface SuccessData {
   adminEmail: string
   tempPassword: string
   loginUrl: string
+  emailSent?: boolean
+  emailError?: string
 }
 
 export default function OnboardCompanyPage() {
@@ -123,6 +125,25 @@ export default function OnboardCompanyPage() {
               Workspace created and credentials transmitted to <span className="font-semibold text-zinc-300">{success.adminEmail}</span>
             </p>
           </div>
+
+          {/* Email delivery status */}
+          {success.emailSent === false && (
+            <div className="bg-amber-500/10 border border-amber-500/25 rounded p-4 text-left flex items-start gap-3">
+              <span className="text-amber-400 text-lg leading-none mt-0.5">⚠️</span>
+              <div>
+                <p className="text-amber-400 text-xs font-bold">Welcome email could not be delivered</p>
+                <p className="text-amber-600/80 text-[10px] mt-1 leading-relaxed">
+                  {success.emailError ?? 'SMTP error'} — Please share the credentials below with the owner manually.
+                </p>
+              </div>
+            </div>
+          )}
+          {success.emailSent === true && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded p-3 text-left flex items-center gap-2">
+              <span className="text-emerald-400 text-sm">✉️</span>
+              <p className="text-emerald-400 text-xs font-semibold">Welcome email sent successfully to {success.adminEmail}</p>
+            </div>
+          )}
 
           <div className="bg-zinc-900/30 border border-zinc-900 rounded p-5 text-left space-y-3.5">
             <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1">Workspace Manifest</p>

@@ -47,8 +47,8 @@ export function PublicNavbar() {
           {[
             { label: 'Features', href: '/#features' },
             { label: 'Pricing', href: '/#pricing' },
-            { label: 'Integrations', href: '/#integrations' },
             { label: 'About', href: '/about' },
+            { label: 'API Docs', href: '/api-docs' },
             { label: 'Contact', href: '/contact' },
           ].map(item => (
             <Link
@@ -114,8 +114,8 @@ export function PublicNavbar() {
             {[
               { label: 'Features', href: '/#features' },
               { label: 'Pricing', href: '/#pricing' },
-              { label: 'Integrations', href: '/#integrations' },
               { label: 'About', href: '/about' },
+              { label: 'API Docs', href: '/api-docs' },
               { label: 'Careers', href: '/careers' },
               { label: 'Blog', href: '/blog' },
               { label: 'Contact', href: '/contact' },

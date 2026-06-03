@@ -109,8 +109,8 @@ export async function POST(req: NextRequest) {
   }).eq('id', newUserId)
   const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://klinqcrm.in'}/login`
 
-  // Send onboarding email via Gmail SMTP — don't block if it fails
-  sendEmail({
+  // Send onboarding email via Gmail SMTP
+  const emailResult = await sendEmail({
     to: adminEmail,
     subject: `Your ${companyName} CRM Account is Ready 🎉`,
     html: onboardingEmailHtml({
@@ -120,7 +120,14 @@ export async function POST(req: NextRequest) {
       tempPassword,
       loginUrl,
     }),
-  }).catch(err => console.error('[Onboarding Email] Failed:', err?.message))
+  })
+
+  if (!emailResult.success) {
+    // Non-fatal: company was created successfully, but log the email failure clearly
+    console.error('[Onboarding Email] FAILED to send to', adminEmail, '—', emailResult.error)
+  } else {
+    console.log('[Onboarding Email] Sent successfully to', adminEmail, '— MessageId:', emailResult.messageId)
+  }
 
   // 6. Audit log
   await (svc as any).from('audit_logs').insert({
@@ -143,5 +150,7 @@ export async function POST(req: NextRequest) {
     tempPassword,
     loginUrl,
     companyId: company.id,
+    emailSent: emailResult.success,
+    emailError: emailResult.success ? undefined : emailResult.error,
   })
 }

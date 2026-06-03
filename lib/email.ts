@@ -4,18 +4,24 @@ import nodemailer from 'nodemailer'
 // Gmail SMTP via App Password — works with klinqcrm@gmail.com
 // Requires: GMAIL_USER + GMAIL_APP_PASSWORD in .env
 // Get App Password: myaccount.google.com → Security → 2-Step Verification → App Passwords
+//
+// NOTE: Transporter is created lazily (per send) so that env vars are always
+// read at call-time — avoids Vercel cold-start / Edge runtime issues where
+// process.env may not be populated at module-init time.
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,           // SSL — required for port 465
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  connectionTimeout: 10_000,  // 10 s — fail fast instead of hanging
-  greetingTimeout: 10_000,
-})
+function createTransporter() {
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,           // SSL — required for port 465
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+    connectionTimeout: 10_000,  // 10 s — fail fast instead of hanging
+    greetingTimeout: 10_000,
+  })
+}
 
 export interface SendEmailOptions {
   to: string | string[]
@@ -38,7 +44,16 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
   const fromName = process.env.EMAIL_FROM_NAME ?? 'Klinq CRM'
   const fromAddr = process.env.GMAIL_USER ?? 'klinqcrm@gmail.com'
 
+  // Validate credentials are configured
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    const errMsg = 'GMAIL_USER or GMAIL_APP_PASSWORD environment variable is missing'
+    console.error('[Email] Config error:', errMsg)
+    return { success: false, error: errMsg }
+  }
+
   try {
+    // Create a fresh transporter each time so env vars are always current
+    const transporter = createTransporter()
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromAddr}>`,
       to: Array.isArray(opts.to) ? opts.to.join(', ') : opts.to,
@@ -46,6 +61,7 @@ export async function sendEmail(opts: SendEmailOptions): Promise<SendEmailResult
       html: opts.html,
       replyTo: opts.replyTo ?? fromAddr,
     })
+    console.log(`[Email] Sent to ${Array.isArray(opts.to) ? opts.to.join(', ') : opts.to} — MessageId: ${info.messageId}`)
     return { success: true, messageId: info.messageId }
   } catch (err: any) {
     console.error('[Email] Send failed:', err?.message)
@@ -114,75 +130,83 @@ export function onboardingEmailHtml(opts: {
   tempPassword: string
   loginUrl: string
 }): string {
+  const steps = ['Log in and change your password', 'Complete your company profile', 'Invite your team members']
+  const stepsRows = steps.map((step, i) => `
+    <tr>
+      <td style="padding:6px 0;vertical-align:top;width:32px;">
+        <span style="display:inline-block;width:22px;height:22px;background:#18181b;color:#fff;font-size:11px;font-weight:700;border-radius:50%;text-align:center;line-height:22px;">${i + 1}</span>
+      </td>
+      <td style="padding:6px 0;font-size:14px;color:#52525b;line-height:1.5;">${step}</td>
+    </tr>`).join('')
+
   return baseWrapper(`
-    <!-- Top accent bar -->
-    <tr><td style="height:4px;background:linear-gradient(90deg,#18181b,#52525b);"></td></tr>
-
-    <div style="padding:40px 40px 32px;">
-      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:1px;">
-        Account Ready
-      </p>
-      <h1 style="margin:0 0 24px;font-size:28px;font-weight:800;color:#18181b;line-height:1.2;">
-        Welcome to Klinq CRM, ${opts.adminName}!
-      </h1>
-      <p style="margin:0 0 24px;font-size:15px;color:#52525b;line-height:1.7;">
-        Your company <strong style="color:#18181b;">${opts.companyName}</strong> has been onboarded successfully.
-        You can now log in and set up your team, configure integrations, and start managing your leads.
-      </p>
-
-      <!-- Credentials box -->
-      <div style="background:#f9f9fb;border:1px solid #e4e4e7;border-radius:12px;padding:24px;margin-bottom:24px;">
-        <p style="margin:0 0 16px;font-size:13px;font-weight:700;color:#18181b;text-transform:uppercase;letter-spacing:0.5px;">
-          Your Login Credentials
+    <tr><td style="height:4px;background:linear-gradient(90deg,#18181b,#52525b);font-size:0;line-height:0;">&nbsp;</td></tr>
+    <tr>
+      <td style="padding:40px 40px 32px;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:1px;">Account Ready</p>
+        <h1 style="margin:0 0 24px;font-size:28px;font-weight:800;color:#18181b;line-height:1.2;">Welcome to Klinq CRM, ${opts.adminName}!</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#52525b;line-height:1.7;">
+          Your company <strong style="color:#18181b;">${opts.companyName}</strong> has been onboarded successfully.
+          You can now log in and set up your team, configure integrations, and start managing your leads.
         </p>
-        <table width="100%" cellpadding="0" cellspacing="0">
+
+        <!-- Credentials box -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9fb;border:1px solid #e4e4e7;border-radius:12px;margin-bottom:24px;">
           <tr>
-            <td style="padding:8px 0;font-size:13px;color:#71717a;width:140px;">Login URL</td>
-            <td style="padding:8px 0;font-size:13px;">
-              <a href="${opts.loginUrl}" style="color:#2563eb;font-weight:500;">${opts.loginUrl}</a>
+            <td style="padding:20px 24px 12px;">
+              <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#18181b;text-transform:uppercase;letter-spacing:0.5px;">Your Login Credentials</p>
             </td>
           </tr>
-          <tr><td colspan="2"><div style="height:1px;background:#e4e4e7;"></div></td></tr>
           <tr>
-            <td style="padding:8px 0;font-size:13px;color:#71717a;">Email</td>
-            <td style="padding:8px 0;font-size:13px;font-weight:600;color:#18181b;">${opts.adminEmail}</td>
+            <td style="padding:0 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:8px 0;font-size:13px;color:#71717a;width:140px;">Login URL</td>
+                  <td style="padding:8px 0;font-size:13px;"><a href="${opts.loginUrl}" style="color:#2563eb;font-weight:500;">${opts.loginUrl}</a></td>
+                </tr>
+                <tr><td colspan="2" style="height:1px;background:#e4e4e7;font-size:0;line-height:0;"></td></tr>
+                <tr>
+                  <td style="padding:8px 0;font-size:13px;color:#71717a;">Email</td>
+                  <td style="padding:8px 0;font-size:13px;font-weight:600;color:#18181b;">${opts.adminEmail}</td>
+                </tr>
+                <tr><td colspan="2" style="height:1px;background:#e4e4e7;font-size:0;line-height:0;"></td></tr>
+                <tr>
+                  <td style="padding:8px 0;font-size:13px;color:#71717a;">Temp Password</td>
+                  <td style="padding:8px 0;">
+                    <span style="background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:4px 12px;border-radius:6px;font-size:15px;font-weight:700;letter-spacing:1px;font-family:monospace;">${opts.tempPassword}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
           </tr>
-          <tr><td colspan="2"><div style="height:1px;background:#e4e4e7;"></div></td></tr>
+          <tr><td style="padding:12px 24px 20px;font-size:0;"></td></tr>
+        </table>
+
+        <!-- Warning -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;margin-bottom:28px;">
           <tr>
-            <td style="padding:8px 0;font-size:13px;color:#71717a;">Temp Password</td>
-            <td style="padding:8px 0;">
-              <code style="background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:4px 12px;border-radius:6px;font-size:15px;font-weight:700;letter-spacing:1px;">${opts.tempPassword}</code>
+            <td style="padding:14px 16px;font-size:13px;color:#92400e;">
+              ⚠️ This password expires in <strong>7 days</strong>. You will be prompted to change it on first login.
             </td>
           </tr>
         </table>
-      </div>
 
-      <!-- Warning -->
-      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:28px;">
-        <p style="margin:0;font-size:13px;color:#92400e;">
-          ⚠️ This password expires in <strong>7 days</strong>. You will be prompted to change it on first login.
-        </p>
-      </div>
+        <!-- Steps -->
+        <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#18181b;">Get started in 3 steps:</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+          ${stepsRows}
+        </table>
 
-      <!-- Steps -->
-      <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#18181b;">Get started in 3 steps:</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
-        ${['Log in and change your password', 'Complete your company profile', 'Invite your team members'].map((step, i) => `
-        <tr>
-          <td style="padding:6px 0;vertical-align:top;width:28px;">
-            <span style="display:inline-block;width:22px;height:22px;background:#18181b;color:#fff;font-size:11px;font-weight:700;border-radius:50%;text-align:center;line-height:22px;">${i + 1}</span>
-          </td>
-          <td style="padding:6px 0;font-size:14px;color:#52525b;line-height:1.5;">${step}</td>
-        </tr>`).join('')}
-      </table>
-
-      <!-- CTA -->
-      <div style="text-align:center;">
-        <a href="${opts.loginUrl}" style="display:inline-block;background:#18181b;color:#ffffff;padding:14px 36px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:700;letter-spacing:0.3px;">
-          Log In Now →
-        </a>
-      </div>
-    </div>
+        <!-- CTA -->
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="center">
+              <a href="${opts.loginUrl}" style="display:inline-block;background:#18181b;color:#ffffff;padding:14px 36px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:700;letter-spacing:0.3px;">Log In Now &rarr;</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
   `)
 }
 
