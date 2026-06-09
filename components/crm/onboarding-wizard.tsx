@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -139,16 +139,27 @@ function Step1({ companyId, onNext }: { companyId: string; onNext: () => void })
   const save = async () => {
     if (!form.name.trim()) { toast.error('Company name is required'); return }
     setSaving(true)
-    const supabase = createClient()
-    const { error } = await (supabase as any).from('companies').update({
-      name: form.name.trim(),
-      industry: form.industry || null,
-      website: form.website || null,
-      timezone: form.timezone,
-      currency: form.currency,
-      setup_step: 2,
-    }).eq('id', companyId)
-    if (error) { toast.error(error.message); setSaving(false); return }
+    // Use the API route so it runs with service-role and bypasses RLS
+    const res = await fetch('/api/onboarding/complete-step', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        step: 1,
+        data: {
+          name: form.name.trim(),
+          timezone: form.timezone,
+          currency: form.currency,
+          ...(form.industry ? { industry: form.industry } : {}),
+          ...(form.website ? { website: form.website } : {}),
+        },
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to save' }))
+      toast.error(err.error || 'Failed to save company profile')
+      setSaving(false)
+      return
+    }
     onNext()
     setSaving(false)
   }
@@ -267,6 +278,17 @@ function Step3({ onNext }: { onNext: () => void }) {
     { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Two-way WhatsApp messaging', envKey: 'META_WHATSAPP_TOKEN', icon: '💬' },
     { id: 'sms', name: 'Fast2SMS', desc: 'Bulk & transactional SMS in India', envKey: 'FAST2SMS_API_KEY', icon: '📱' },
   ]
+
+  const handleNext = async () => {
+    // Mark step 3 complete server-side
+    await fetch('/api/onboarding/complete-step', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step: 3 }),
+    }).catch(() => {}) // non-fatal
+    onNext()
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Connect your communication channels. You can configure these later in Settings → Integrations.</p>
@@ -283,8 +305,8 @@ function Step3({ onNext }: { onNext: () => void }) {
         </div>
       ))}
       <div className="flex gap-2 pt-2">
-        <Button variant="outline" className="flex-1" onClick={onNext}>Skip for now</Button>
-        <Button className="flex-1" onClick={onNext}>Continue <ChevronRight className="size-4 ml-1" /></Button>
+        <Button variant="outline" className="flex-1" onClick={handleNext}>Skip for now</Button>
+        <Button className="flex-1" onClick={handleNext}>Continue <ChevronRight className="size-4 ml-1" /></Button>
       </div>
     </div>
   )
@@ -453,17 +475,23 @@ function Step5({ companyId }: { companyId: string }) {
   ]
 
   const finish = async () => {
-    const supabase = createClient()
-    // Mark company setup complete
-    await (supabase as any).from('companies').update({ setup_complete: true, setup_step: 5 }).eq('id', companyId)
-    // CRITICAL: mark profiles.onboarding_completed = true so middleware stops redirecting
-    await (supabase as any).from('profiles').update({ onboarding_completed: true }).eq('id', (await supabase.auth.getUser()).data.user?.id)
-    // Also call the API to ensure server-side state is consistent
-    await fetch('/api/onboarding/complete-step', {
+    // Use the API to mark onboarding complete — runs with service role,
+    // bypasses RLS, and sets both profiles.onboarding_completed + companies.setup_complete
+    const res = await fetch('/api/onboarding/complete-step', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ step: 4 }),
     })
+    if (!res.ok) {
+      toast.error('Failed to complete setup. Please try again.')
+      return
+    }
+    // router.refresh() forces Next.js to re-fetch server components + re-run
+    // middleware with the updated onboarding_completed=true from the DB,
+    // so we don't get redirected back to /onboarding on push('/dashboard')
+    router.refresh()
+    // Small delay so refresh propagates before navigation
+    await new Promise(r => setTimeout(r, 400))
     router.push('/dashboard')
   }
 

@@ -12,17 +12,9 @@ export default function CareersPage() {
       title: 'Full Stack Developer',
       department: 'Engineering',
       type: 'Full-time',
-      location: 'Remote / Rajkot',
+      location: 'Remote ',
       desc: 'Build and ship core features for Klinq CRM. Take ownership of front-to-back Next.js modules, Supabase integration, and real-time WhatsApp automation workflows.',
       subject: 'Application: Full Stack Developer'
-    },
-    {
-      title: 'Sales & Business Development',
-      department: 'Sales',
-      type: 'Full-time',
-      location: 'Rajkot',
-      desc: 'Help onboard, support, and grow our corporate tenant base across India. Engage with company executives and design customized CRM rollout plans.',
-      subject: 'Application: Sales & Business Development'
     }
   ]
 

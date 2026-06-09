@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // PATCH /api/onboarding/complete-step
 // Called by onboarding wizard after each step completes
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
+  const svc = createServiceClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -20,19 +22,19 @@ export async function PATCH(req: NextRequest) {
 
   const { step, data: stepData } = body
 
-  // Get the user's company_id
-  const { data: uac } = await (supabase as any)
-    .from('user_active_company')
+  // Get the user's company_id via profiles (service client bypasses RLS)
+  const { data: profile } = await (svc as any)
+    .from('profiles')
     .select('company_id')
-    .eq('user_id', user.id)
-    .single()
+    .eq('id', user.id)
+    .maybeSingle()
 
-  const companyId = (uac as any)?.company_id
+  const companyId = (profile as any)?.company_id
 
   try {
     switch (step) {
       case 0: // Password changed — mark temp_password_used
-        await (supabase as any)
+        await (svc as any)
           .from('profiles')
           .update({ temp_password_used: true })
           .eq('id', user.id)
@@ -40,7 +42,7 @@ export async function PATCH(req: NextRequest) {
 
       case 1: // Company profile saved
         if (companyId) {
-          await (supabase as any)
+          await (svc as any)
             .from('companies')
             .update({
               ...(stepData?.name ? { name: stepData.name } : {}),
@@ -49,6 +51,8 @@ export async function PATCH(req: NextRequest) {
               ...(stepData?.currency ? { currency: stepData.currency } : {}),
               ...(stepData?.address !== undefined ? { address: stepData.address } : {}),
               ...(stepData?.gstin !== undefined ? { gstin: stepData.gstin } : {}),
+              ...(stepData?.industry !== undefined ? { industry: stepData.industry } : {}),
+              ...(stepData?.website !== undefined ? { website: stepData.website } : {}),
               setup_step: 1,
             })
             .eq('id', companyId)
@@ -57,7 +61,7 @@ export async function PATCH(req: NextRequest) {
 
       case 2: // Team invites sent
         if (companyId) {
-          await (supabase as any)
+          await (svc as any)
             .from('companies')
             .update({ setup_step: 2 })
             .eq('id', companyId)
@@ -66,7 +70,7 @@ export async function PATCH(req: NextRequest) {
 
       case 3: // Integrations step
         if (companyId) {
-          await (supabase as any)
+          await (svc as any)
             .from('companies')
             .update({ setup_step: 3 })
             .eq('id', companyId)
@@ -74,15 +78,15 @@ export async function PATCH(req: NextRequest) {
         break
 
       case 4: // Final step — mark fully onboarded
-        // Update profile
-        await (supabase as any)
+        // Update profile (service client so it's guaranteed to work)
+        await (svc as any)
           .from('profiles')
           .update({ onboarding_completed: true })
           .eq('id', user.id)
 
         // Update company
         if (companyId) {
-          await (supabase as any)
+          await (svc as any)
             .from('companies')
             .update({
               setup_complete: true,

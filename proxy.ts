@@ -172,7 +172,7 @@ export async function proxy(request: NextRequest) {
         .maybeSingle()
 
       if (profile?.is_super_admin) return redirectTo('/super-admin', request)
-      if (profile?.onboarding_completed === false) return redirectTo('/onboarding', request)
+      if (!profile?.onboarding_completed) return redirectTo('/onboarding', request)
     } catch { /* ignore — just show login */ }
 
     return redirectTo('/dashboard', request)

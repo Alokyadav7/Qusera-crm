@@ -1,11 +1,11 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { OnboardingWizard } from '@/components/crm/onboarding-wizard'
-import Link from 'next/link'
 import { Mail } from 'lucide-react'
+import { SignOutButton } from '@/components/crm/sign-out-button'
 
 async function getSupportEmail(): Promise<string> {
   try {
@@ -29,7 +29,7 @@ export default async function OnboardingPage() {
   // Get profile flags
   const { data: profile } = await (supabase as any)
     .from('profiles')
-    .select('onboarding_completed, temp_password_used')
+    .select('onboarding_completed, temp_password_used, company_id')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -37,16 +37,32 @@ export default async function OnboardingPage() {
   if (profile?.onboarding_completed) redirect('/dashboard')
 
   // Get the user's company via user_active_company
-  const { data: uac } = await (supabase as any)
+  let { data: uac } = await (supabase as any)
     .from('user_active_company')
     .select('company_id, company:companies(id, setup_complete, setup_step, onboarding_completed_at)')
     .eq('user_id', user.id)
     .single()
 
+  // Self-repair: If user_active_company is missing but profile has company_id
+  if (!uac && profile?.company_id) {
+    const svc = createServiceClient()
+    await (svc as any).from('user_active_company').insert({
+      user_id: user.id,
+      company_id: profile.company_id
+    })
+    
+    // Retry fetching
+    const { data: refetchedUac } = await (supabase as any)
+      .from('user_active_company')
+      .select('company_id, company:companies(id, setup_complete, setup_step, onboarding_completed_at)')
+      .eq('user_id', user.id)
+      .single()
+    uac = refetchedUac
+  }
+
   const company = (uac as any)?.company
 
   // No company found — user was not properly onboarded by admin.
-  // Do NOT auto-create a company. Show error with support contact.
   if (!company) {
     const supportEmail = await getSupportEmail()
     return (
@@ -69,12 +85,7 @@ export default async function OnboardingPage() {
             <Mail className="size-4" />
             Contact Administrator
           </a>
-          <Link
-            href="/login"
-            className="block text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Back to login
-          </Link>
+          <SignOutButton />
         </div>
       </div>
     )

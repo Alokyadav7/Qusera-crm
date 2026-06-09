@@ -28,13 +28,13 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'KlinqCRM',
     description: 'The CRM built for growing Indian businesses.',
-    images: ['/Klinqcrm-logo.png']
+    images: ['/app/(public)/headerlogo.png']
   },
   icons: {
     icon: [
-      { url: '/Klinqcrm-logo.png' }
+      { url: '/app/(public)/headerlogo.png' }
     ],
-    apple: '/Klinqcrm-logo.png'
+    apple: '/app/(public)/headerlogo.png'
   }
 }
 
