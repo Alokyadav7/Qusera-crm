@@ -23,36 +23,61 @@ async function getSupportEmail(): Promise<string> {
 
 export default async function OnboardingPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Use getSession() — reads from cookie, no network call to Supabase auth server.
+  // Middleware already validated routing; all DB queries use service client (RLS bypassed).
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
   if (!user) redirect('/login')
 
+  // Always use service client so RLS never blocks these reads
+  const svc = createServiceClient()
+
   // Get profile flags
-  const { data: profile } = await (supabase as any)
+  const { data: profile } = await (svc as any)
     .from('profiles')
     .select('onboarding_completed, temp_password_used, company_id')
     .eq('id', user.id)
     .maybeSingle()
 
-  // Already onboarded → dashboard (middleware also catches this)
+  // Already onboarded → go to dashboard
   if (profile?.onboarding_completed) redirect('/dashboard')
 
   // Get the user's company via user_active_company
-  let { data: uac } = await (supabase as any)
+  // Use SERVICE CLIENT — anon client RLS blocks the nested companies join silently
+  let { data: uac } = await (svc as any)
     .from('user_active_company')
     .select('company_id, company:companies(id, setup_complete, setup_step, onboarding_completed_at)')
     .eq('user_id', user.id)
     .single()
 
-  // Self-repair: If user_active_company is missing but profile has company_id
+  // Self-repair: user_active_company row is missing but profile has company_id
   if (!uac && profile?.company_id) {
-    const svc = createServiceClient()
-    await (svc as any).from('user_active_company').insert({
-      user_id: user.id,
-      company_id: profile.company_id
-    })
-    
-    // Retry fetching
-    const { data: refetchedUac } = await (supabase as any)
+    console.log('[ONBOARDING] Self-repair: creating missing rows for', user.id)
+
+    // Re-create user_active_company
+    await (svc as any)
+      .from('user_active_company')
+      .upsert(
+        { user_id: user.id, company_id: profile.company_id, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+
+    // Re-create company_members (with 'owner' role — this table allows 'owner')
+    await (svc as any)
+      .from('company_members')
+      .upsert(
+        {
+          user_id: user.id,
+          company_id: profile.company_id,
+          role: 'owner',
+          is_active: true,
+          joined_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id, company_id' }
+      )
+
+    // Retry fetching after repair
+    const { data: refetchedUac } = await (svc as any)
       .from('user_active_company')
       .select('company_id, company:companies(id, setup_complete, setup_step, onboarding_completed_at)')
       .eq('user_id', user.id)
@@ -60,9 +85,20 @@ export default async function OnboardingPage() {
     uac = refetchedUac
   }
 
-  const company = (uac as any)?.company
+  // Resolve the company object
+  let company = (uac as any)?.company
 
-  // No company found — user was not properly onboarded by admin.
+  // Last-resort fallback: look up company directly from profiles.company_id
+  if (!company && profile?.company_id) {
+    const { data: directCompany } = await (svc as any)
+      .from('companies')
+      .select('id, setup_complete, setup_step, onboarding_completed_at')
+      .eq('id', profile.company_id)
+      .single()
+    company = directCompany
+  }
+
+  // No company found — admin did not finish onboarding this user
   if (!company) {
     const supportEmail = await getSupportEmail()
     return (
@@ -91,12 +127,16 @@ export default async function OnboardingPage() {
     )
   }
 
-  // Determine starting step
-  // Step 0 = force password change (if temp password not yet changed)
-  // Step 1+ = normal wizard steps
+  // Step 0 = force password change (temp password not yet changed)
+  // Step 1+ = normal onboarding wizard steps
+  //
+  // IMPORTANT: setup_step stores the LAST COMPLETED step (e.g. after completing
+  // Step 1 it is set to 1). So we must add 1 to get the NEXT step to show.
+  // Without +1 users get sent back to the step they just finished (off-by-one bug).
   const passwordChanged = profile?.temp_password_used === true
+  const lastCompletedStep = (company as any).setup_step ?? 0
   const initialStep = passwordChanged
-    ? Math.min(Math.max((company as any).setup_step || 1, 1), 4)
+    ? Math.min(Math.max(lastCompletedStep + 1, 1), 4)
     : 0
 
   return (

@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 
-// Universal data API — used by client hooks when anon key is blocked by RLS
-// Returns table data using service role (server-side only, never exposes service key to browser)
-// Scopes by company_id when provided for multi-tenant isolation
 
 const ALLOWED_TABLES = [
   'leads', 'tasks', 'interactions', 'contacts', 'accounts', 'deals',

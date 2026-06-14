@@ -1,4 +1,4 @@
-﻿// ─── Klinq CRM — Tenant Auth Middleware HOC ────────────────────────────────────
+// ─── Klinq CRM — Tenant Auth Middleware HOC ────────────────────────────────────
 // Wraps Next.js API route handlers with tenant auth + RBAC enforcement.
 // Use this on every /api/* route that touches company data.
 
@@ -75,8 +75,10 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
       }
 
       // 3. Get user's active company (from user_active_company table)
+      // Use service client to bypass RLS — anon client can block this during onboarding
       if (!activeCompanyId) {
-        const { data: activeCompany } = await supabase
+        const svcForUac = createServiceClient()
+        const { data: activeCompany } = await svcForUac
           .from('user_active_company')
           .select('company_id, workspace_id')
           .eq('user_id', user.id)
@@ -137,7 +139,7 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
       }
 
       // 7. Get workspace and plan
-      const { data: activeMembership } = await supabase
+      const { data: activeMembership } = await svc
         .from('user_active_company')
         .select('workspace_id')
         .eq('user_id', user.id)

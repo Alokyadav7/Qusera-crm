@@ -35,37 +35,70 @@ function checkPasswordStrength(pw: string) {
 }
 
 
-const INDUSTRIES = ['SaaS','Real Estate','Finance','Healthcare','EdTech','Retail','Manufacturing','Consulting','Other']
-const TIMEZONES  = ['Asia/Kolkata','Asia/Dubai','America/New_York','America/Los_Angeles','Europe/London','Europe/Berlin']
-const CURRENCIES = ['INR','USD','EUR','GBP','AED','SGD']
+const INDUSTRIES = ['SaaS', 'Real Estate', 'Finance', 'Healthcare', 'EdTech', 'Retail', 'Manufacturing', 'Consulting', 'Other']
+const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'America/New_York', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin']
+const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD']
 
 // ── Step 0 — Force Password Change ────────────────────────────────────────────
 function Step0({ onNext }: { onNext: () => void }) {
   const [form, setForm] = useState({ password: '', confirm: '' })
   const [showPw, setShowPw] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const strength = checkPasswordStrength(form.password)
 
   const STRENGTH_LABELS = ['Too weak', 'Weak', 'Fair', 'Good', 'Strong']
   const STRENGTH_COLORS = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-emerald-500']
 
   const handleSubmit = async () => {
-    if (!strength.valid) { toast.error('Password does not meet requirements'); return }
-    if (form.password !== form.confirm) { toast.error('Passwords do not match'); return }
+    setError(null)
+
+    if (!form.password) { setError('Please enter a password'); return }
+    if (!strength.valid) {
+      setError('Password must have 8+ chars, 1 uppercase, 1 number, 1 special character.')
+      return
+    }
+    if (form.password !== form.confirm) { setError('Passwords do not match'); return }
+
     setSaving(true)
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ password: form.password })
-    if (error) { toast.error(error.message); setSaving(false); return }
-    // Mark step complete server-side
-    await fetch('/api/onboarding/complete-step', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step: 0 }),
-    })
-    toast.success('Password updated! ✅')
-    setSaving(false)
-    onNext()
+    try {
+      const supabase = createClient()
+
+      // 1. Update password (15s timeout guard)
+      const { error } = await Promise.race([
+        supabase.auth.updateUser({ password: form.password }),
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: null, error: new Error('Connection timed out. Check your internet and try again.') }), 15000)
+        ),
+      ])
+
+      if (error) {
+        setError(error.message)
+        toast.error(error.message)
+        setSaving(false)
+        return
+      }
+
+      // 2. Fire-and-forget: mark temp_password_used=true in DB so page reloads
+      //    correctly skip Step 0 and start from Step 1.
+      fetch('/api/onboarding/complete-step', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step: 0 }),
+      }).catch(() => {})
+
+      // 3. Just advance to next step — onNext() = setStep(1), pure local React state.
+      //    No page reload, no middleware, no JWT issues.
+      toast.success('Password set! Continuing...')
+      onNext()
+
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.')
+      toast.error('Something went wrong. Please try again.')
+      setSaving(false)
+    }
   }
+
 
   return (
     <div className="space-y-5">
@@ -73,14 +106,21 @@ function Step0({ onNext }: { onNext: () => void }) {
         🔐 Your account was created with a temporary password. Please set a new password to continue.
       </div>
 
+      {/* Inline error display */}
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <Label>New Password <span className="text-destructive">*</span></Label>
         <div className="relative">
           <Input
             type={showPw ? 'text' : 'password'}
-            placeholder="Min. 8 characters"
+            placeholder="Min. 8 chars, uppercase, number, special char"
             value={form.password}
-            onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+            onChange={e => { setForm(p => ({ ...p, password: e.target.value })); setError(null) }}
             autoFocus
           />
           <button type="button" onClick={() => setShowPw(v => !v)}
@@ -89,18 +129,18 @@ function Step0({ onNext }: { onNext: () => void }) {
           </button>
         </div>
 
-        {/* Strength bar */}
+        {/* Strength bar — always shown when user starts typing */}
         {form.password && (
           <div className="space-y-2 pt-1">
             <div className="flex gap-1">
-              {[0,1,2,3].map(i => (
-                <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i < strength.score ? STRENGTH_COLORS[strength.score] : 'bg-muted'}`} />
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className={`h - 1 flex - 1 rounded - full transition - all ${i < strength.score ? STRENGTH_COLORS[strength.score] : 'bg-muted'} `} />
               ))}
             </div>
             <p className="text-xs text-muted-foreground">{STRENGTH_LABELS[strength.score]}</p>
             <ul className="grid grid-cols-2 gap-1">
-              {([['length','8+ characters'],['upper','1 uppercase'],['number','1 number'],['special','1 special char']] as const).map(([k,label]) => (
-                <li key={k} className={`text-xs flex items-center gap-1 ${strength.checks[k] ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+              {([['length', '8+ characters'], ['upper', '1 uppercase'], ['number', '1 number'], ['special', '1 special char']] as const).map(([k, label]) => (
+                <li key={k} className={`text - xs flex items - center gap - 1 ${strength.checks[k] ? 'text-emerald-600' : 'text-muted-foreground'} `}>
                   <span>{strength.checks[k] ? '✓' : '○'}</span> {label}
                 </li>
               ))}
@@ -115,16 +155,24 @@ function Step0({ onNext }: { onNext: () => void }) {
           type={showPw ? 'text' : 'password'}
           placeholder="Repeat password"
           value={form.confirm}
-          onChange={e => setForm(p => ({ ...p, confirm: e.target.value }))}
+          onChange={e => { setForm(p => ({ ...p, confirm: e.target.value })); setError(null) }}
         />
         {form.confirm && form.password !== form.confirm && (
           <p className="text-xs text-destructive">Passwords do not match</p>
         )}
       </div>
 
-      <Button className="w-full" onClick={handleSubmit} disabled={saving || !strength.valid || form.password !== form.confirm}>
+      {/* Button is only disabled while saving — NOT blocked by strength.valid.
+          Validation happens inside handleSubmit with clear error messages. */}
+      <Button
+        className="w-full"
+        onClick={handleSubmit}
+        disabled={saving}
+        id="step0-submit-btn"
+      >
         {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
-        Set Password & Continue <ChevronRight className="size-4 ml-1" />
+        {saving ? 'Setting password...' : 'Set Password & Continue'}
+        {!saving && <ChevronRight className="size-4 ml-1" />}
       </Button>
     </div>
   )
@@ -245,8 +293,8 @@ function Step2({ companyId, onNext, onSkip }: { companyId: string; onNext: () =>
           <Select value={row.role} onValueChange={v => setRows(p => p.map((r, j) => j === i ? { ...r, role: v } : r))}>
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {['company_admin','sales_manager','sales_rep','viewer'].map(r => (
-                <SelectItem key={r} value={r} className="text-xs capitalize">{r.replace(/_/g,' ')}</SelectItem>
+              {['company_admin', 'sales_manager', 'sales_rep', 'viewer'].map(r => (
+                <SelectItem key={r} value={r} className="text-xs capitalize">{r.replace(/_/g, ' ')}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -285,7 +333,7 @@ function Step3({ onNext }: { onNext: () => void }) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ step: 3 }),
-    }).catch(() => {}) // non-fatal
+    }).catch(() => { }) // non-fatal
     onNext()
   }
 
@@ -322,7 +370,7 @@ function Step4({ companyId, onNext }: { companyId: string; onNext: () => void })
   const [progress, setProgress] = useState(0)
   const [imported, setImported] = useState<number | null>(null)
 
-  const CRM_FIELDS = ['full_name','email','phone_number','company','city','state','source','status','estimated_budget']
+  const CRM_FIELDS = ['full_name', 'email', 'phone_number', 'company', 'city', 'state', 'source', 'status', 'estimated_budget']
 
   const handleFile = useCallback(async (f: File) => {
     setFile(f)
@@ -385,8 +433,13 @@ function Step4({ companyId, onNext }: { companyId: string; onNext: () => void })
       setProgress(Math.round((done / leads.length) * 100))
     }
 
-    // Update setup step
-    await (supabase as any).from('companies').update({ setup_step: 5 }).eq('id', companyId)
+    // Mark step complete via API (uses service client — bypasses RLS)
+    await fetch('/api/onboarding/complete-step', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step: 3 }), // step 3 = integrations/import step
+    }).catch(() => { })
+
     setImported(done)
     setImporting(false)
   }
@@ -463,7 +516,7 @@ function Step4({ companyId, onNext }: { companyId: string; onNext: () => void })
 }
 
 // ── Step 5 — Done ─────────────────────────────────────────────────────────────
-function Step5({ companyId }: { companyId: string }) {
+function Step5({ companyId, onClear }: { companyId: string; onClear?: () => void }) {
   const router = useRouter()
   const [done, setDone] = useState<Set<string>>(new Set())
 
@@ -477,22 +530,29 @@ function Step5({ companyId }: { companyId: string }) {
   const finish = async () => {
     // Use the API to mark onboarding complete — runs with service role,
     // bypasses RLS, and sets both profiles.onboarding_completed + companies.setup_complete
-    const res = await fetch('/api/onboarding/complete-step', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step: 4 }),
-    })
-    if (!res.ok) {
-      toast.error('Failed to complete setup. Please try again.')
+    try {
+      const res = await fetch('/api/onboarding/complete-step', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step: 4 }),
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        console.error('[Step5] Final complete failed:', errData)
+        toast.error('Failed to complete setup. Please try again.')
+        return
+      }
+      console.log('[Step5] Onboarding marked complete ✅')
+    } catch (err) {
+      console.error('[Step5] Unexpected error:', err)
+      toast.error('Something went wrong. Please try again.')
       return
     }
-    // router.refresh() forces Next.js to re-fetch server components + re-run
-    // middleware with the updated onboarding_completed=true from the DB,
-    // so we don't get redirected back to /onboarding on push('/dashboard')
-    router.refresh()
-    // Small delay so refresh propagates before navigation
-    await new Promise(r => setTimeout(r, 400))
-    router.push('/dashboard')
+    // Clear sessionStorage so step doesn't persist after completion
+    onClear?.()
+    // Hard navigation: clears all Next.js router state and re-runs middleware
+    // with the updated onboarding_completed=true from DB — prevents looping back
+    window.location.href = '/dashboard'
   }
 
 
@@ -526,8 +586,69 @@ function Step5({ companyId }: { companyId: string }) {
 }
 
 // ── Main Wizard ───────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'klinq_onboarding_step'
+
 export function OnboardingWizard({ companyId, initialStep = 0 }: OnboardingWizardProps) {
-  const [step, setStep] = useState(initialStep)
+  // ✅ FIX B: ALWAYS check sessionStorage first, regardless of initialStep.
+  // supabase.auth.updateUser() fires USER_UPDATED which can cause the server
+  // to re-render /onboarding with initialStep=0 (before temp_password_used
+  // DB write completes). Old code ignored sessionStorage when initialStep=0,
+  // causing the wizard to reset. Now sessionStorage always wins if present.
+  const [step, setStepRaw] = useState(() => {
+    if (typeof window === 'undefined') return initialStep
+    const saved = sessionStorage.getItem(STORAGE_KEY)
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10)
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 4) {
+        console.log('[Wizard] Restored step from sessionStorage:', parsed, '(server initialStep:', initialStep, ')')
+        return parsed
+      }
+    }
+    return initialStep
+  })
+
+  // Wrap setStep to also persist to sessionStorage
+  const setStep = (updater: number | ((prev: number) => number)) => {
+    setStepRaw(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      try { sessionStorage.setItem(STORAGE_KEY, String(next)) } catch { }
+      return next
+    })
+  }
+
+  // Session guard — if no active session redirect to login
+  useEffect(() => {
+    async function checkSession() {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        console.error('[OnboardingWizard] No active session — redirecting to login')
+        window.location.href = '/login'
+        return
+      }
+      console.log('[OnboardingWizard] Session valid:', session.user.email, '| initialStep:', initialStep)
+    }
+    checkSession()
+  }, [])
+
+  // ✅ FIX C: Intercept USER_UPDATED so it never resets the wizard.
+  // updateUser() fires this event client-side after password change.
+  // Without this, React might re-read initialStep prop from a stale server render.
+  useEffect(() => {
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.log('[Wizard] Auth event:', event)
+      if (event === 'USER_UPDATED') {
+        console.log('[Wizard] USER_UPDATED — keeping current step (sessionStorage holds position)')
+        // Do nothing — sessionStorage already has step=1
+      }
+      if (event === 'SIGNED_OUT') {
+        window.location.href = '/login'
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
   // Cannot go back to step 0 (password change) once completed
   const next = () => setStep(s => Math.min(s + 1, 4))
   const back = () => setStep(s => Math.max(s - 1, 1)) // min back is step 1
@@ -567,11 +688,10 @@ export function OnboardingWizard({ companyId, initialStep = 0 }: OnboardingWizar
             const done = step > s.id
             return (
               <div key={s.id} className="flex flex-col items-center gap-1.5">
-                <div className={`size-8 rounded-full flex items-center justify-center border-2 transition-all ${
-                  done ? 'bg-primary border-primary text-white' :
+                <div className={`size-8 rounded-full flex items-center justify-center border-2 transition-all ${done ? 'bg-primary border-primary text-white' :
                   active ? 'bg-background border-primary text-primary' :
-                  'bg-background border-border text-muted-foreground'
-                }`}>
+                    'bg-background border-border text-muted-foreground'
+                  }`}>
                   {done ? <span className="text-xs font-bold">✓</span> : <Icon className="size-3.5" />}
                 </div>
                 <span className={`text-[10px] font-medium hidden sm:block ${active ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -593,7 +713,9 @@ export function OnboardingWizard({ companyId, initialStep = 0 }: OnboardingWizar
           {step === 1 && <Step1 companyId={companyId} onNext={next} />}
           {step === 2 && <Step2 companyId={companyId} onNext={next} onSkip={next} />}
           {step === 3 && <Step3 onNext={next} />}
-          {step === 4 && <Step5 companyId={companyId} />}
+          {step === 4 && <Step5 companyId={companyId} onClear={() => {
+            try { sessionStorage.removeItem(STORAGE_KEY) } catch { }
+          }} />}
 
           {/* Back button — only for steps 2+ (step 0 & 1 cannot go back to step 0) */}
           {step > 1 && step < 4 && (

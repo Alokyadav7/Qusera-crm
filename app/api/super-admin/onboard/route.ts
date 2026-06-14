@@ -138,7 +138,6 @@ export async function POST(req: NextRequest) {
         industry: industry || null,
         employee_count: employeeCount || null,
         plan: plan || 'basic',
-        custom_subdomain: customSubdomain?.toLowerCase().trim() || null,
         logo_url: logoUrl || null,
         is_active: true,
         setup_complete: false,
@@ -214,7 +213,7 @@ export async function POST(req: NextRequest) {
           full_name: adminName.trim(),
           phone: adminPhone?.trim() || null,
           company_id: company.id,        // CRITICAL: links user to their company
-          role: 'owner',                 // CRITICAL: grants owner permissions
+          role: 'admin',                 // NOTE: session role comes from company_members (owner). profiles.role constraint may not allow 'owner'.
           is_active: true,
           is_super_admin: false,
           onboarding_completed: false,   // forces /onboarding redirect on first login

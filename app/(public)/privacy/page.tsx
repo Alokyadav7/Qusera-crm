@@ -22,6 +22,7 @@ export default function PrivacyPage() {
           <Clock className="size-3.5" />
           <span>Last updated: May 2026</span>
         </div>
+        
       </div>
 
       {/* Real Policy Content */}

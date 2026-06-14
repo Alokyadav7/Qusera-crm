@@ -425,6 +425,7 @@ function LoginFormContent() {
               autoComplete="email"
               placeholder="name@company.com"
               className="w-full h-10 pl-9 pr-4 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-950/5 focus:border-zinc-950 focus:bg-white transition-all duration-150 font-sans"
+              suppressHydrationWarning
             />
           </div>
         </div>
@@ -449,6 +450,7 @@ function LoginFormContent() {
               autoComplete="current-password"
               placeholder="••••••••"
               className="w-full h-10 pl-9 pr-10 text-sm bg-white border border-zinc-200 rounded-lg text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-950/5 focus:border-zinc-950 focus:bg-white transition-all duration-150 font-sans"
+              suppressHydrationWarning
             />
             <button
               type="button"
@@ -468,6 +470,7 @@ function LoginFormContent() {
             name="rememberMe"
             type="checkbox"
             className="size-4 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-950 cursor-pointer"
+            suppressHydrationWarning
           />
           <label htmlFor="rememberMe" className="ml-2 text-xs text-zinc-500 select-none cursor-pointer">
             Keep me signed in on this device
@@ -479,6 +482,7 @@ function LoginFormContent() {
           type="submit"
           disabled={loading || googleLoading}
           className="w-full h-10 flex items-center justify-center gap-2 bg-zinc-950 hover:bg-zinc-800 text-white font-medium rounded-lg text-xs transition-colors disabled:opacity-55 disabled:cursor-not-allowed cursor-pointer shadow-sm shadow-black/10"
+          suppressHydrationWarning
         >
           {loading ? (
             <div className="size-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />

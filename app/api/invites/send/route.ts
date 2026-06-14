@@ -33,17 +33,26 @@ export const POST = withTenantAuth(
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    // Check if user is already a member
-    const { data: existingMember } = await svc
-      .from('company_members')
+    // Check if email belongs to an existing member
+    const { data: existingProfile } = await svc
+      .from('profiles')
       .select('id')
-      .eq('company_id', ctx.companyId)
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .single()
+      .eq('email', email.toLowerCase())
+      .maybeSingle()
 
-    if (existingMember) {
-      return NextResponse.json({ error: 'User is already a member of this company' }, { status: 409 })
+    if (existingProfile) {
+      const { data: existingMember } = await svc
+        .from('company_members')
+        .select('id')
+        .eq('company_id', ctx.companyId)
+        .eq('user_id', existingProfile.id)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .maybeSingle()
+
+      if (existingMember) {
+        return NextResponse.json({ error: 'User is already a member of this company' }, { status: 409 })
+      }
     }
 
     // Check for existing pending invite
