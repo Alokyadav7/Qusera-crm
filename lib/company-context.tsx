@@ -72,7 +72,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     load()
     const supabase = createClient()
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load())
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'USER_UPDATED') return
+      load()
+    })
     return () => subscription.unsubscribe()
   }, [load])
 
