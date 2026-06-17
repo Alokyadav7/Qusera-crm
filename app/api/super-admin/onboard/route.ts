@@ -125,10 +125,9 @@ export async function POST(req: NextRequest) {
     // ── STEP 1: Create company ────────────────────────────────────────────
     console.log('[ONBOARD] Creating company:', companyName)
 
-    const slug = (customSubdomain || companyName)
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
+    const slug = customSubdomain
+      ? customSubdomain.toLowerCase().replace(/[^a-z0-9.-]+/g, '-').replace(/^[.-]+|[.-]+$/g, '')
+      : companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
     const { data: company, error: companyError } = await db
       .from('companies')
@@ -307,7 +306,27 @@ export async function POST(req: NextRequest) {
     // ── STEP 8: Send onboarding email (non-fatal) ─────────────────────────
     console.log('[ONBOARD] Sending email to:', cleanEmail)
 
-    const loginUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://klinqcrm.in'
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://klinqcrm.in'
+    let tenantLoginUrl = `${siteUrl}/login`
+    if (slug) {
+      try {
+        const urlObj = new URL(siteUrl)
+        if (slug.includes('.')) {
+          // If slug contains a dot, it's treated as a custom domain
+          tenantLoginUrl = `https://${slug}/login`
+        } else {
+          // If slug is a simple subdomain
+          const baseHost = urlObj.hostname.replace(/^www\./i, '')
+          if (baseHost === 'localhost' || baseHost === '127.0.0.1') {
+            tenantLoginUrl = `${urlObj.protocol}//${slug}.localhost:${urlObj.port || '3000'}/login`
+          } else {
+            tenantLoginUrl = `${urlObj.protocol}//${slug}.${baseHost}/login`
+          }
+        }
+      } catch {
+        // fallback
+      }
+    }
 
     let emailSent = false
     let emailError: string | undefined
@@ -329,7 +348,7 @@ export async function POST(req: NextRequest) {
   <div style="background: #f4f4f5; border-radius: 8px; padding: 24px; margin: 24px 0;">
     <p style="margin: 0 0 12px; color: #444;">
       <strong>Login URL:</strong><br>
-      <a href="${loginUrl}/login" style="color: #2563eb;">${loginUrl}/login</a>
+      <a href="${tenantLoginUrl}" style="color: #2563eb;">${tenantLoginUrl}</a>
     </p>
     <p style="margin: 12px 0; color: #444;">
       <strong>Your Email:</strong><br>
@@ -358,7 +377,7 @@ export async function POST(req: NextRequest) {
   </ol>
 
   <div style="text-align: center; margin: 32px 0;">
-    <a href="${loginUrl}/login"
+    <a href="${tenantLoginUrl}"
        style="background: #111; color: white; padding: 14px 36px;
               border-radius: 6px; text-decoration: none;
               font-weight: bold; font-size: 16px;">
@@ -416,7 +435,7 @@ export async function POST(req: NextRequest) {
       companyName: companyName,
       adminEmail: cleanEmail,
       tempPassword,
-      loginUrl: `${loginUrl}/login`,
+      loginUrl: tenantLoginUrl,
       emailSent,
       emailError,
       verification: {

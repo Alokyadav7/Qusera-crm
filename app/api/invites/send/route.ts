@@ -2,17 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withTenantAuth } from '@/lib/middleware/withTenantAuth'
 import { createServiceClient } from '@/lib/supabase/service'
 import { emitEvent } from '@/lib/events/emit'
-import { enqueueJob } from '@/lib/jobs/enqueue'
 
 // POST /api/invites/send
 export const POST = withTenantAuth(
   async (req: NextRequest, ctx) => {
     const body = await req.json()
-    const { email, role, workspaceId } = body
+    const { email, role: rawRole, workspaceId } = body
 
-    if (!email || !role) {
+    if (!email || !rawRole) {
       return NextResponse.json({ error: 'email and role are required' }, { status: 400 })
     }
+
+    // Map UI roles to database CHECK constraint allowed roles
+    let role = rawRole
+    if (role === 'company_admin') role = 'admin'
+    else if (role === 'sales_manager') role = 'manager'
+    else if (role === 'sales_rep') role = 'sales'
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -106,23 +111,36 @@ export const POST = withTenantAuth(
 
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://klinqcrm.in'}/invite/${invite.token}`
 
-    // Queue email (non-blocking)
-    await enqueueJob({
-      companyId: ctx.companyId,
-      type: 'send_email',
-      payload: {
-        to: email,
-        template: 'team_invite',
-        data: {
-          companyName: company.name,
-          role,
-          inviteUrl,
-          expiresInDays: 7,
-        },
-      },
-      priority: 8,
-      createdBy: ctx.userId,
+    // Send email directly (synchronous for immediate delivery)
+    const { data: inviterProfile } = await svc
+      .from('profiles')
+      .select('full_name')
+      .eq('id', ctx.userId)
+      .maybeSingle()
+
+    const { sendEmail, teamInviteEmailHtml } = await import('@/lib/email')
+
+    const emailResult = await sendEmail({
+      to: email,
+      subject: `You've been invited to join ${company.name} on Klinq CRM`,
+      html: teamInviteEmailHtml({
+        companyName: company.name,
+        inviterName: inviterProfile?.full_name ?? 'Your admin',
+        role: rawRole,
+        inviteUrl,
+        expiryDays: 7,
+      }),
     })
+
+    if (!emailResult.success) {
+      console.error('[INVITE] Email send failed:', emailResult.error)
+      // Return success but with warnings so client/user is aware the email dispatch had issues
+      return NextResponse.json({
+        message: `Invite created in DB, but email failed: ${emailResult.error}`,
+        inviteId: invite.id,
+        emailError: emailResult.error,
+      })
+    }
 
     // Emit event
     await emitEvent({

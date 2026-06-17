@@ -17,8 +17,7 @@ import { formatDistanceToNow, isPast } from 'date-fns'
 
 interface PendingInvite {
   id: string
-  invited_email: string
-  invited_name: string | null
+  email: string
   role: string
   expires_at: string
   created_at: string
@@ -65,7 +64,7 @@ export default function AdminTeamPage() {
     const supabase = createClient()
     const { data } = await (supabase as any)
       .from('invites')
-      .select('id, invited_email, invited_name, role, expires_at, created_at')
+      .select('id, email, role, expires_at, created_at')
       .eq('company_id', companyId)
       .is('accepted_at', null)
       .order('created_at', { ascending: false })
@@ -107,7 +106,7 @@ export default function AdminTeamPage() {
     // Load pending invites after getting cid
     const { data: inviteData } = await (supabase as any)
       .from('invites')
-      .select('id, invited_email, invited_name, role, expires_at, created_at')
+      .select('id, email, role, expires_at, created_at')
       .eq('company_id', cid)
       .is('accepted_at', null)
       .order('created_at', { ascending: false })
@@ -191,14 +190,13 @@ export default function AdminTeamPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: invite.invited_email,
-        full_name: invite.invited_name,
+        email: invite.email,
         role: invite.role,
         company_id: companyId,
       }),
     })
     if (res.ok) {
-      toast.success(`Invite resent to ${invite.invited_email}`)
+      toast.success(`Invite resent to ${invite.email}`)
       loadInvites()
     } else {
       const err = await res.json().catch(() => ({}))
@@ -353,8 +351,7 @@ export default function AdminTeamPage() {
                       <tr key={invite.id} className="border-b last:border-0 hover:bg-muted/20">
                         <td className="px-4 py-3">
                           <div>
-                            <p className="font-medium">{invite.invited_email}</p>
-                            {invite.invited_name && <p className="text-xs text-muted-foreground">{invite.invited_name}</p>}
+                            <p className="font-medium">{invite.email}</p>
                           </div>
                         </td>
                         <td className="px-4 py-3">

@@ -85,10 +85,22 @@ const MATRIX: Record<Action, Role[]> = {
 }
 
 // ── Core helper — pure, no DB ─────────────────────────────────────────────────
+export function normalizeRole(role: string | null | undefined): Role | null {
+  if (!role) return null
+  const r = role.toLowerCase().trim()
+  if (r === 'owner' || r === 'admin' || r === 'company_admin') return 'company_admin'
+  if (r === 'manager' || r === 'sales_manager') return 'sales_manager'
+  if (r === 'sales' || r === 'sales_rep') return 'sales_rep'
+  if (r === 'viewer') return 'viewer'
+  return role as Role
+}
+
 export function can(role: string | null | undefined, action: Action): boolean {
   if (!role) return false
   if (role === ROLES.SUPER_ADMIN) return true  // super admin bypasses all
-  return MATRIX[action].includes(role as Role)
+  const norm = normalizeRole(role)
+  if (!norm) return false
+  return MATRIX[action].includes(norm)
 }
 
 // ── Server-side guard — fetches role from DB ──────────────────────────────────
@@ -121,7 +133,8 @@ export async function getMemberContext(userId: string, companyId: string): Promi
     .eq('company_id', companyId)
     .single()
 
-  const role = ((member as any)?.is_active ? (member as any)?.role : null) as Role | null
+  const dbRole = (member as any)?.is_active ? (member as any)?.role : null
+  const role = normalizeRole(dbRole)
   return { userId, companyId, role, isSuperAdmin: false }
 }
 
@@ -140,6 +153,7 @@ export async function checkPermission(
 
 // ── UI helpers (client-safe, role passed as string) ───────────────────────────
 export function getRoleLabel(role: string): string {
+  const norm = normalizeRole(role) || role
   const labels: Record<string, string> = {
     super_admin:   '⚡ Super Admin',
     company_admin: '🛡️ Admin',
@@ -147,10 +161,11 @@ export function getRoleLabel(role: string): string {
     sales_rep:     '💼 Sales Rep',
     viewer:        '👁️ Viewer',
   }
-  return labels[role] ?? role
+  return labels[norm] ?? norm
 }
 
 export function getRoleBadgeColor(role: string): string {
+  const norm = normalizeRole(role) || role
   const colors: Record<string, string> = {
     super_admin:   'bg-yellow-100 text-yellow-800 border-yellow-200',
     company_admin: 'bg-violet-100 text-violet-800 border-violet-200',
@@ -158,7 +173,7 @@ export function getRoleBadgeColor(role: string): string {
     sales_rep:     'bg-emerald-100 text-emerald-800 border-emerald-200',
     viewer:        'bg-slate-100 text-slate-600 border-slate-200',
   }
-  return colors[role] ?? 'bg-muted text-muted-foreground'
+  return colors[norm] ?? 'bg-muted text-muted-foreground'
 }
 
 export const ALL_ROLES: Role[] = [
