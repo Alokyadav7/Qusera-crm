@@ -76,8 +76,22 @@ function getClientIp(request: NextRequest): string {
   )
 }
 
-function redirectTo(url: string, request: NextRequest): NextResponse {
-  return NextResponse.redirect(new URL(url, request.url))
+function redirectTo(url: string, request: NextRequest, response?: NextResponse): NextResponse {
+  const redirectResponse = NextResponse.redirect(new URL(url, request.url))
+  if (response) {
+    response.cookies.getAll().forEach(cookie => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, {
+        path: cookie.path,
+        domain: cookie.domain,
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        sameSite: cookie.sameSite,
+        expires: cookie.expires,
+        maxAge: cookie.maxAge,
+      })
+    })
+  }
+  return redirectResponse
 }
 
 // ── Main Proxy ───────────────────────────────────────────────────────────────
@@ -109,7 +123,7 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('message', 'invitation_only')
-    return NextResponse.redirect(url)
+    return redirectTo(url.pathname + url.search, request, response)
   }
 
   // ── 4. Create Supabase SSR client (refreshes session cookies) ────────────
@@ -160,7 +174,7 @@ export async function proxy(request: NextRequest) {
       user.user_metadata?.is_platform_admin === true
 
     if (isSuperAdminByMeta) {
-      return redirectTo('/super-admin', request)
+      return redirectTo('/super-admin', request, response)
     }
 
     // Slow path: check DB profile (1 DB call)
@@ -171,11 +185,11 @@ export async function proxy(request: NextRequest) {
         .eq('id', user.id)
         .maybeSingle()
 
-      if (profile?.is_super_admin) return redirectTo('/super-admin', request)
-      if (!profile?.onboarding_completed) return redirectTo('/onboarding', request)
+      if (profile?.is_super_admin) return redirectTo('/super-admin', request, response)
+      if (!profile?.onboarding_completed) return redirectTo('/onboarding', request, response)
     } catch { /* ignore — just show login */ }
 
-    return redirectTo('/dashboard', request)
+    return redirectTo('/dashboard', request, response)
   }
 
   // ── 7. All remaining routes require authentication ─────────────────────────
@@ -186,7 +200,7 @@ export async function proxy(request: NextRequest) {
     if (pathname !== '/login') {
       url.searchParams.set('next', pathname)
     }
-    return NextResponse.redirect(url)
+    return redirectTo(url.pathname + url.search, request, response)
   }
 
   // ── 8. FAST PATH: Super admin via JWT metadata (0 DB calls) ───────────────
@@ -201,7 +215,7 @@ export async function proxy(request: NextRequest) {
   if (isSuperAdminByMeta) {
     // Super admin trying to access company routes → redirect to their home
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) {
-      return redirectTo('/super-admin', request)
+      return redirectTo('/super-admin', request, response)
     }
     // Super admin on /super-admin or elsewhere → allow through
     return response
@@ -231,19 +245,19 @@ export async function proxy(request: NextRequest) {
   //     If JWT didn't have is_platform_admin yet, the DB is the source of truth.
   if (profile?.is_super_admin === true) {
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) {
-      return redirectTo('/super-admin', request)
+      return redirectTo('/super-admin', request, response)
     }
     return response
   }
 
   // ── 11. Block non-super-admins from /super-admin ───────────────────────────
   if (pathname.startsWith('/super-admin')) {
-    return redirectTo('/dashboard', request)
+    return redirectTo('/dashboard', request, response)
   }
 
   // ── 12. Deactivated individual user ───────────────────────────────────────
   if (profile?.is_active === false) {
-    return redirectTo('/suspended', request)
+    return redirectTo('/suspended', request, response)
   }
 
   // ── 13. Profile missing (new user / DB write latency) ─────────────────────
@@ -268,7 +282,7 @@ export async function proxy(request: NextRequest) {
         .maybeSingle()
 
       if (company?.is_active === false) {
-        return redirectTo('/suspended', request)
+        return redirectTo('/suspended', request, response)
       }
     } catch {
       // Company check failed — allow through, page will handle it
@@ -279,11 +293,11 @@ export async function proxy(request: NextRequest) {
   const isOnboarded = profile.onboarding_completed === true
 
   if (!isOnboarded && !pathname.startsWith('/onboarding')) {
-    return redirectTo('/onboarding', request)
+    return redirectTo('/onboarding', request, response)
   }
 
   if (isOnboarded && pathname.startsWith('/onboarding')) {
-    return redirectTo('/dashboard', request)
+    return redirectTo('/dashboard', request, response)
   }
 
   // ── 16. All checks passed — allow through ────────────────────────────────
