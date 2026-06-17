@@ -453,14 +453,19 @@ export default function OnboardCompanyPage() {
                 <label className={labelCls}>Custom Subdomain Slug (optional)</label>
                 <input
                   value={form.customSubdomain}
-                  onChange={e => setVal('customSubdomain', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  onChange={e => setVal('customSubdomain', e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, ''))}
                   className={inputCls}
                   placeholder="acme"
                 />
                 {form.customSubdomain && (
-                  <p className="text-zinc-500 text-[10px] font-mono mt-1.5 flex items-center gap-1.5 select-none">
+                  <p className="text-zinc-550 text-[10px] font-mono mt-1.5 flex items-center gap-1.5 select-none">
                     <Globe className="size-3.5 text-zinc-400" />
-                    <span>Domain Node: https://{form.customSubdomain}.klinqcrm.in</span>
+                    <span>
+                      Domain Node:{' '}
+                      {form.customSubdomain.includes('.')
+                        ? `https://${form.customSubdomain}`
+                        : `https://${form.customSubdomain}.klinqcrm.in`}
+                    </span>
                   </p>
                 )}
               </div>

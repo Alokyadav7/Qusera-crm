@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -15,7 +15,7 @@ import { Switch } from '@/components/ui/switch'
 import {
   Building2, Users, Bell, Shield, CreditCard, Mail, Phone,
   Globe, Loader2, CheckCircle2, Trash2, UserPlus, Key, Crown,
-  Lock, ShieldAlert, MessageSquare, Zap
+  Lock, ShieldAlert, MessageSquare, Zap, Pencil
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -30,6 +30,7 @@ interface TeamMember {
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('member')
@@ -55,25 +56,44 @@ export default function SettingsPage() {
     // Load profile
     const { data: prof } = await (supabase as any).from('profiles').select('*').eq('id', currentUser.id).single()
     if (prof) {
+      let companyName = prof.company_name || ''
+      let companyIndustry = prof.industry || ''
+      let companyWebsite = prof.website || ''
+      let companyCurrency = prof.currency || 'INR'
+
+      if (prof.company_id) {
+        const { data: comp } = await (supabase as any)
+          .from('companies')
+          .select('name, industry, website, currency')
+          .eq('id', prof.company_id)
+          .maybeSingle()
+        if (comp) {
+          companyName = comp.name || ''
+          companyIndustry = comp.industry || ''
+          companyWebsite = comp.website || ''
+          companyCurrency = comp.currency || 'INR'
+        }
+      }
+
       setProfile({
-        company_name: prof.company_name || '',
-        industry: prof.industry || '',
+        company_name: companyName,
+        industry: companyIndustry,
         phone: prof.phone || '',
-        website: prof.website || '',
-        currency: prof.currency || 'INR',
+        website: companyWebsite,
+        currency: companyCurrency,
         email_notifications: prof.email_notifications !== false,
         whatsapp_notifications: prof.whatsapp_notifications !== false,
       })
     }
 
-    // Fetch team members sharing the same company name
+    // Fetch team members sharing the same company_id
     let query = (supabase as any)
       .from('profiles')
       .select('id, email, full_name, role, created_at')
       .order('created_at', { ascending: true })
 
-    if (prof?.company_name) {
-      query = query.eq('company_name', prof.company_name)
+    if (prof?.company_id) {
+      query = query.eq('company_id', prof.company_id)
     } else {
       query = query.eq('id', currentUser.id)
     }
@@ -108,14 +128,45 @@ export default function SettingsPage() {
     setLoading(true)
     const supabase = createClient()
     if (!user) { setLoading(false); return }
-    const { error } = await (supabase as any).from('profiles').upsert({
-      id: user.id,
-      email: user.email,
-      ...profile,
-      updated_at: new Date().toISOString(),
-    })
-    if (error) {
-      toast.error('Save failed: ' + error.message)
+
+    // 1. Update profiles preferences & denormalized company info
+    const { error: profileError } = await (supabase as any)
+      .from('profiles')
+      .update({
+        phone: profile.phone,
+        company_name: profile.company_name,
+        industry: profile.industry,
+        website: profile.website,
+        currency: profile.currency,
+        email_notifications: profile.email_notifications,
+        whatsapp_notifications: profile.whatsapp_notifications,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+
+    // 2. Update company-wide settings in the companies table
+    let companyError = null
+    try {
+      const res = await fetch('/api/company/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: profile.company_name,
+          industry: profile.industry,
+          website: profile.website,
+          currency: profile.currency,
+        }),
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        companyError = errData.error || 'Failed to save company settings'
+      }
+    } catch (err: any) {
+      companyError = err.message || 'Failed to reach company settings API'
+    }
+
+    if (profileError || companyError) {
+      toast.error('Save failed: ' + (profileError?.message || companyError))
     } else {
       toast.success('Settings saved successfully!')
       loadSettings() // Force state refresh
@@ -232,13 +283,14 @@ export default function SettingsPage() {
                         value={profile.company_name} 
                         onChange={e => setProfile(p => ({ ...p, company_name: e.target.value }))} 
                         placeholder="e.g. Acme Corporation" 
+                        disabled={!isEditing}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="industry" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Industry Sector</Label>
-                    <Select value={profile.industry} onValueChange={v => setProfile(p => ({ ...p, industry: v }))}>
+                    <Select value={profile.industry} onValueChange={v => setProfile(p => ({ ...p, industry: v }))} disabled={!isEditing}>
                       <SelectTrigger id="industry" className="bg-background/50 hover:bg-background/80 transition-colors rounded-xl">
                         <SelectValue placeholder="Select industry" />
                       </SelectTrigger>
@@ -260,6 +312,7 @@ export default function SettingsPage() {
                         value={profile.phone} 
                         onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} 
                         placeholder="+91 98765 43210" 
+                        disabled={!isEditing}
                       />
                     </div>
                   </div>
@@ -274,13 +327,14 @@ export default function SettingsPage() {
                         value={profile.website} 
                         onChange={e => setProfile(p => ({ ...p, website: e.target.value }))} 
                         placeholder="acme.com" 
+                        disabled={!isEditing}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="currency" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Preferred Currency</Label>
-                    <Select value={profile.currency} onValueChange={v => setProfile(p => ({ ...p, currency: v }))}>
+                    <Select value={profile.currency} onValueChange={v => setProfile(p => ({ ...p, currency: v }))} disabled={!isEditing}>
                       <SelectTrigger id="currency" className="bg-background/50 hover:bg-background/80 transition-colors rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
@@ -302,11 +356,23 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-border/40 flex justify-end">
-                  <Button onClick={saveProfile} disabled={loading} className="rounded-xl px-5 gap-2">
-                    {loading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-                    Save Company Profile
-                  </Button>
+                <div className="pt-4 border-t border-border/40 flex justify-end gap-2">
+                  {!isEditing ? (
+                    <Button onClick={() => setIsEditing(true)} className="rounded-xl px-5 gap-2">
+                      <Pencil className="size-4" />
+                      Edit Profile
+                    </Button>
+                  ) : (
+                    <>
+                      <Button variant="outline" onClick={() => { setIsEditing(false); loadSettings(); }} className="rounded-xl px-5">
+                        Cancel
+                      </Button>
+                      <Button onClick={async () => { await saveProfile(); setIsEditing(false); }} disabled={loading} className="rounded-xl px-5 gap-2">
+                        {loading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                        Save Changes
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

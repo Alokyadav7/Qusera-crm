@@ -184,6 +184,31 @@ function Step1({ companyId, onNext }: { companyId: string; onNext: () => void })
   const [saving, setSaving] = useState(false)
   const f = (k: string) => (v: string) => setForm(p => ({ ...p, [k]: v }))
 
+  useEffect(() => {
+    async function loadCompany() {
+      try {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('companies')
+          .select('name, industry, website, timezone, currency')
+          .eq('id', companyId)
+          .maybeSingle()
+        if (data) {
+          setForm({
+            name: data.name || '',
+            industry: data.industry || '',
+            website: data.website || '',
+            timezone: data.timezone || 'Asia/Kolkata',
+            currency: data.currency || 'INR',
+          })
+        }
+      } catch (err) {
+        console.error('Failed to prefill company profile:', err)
+      }
+    }
+    loadCompany()
+  }, [companyId])
+
   const save = async () => {
     if (!form.name.trim()) { toast.error('Company name is required'); return }
     setSaving(true)
@@ -264,21 +289,46 @@ function Step2({ companyId, onNext, onSkip }: { companyId: string; onNext: () =>
     const valid = rows.filter(r => r.email.trim())
     if (!valid.length) { onSkip(); return }
     setSending(true)
-    const results = await Promise.allSettled(valid.map(r =>
-      fetch('/api/invites/send', {
-        method: 'POST',
+    
+    let sentCount = 0
+    let failedCount = 0
+    let lastError = ''
+
+    for (const r of valid) {
+      try {
+        const res = await fetch('/api/invites/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: r.email.trim(), role: r.role }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok && !data.emailError) {
+          sentCount++
+        } else {
+          failedCount++
+          lastError = data.emailError || data.error || 'Failed to send invite'
+        }
+      } catch (err: any) {
+        failedCount++
+        lastError = err.message || 'Network error'
+      }
+    }
+
+    if (sentCount > 0) {
+      toast.success(`${sentCount} invitation(s) sent successfully!`)
+    }
+    if (failedCount > 0) {
+      toast.error(`Failed to send ${failedCount} invitation(s). Error: ${lastError}`)
+    }
+
+    if (sentCount > 0) {
+      await fetch('/api/onboarding/complete-step', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: r.email.trim(), role: r.role }),
-      })
-    ))
-    const sent = results.filter(r => r.status === 'fulfilled').length
-    toast.success(`${sent} invitation(s) sent — they'll get an email with their invite link`)
-    await fetch('/api/onboarding/complete-step', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step: 2 }),
-    })
-    onNext()
+        body: JSON.stringify({ step: 2 }),
+      }).catch(() => {})
+      onNext()
+    }
     setSending(false)
   }
 

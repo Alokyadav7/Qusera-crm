@@ -46,24 +46,30 @@ export async function POST(req: NextRequest) {
   const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://klinqcrm.in'}/invite/${newToken}`
   const company = invite.company as any
 
-  // Queue resend email
-  const { enqueueJob } = await import('@/lib/jobs/enqueue')
-  await enqueueJob({
-    companyId: invite.company_id,
-    type: 'send_email',
-    payload: {
-      to: invite.email,
-      template: 'team_invite',
-      data: {
-        companyName: company?.name ?? 'Your Team',
-        role: invite.role,
-        inviteUrl,
-        expiresInDays: 7,
-      },
-    },
-    priority: 8,
-    createdBy: user.id,
+  // Send email directly
+  const { data: inviterProfile } = await svc
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const { sendEmail, teamInviteEmailHtml } = await import('@/lib/email')
+
+  const emailResult = await sendEmail({
+    to: invite.email,
+    subject: `You've been invited to join ${company?.name ?? 'Your Team'} on Klinq CRM`,
+    html: teamInviteEmailHtml({
+      companyName: company?.name ?? 'Your Team',
+      inviterName: inviterProfile?.full_name ?? 'Your admin',
+      role: invite.role,
+      inviteUrl,
+      expiryDays: 7,
+    }),
   })
+
+  if (!emailResult.success) {
+    return NextResponse.json({ error: 'Failed to send invitation email: ' + emailResult.error }, { status: 500 })
+  }
 
   return NextResponse.json({ message: `Invite resent to ${invite.email}` })
 }

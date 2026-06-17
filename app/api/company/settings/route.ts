@@ -9,7 +9,7 @@ export const PATCH = withTenantAuth(async (req: NextRequest, ctx) => {
   const body = await req.json()
   const svc = createServiceClient()
 
-  const allowed = ['name', 'timezone', 'currency', 'custom_domain', 'primary_color', 'logo_url']
+  const allowed = ['name', 'timezone', 'currency', 'custom_domain', 'primary_color', 'logo_url', 'industry', 'website']
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]

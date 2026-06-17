@@ -170,10 +170,26 @@ function LoginFormContent() {
         // Fallback to checking subdomain logic if query is missing
         if (!detectedSlug && typeof window !== 'undefined') {
           const hostname = window.location.hostname
-          // Check if subdomain is present and is not 'www' or local hosts
-          const parts = hostname.split('.')
-          if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'localhost') {
-            detectedSlug = parts[0]
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://klinqcrm.in'
+          let baseDomain = 'klinqcrm.in'
+          try {
+            const urlObj = new URL(appUrl)
+            baseDomain = urlObj.hostname.replace(/^www\./i, '')
+          } catch {
+            // fallback
+          }
+
+          if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            // No slug on localhost directly
+          } else if (hostname.endsWith('.' + baseDomain)) {
+            // e.g. qusera.in.klinqcrm.in -> qusera.in
+            detectedSlug = hostname.slice(0, -(baseDomain.length + 1))
+          } else if (hostname.endsWith('.localhost')) {
+            // e.g. qusera.in.localhost -> qusera.in
+            detectedSlug = hostname.slice(0, -10)
+          } else if (hostname !== baseDomain && hostname !== 'www.' + baseDomain) {
+            // Custom domain: e.g. qusera.in -> qusera.in
+            detectedSlug = hostname.replace(/^www\./i, '')
           }
         }
 
