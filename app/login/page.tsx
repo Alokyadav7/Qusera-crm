@@ -198,6 +198,7 @@ function LoginFormContent() {
             .from('companies')
             .select('id, name, logo_url, status, suspension_reason, brand_color')
             .eq('slug', detectedSlug)
+            .is('deleted_at', null)
             .maybeSingle()
 
           if (!error && data) {
@@ -223,6 +224,8 @@ function LoginFormContent() {
         setErrorMsg('Your security session has expired. Please sign in again.')
       } else if (errorQuery === 'suspended') {
         setErrorMsg('This workspace account is suspended. Please contact your administrator.')
+      } else if (errorQuery === 'company_deleted') {
+        setErrorMsg('This company/workspace has been deleted. You can no longer log in.')
       } else if (errorQuery === 'invitation_expired') {
         setErrorMsg('This invitation link has expired or is invalid.')
       } else if (errorQuery === 'org_disabled') {
@@ -301,11 +304,18 @@ function LoginFormContent() {
       if (profile?.company_id) {
         const { data: company } = await supabase
           .from('companies')
-          .select('status, suspension_reason')
+          .select('status, suspension_reason, deleted_at')
           .eq('id', profile.company_id)
           .maybeSingle()
 
-        if (company?.status === 'suspended') {
+        if (!company || company.deleted_at || company.status === 'deleted') {
+          await supabase.auth.signOut()
+          setErrorMsg('This company/workspace has been deleted. You can no longer log in.')
+          setLoading(false)
+          return
+        }
+
+        if (company.status === 'suspended') {
           await supabase.auth.signOut()
           setErrorMsg(`Workspace suspended: ${company.suspension_reason || 'Please contact support.'}`)
           setLoading(false)

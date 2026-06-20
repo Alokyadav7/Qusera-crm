@@ -9,9 +9,9 @@ async function getInviteByToken(token: string) {
   const svc = createServiceClient()
   const { data } = await svc
     .from('invites')
-    .select('*, company:companies(id, name, logo_url, primary_color)')
+    .select('*, company:companies(id, name, logo_url, primary_color, status, deleted_at)')
     .eq('token', token)
-    .single()
+    .maybeSingle()
   return data
 }
 
@@ -21,8 +21,10 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   const isExpired = invite && new Date(invite.expires_at) < new Date()
   const isAccepted = invite && !!invite.accepted_at
+  const company = invite?.company as any
+  const isCompanyDeleted = company && (company.deleted_at || company.status === 'deleted')
 
-  if (!invite || isExpired || isAccepted) {
+  if (!invite || isExpired || isAccepted || isCompanyDeleted) {
     return (
       <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4">
         <div className="max-w-sm w-full bg-white border border-zinc-200 rounded-xl p-8 text-center shadow-sm">
@@ -30,10 +32,12 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
             <XCircle className="size-6 text-red-500" />
           </div>
           <h1 className="text-zinc-900 font-semibold text-lg mb-2">
-            {isAccepted ? 'Invite Already Used' : 'Invalid Invite Link'}
+            {isCompanyDeleted ? 'Workspace Deleted' : isAccepted ? 'Invite Already Used' : 'Invalid Invite Link'}
           </h1>
           <p className="text-zinc-500 text-sm">
-            {isAccepted
+            {isCompanyDeleted
+              ? 'This company/workspace has been deleted. You can no longer join.'
+              : isAccepted
               ? 'This invite has already been accepted. Try logging in instead.'
               : isExpired
               ? 'This invite has expired. Ask your admin to send a new one.'
@@ -49,8 +53,6 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       </div>
     )
   }
-
-  const company = invite.company as any
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4">

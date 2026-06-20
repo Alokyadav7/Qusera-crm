@@ -72,12 +72,16 @@ export async function getSession(): Promise<SessionUser | null> {
     }
   }
 
-  // 3. Check onboarding completion
+  // 3. Check onboarding completion and deletion status
   const { data: company } = await svc
     .from('companies')
-    .select('onboarding_completed_at')
+    .select('onboarding_completed_at, status, deleted_at')
     .eq('id', member.company_id)
-    .single()
+    .maybeSingle()
+
+  if (!company || company.deleted_at || company.status === 'deleted') {
+    return null
+  }
 
   return {
     id: user.id,
@@ -85,7 +89,7 @@ export async function getSession(): Promise<SessionUser | null> {
     role: member.role as Role,
     companyId: member.company_id,
     isSuperAdmin: false,
-    onboardingComplete: !!company?.onboarding_completed_at,
+    onboardingComplete: !!company.onboarding_completed_at,
   }
 }
 

@@ -93,8 +93,23 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
         )
       }
 
-      // 4. Get member record (validates user belongs to this company)
       const svc = createServiceClient()
+
+      // Check if the company is deleted
+      const { data: companyRecord } = await svc
+        .from('companies')
+        .select('status, deleted_at')
+        .eq('id', activeCompanyId)
+        .maybeSingle()
+
+      if (!companyRecord || companyRecord.deleted_at || companyRecord.status === 'deleted') {
+        return NextResponse.json(
+          { error: 'This company/workspace has been deleted.' },
+          { status: 403 }
+        )
+      }
+
+      // 4. Get member record (validates user belongs to this company)
       const { data: member } = await svc
         .from('company_members')
         .select('role')

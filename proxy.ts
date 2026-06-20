@@ -181,11 +181,29 @@ export async function proxy(request: NextRequest) {
     try {
       const { data: profile } = await (supabase as any)
         .from('profiles')
-        .select('is_super_admin, onboarding_completed')
+        .select('is_super_admin, onboarding_completed, company_id')
         .eq('id', user.id)
         .maybeSingle()
 
       if (profile?.is_super_admin) return redirectTo('/super-admin', request, response)
+
+      // Check if company is deleted
+      if (profile?.company_id) {
+        const { data: company } = await (supabase as any)
+          .from('companies')
+          .select('is_active, status, deleted_at')
+          .eq('id', profile.company_id)
+          .maybeSingle()
+
+        if (!company || company.deleted_at || company.status === 'deleted') {
+          await supabase.auth.signOut()
+          const url = request.nextUrl.clone()
+          url.pathname = '/login'
+          url.searchParams.set('error', 'company_deleted')
+          return redirectTo(url.pathname + url.search, request, response)
+        }
+      }
+
       if (!profile?.onboarding_completed) return redirectTo('/onboarding', request, response)
     } catch { /* ignore — just show login */ }
 
@@ -267,7 +285,7 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  // ── 14. Company suspension check ─────────────────────────────────────────
+  // ── 14. Company suspension / deletion check ─────────────────────────────────────────
   //    Only checked on dashboard/onboarding — uses company_id from profile
   //    already fetched above. No extra company_members query needed.
   if (
@@ -277,12 +295,24 @@ export async function proxy(request: NextRequest) {
     try {
       const { data: company } = await (supabase as any)
         .from('companies')
-        .select('is_active')
+        .select('is_active, status, deleted_at')
         .eq('id', profile.company_id)
         .maybeSingle()
 
-      if (company?.is_active === false) {
-        return redirectTo('/suspended', request, response)
+      if (!company || company.deleted_at || company.status === 'deleted') {
+        await supabase.auth.signOut()
+        const url = request.nextUrl.clone()
+        url.pathname = '/login'
+        url.searchParams.set('error', 'company_deleted')
+        return redirectTo(url.pathname + url.search, request, response)
+      }
+
+      if (company.is_active === false || company.status === 'suspended') {
+        await supabase.auth.signOut()
+        const url = request.nextUrl.clone()
+        url.pathname = '/login'
+        url.searchParams.set('error', 'suspended')
+        return redirectTo(url.pathname + url.search, request, response)
       }
     } catch {
       // Company check failed — allow through, page will handle it
