@@ -105,10 +105,13 @@ export function CompanyDetailClient({
     setActing(true)
     try {
       if (action === 'impersonate') {
-        const res = await fetch('/api/admin/impersonate', {
+        const res = await fetch('/api/super-admin/impersonate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ company_id: company.id }),
+          body: JSON.stringify({
+            companyId: company.id,
+            reason: `Super Admin access to ${company.name} from Company Detail settings`,
+          }),
         })
         if (res.ok) {
           toast.success(`Impersonating ${company.name}`)

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Users, BarChart3, Activity, BrainCircuit, CheckSquare, MessageSquare, TrendingUp, Clock, AlertCircle, RefreshCw, ArrowRight, Phone, Target, Zap } from 'lucide-react'
@@ -77,7 +77,7 @@ function InsightCard({ title, body, action, href }: {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function klinqPage() {
+export default function KlinqPage() {
   const { leads, isLoading: leadsLoading, refetch } = useRealtimeLeads()
   const { interactions, isLoading: interactionsLoading } = useRealtimeInteractions()
   const [tasks, setTasks] = useState<Task[]>([])

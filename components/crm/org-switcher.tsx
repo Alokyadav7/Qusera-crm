@@ -6,6 +6,7 @@ import { Building2, ChevronDown, Check, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import type { User } from '@supabase/supabase-js'
+import Link from 'next/link'
 
 interface UserCompany {
   company_id: string
@@ -136,13 +137,13 @@ export function OrgSwitcher({ user }: Props) {
               </button>
             ))}
             <div className="border-t border-border mt-1 pt-1">
-              <a
+              <Link
                 href="/onboarding"
                 className="flex items-center gap-2 px-3 py-1.5 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground text-sm"
               >
                 <Plus className="size-3.5" />
                 Add another company
-              </a>
+              </Link>
             </div>
           </div>
         </>

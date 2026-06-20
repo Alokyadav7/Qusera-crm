@@ -8,40 +8,60 @@ import { LeadsPageClient } from './leads-page-client'
 async function getLeadsData() {
   const sessionClient = await createClient()
   const { data: { user } } = await sessionClient.auth.getUser()
-  if (!user) return { leads: [], aiScoringEnabled: false }
+  if (!user) return { leads: [], aiScoringEnabled: false, profiles: [] }
 
   const svc = createServiceClient()
 
-  // Resolve this user's company_id — required for multi-tenant isolation
+  // Resolve this user's company_id and role
   const { data: member } = await (svc as any)
     .from('company_members')
-    .select('company_id')
+    .select('company_id, role')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .single()
 
   const companyId: string | null = member?.company_id ?? null
-  if (!companyId) return { leads: [], aiScoringEnabled: false }
+  const role: string | null = member?.role ?? null
+  if (!companyId) return { leads: [], aiScoringEnabled: false, profiles: [] }
 
-  // Fetch leads scoped to this company only
-  const { data: leads, error } = await svc
+  // Build scoped query
+  let query = svc
     .from('leads')
     .select('*')
     .eq('company_id' as any, companyId)
-    .order('created_at', { ascending: false })
+
+  // Gating check: if not owner, admin, or manager, scope to assigned user
+  const isManagerOrAdmin = role && ['owner', 'admin', 'manager'].includes(role)
+  if (!isManagerOrAdmin) {
+    query = query.eq('assigned_to', user.id)
+  }
+
+  const { data: leads, error } = await query.order('created_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching leads:', error)
-    return { leads: [], aiScoringEnabled: false }
+    return { leads: [], aiScoringEnabled: false, profiles: [] }
   }
+
+  // Fetch profiles of all members in the company to map creators/owners
+  const { data: profiles } = await (svc as any)
+    .from('profiles')
+    .select('id, full_name, email, role')
+    .eq('company_id', companyId)
 
   const aiScoringEnabled = await isFeatureEnabled(companyId, 'ai_scoring_enabled')
 
-  return { leads: leads || [], aiScoringEnabled }
+  return { leads: leads || [], aiScoringEnabled, profiles: profiles || [] }
 }
 
 export default async function LeadsPage() {
-  const { leads, aiScoringEnabled } = await getLeadsData()
+  const { leads, aiScoringEnabled, profiles } = await getLeadsData()
 
-  return <LeadsPageClient initialLeads={leads as any} aiScoringEnabled={aiScoringEnabled} />
+  return (
+    <LeadsPageClient 
+      initialLeads={leads as any} 
+      aiScoringEnabled={aiScoringEnabled} 
+      profiles={profiles}
+    />
+  )
 }

@@ -44,7 +44,7 @@ export function EmailPageClient({ initialEmails }: { initialEmails: EmailRecord[
       .on('postgres_changes', { event: '*', schema: 'public', table: 'emails' }, async (payload) => {
         if (payload.eventType === 'INSERT') {
           // Fetch contact name for the new email
-          let newEmail = payload.new as EmailRecord
+          const newEmail = payload.new as EmailRecord
           if (newEmail.contact_id) {
             const { data } = await supabase.from('contacts').select('full_name, email').eq('id', newEmail.contact_id).single()
             if (data) newEmail.contact = data as any

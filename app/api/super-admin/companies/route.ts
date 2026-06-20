@@ -25,11 +25,12 @@ export const GET = withSuperAdmin(async (req: NextRequest) => {
     return NextResponse.json({ companies: [] })
   }
 
-  // Fetch all member counts and lead counts in ONE parallel batch
+  // Fetch all member counts, lead counts, and owner profiles in parallel batches
   // instead of N sequential calls (fixes N+1 query)
   const companyIds = companiesList.map((c: any) => c.id)
+  const ownerIds = companiesList.map((c: any) => c.owner_id).filter(Boolean)
 
-  const [memberCountResults, leadCountResults] = await Promise.all([
+  const [memberCountResults, leadCountResults, profilesResult] = await Promise.all([
     // Get per-company active member counts in a single aggregated query
     Promise.all(
       companyIds.map((id: string) =>
@@ -53,14 +54,25 @@ export const GET = withSuperAdmin(async (req: NextRequest) => {
           .then(({ count }) => ({ id, count: count ?? 0 }))
       )
     ),
+    // Get owner profiles
+    ownerIds.length > 0
+      ? (svc as any)
+          .from('profiles')
+          .select('id, email, full_name')
+          .in('id', ownerIds)
+          .then(({ data }: any) => data ?? [])
+      : Promise.resolve([]),
   ])
 
   // Build lookup maps for O(1) access
   const memberCountMap = Object.fromEntries(memberCountResults.map(r => [r.id, r.count]))
   const leadCountMap = Object.fromEntries(leadCountResults.map(r => [r.id, r.count]))
+  const profileMap = Object.fromEntries((profilesResult as any[]).map(p => [p.id, p]))
 
   const enriched = companiesList.map((company: any) => ({
     ...company,
+    admin_email: profileMap[company.owner_id]?.email ?? null,
+    admin_name: profileMap[company.owner_id]?.full_name ?? null,
     member_count: memberCountMap[company.id] ?? 0,
     lead_count: leadCountMap[company.id] ?? 0,
     mrr: company.subscription?.mrr ?? 0,
@@ -68,3 +80,4 @@ export const GET = withSuperAdmin(async (req: NextRequest) => {
 
   return NextResponse.json({ companies: enriched })
 })
+

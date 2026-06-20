@@ -24,6 +24,7 @@ interface LeadDetailPanelProps {
   lead: Lead
   onClose: () => void
   onLeadUpdated?: () => void
+  profiles?: Array<{ id: string; full_name: string; email: string; role: string }>
 }
 
 interface Interaction {
@@ -89,7 +90,7 @@ function getInteractionIcon(type: string) {
   return map[type] || '💬'
 }
 
-export function LeadDetailPanel({ lead, onClose, onLeadUpdated }: LeadDetailPanelProps) {
+export function LeadDetailPanel({ lead, onClose, onLeadUpdated, profiles = [] }: LeadDetailPanelProps) {
   const gstStatus = getComplianceStatus(lead.gst_status)
   const panStatus = getComplianceStatus(lead.pan_status)
   const [interactions, setInteractions] = useState<Interaction[]>([])
@@ -394,6 +395,16 @@ export function LeadDetailPanel({ lead, onClose, onLeadUpdated }: LeadDetailPane
                       <span className="text-sm text-muted-foreground">Created</span>
                       <span className="text-sm">{format(new Date(lead.created_at), 'MMM d, yyyy')}</span>
                     </div>
+                    {(() => {
+                      const creator = profiles.find(p => p.id === lead.user_id)
+                      if (!creator) return null
+                      return (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Stored By</span>
+                          <span className="text-sm font-medium">{creator.full_name} ({creator.role === 'sales' ? 'sales rep' : creator.role})</span>
+                        </div>
+                      )
+                    })()}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Last Updated</span>
                       <span className="text-sm">{formatDistanceToNow(new Date(lead.updated_at), { addSuffix: true })}</span>

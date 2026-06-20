@@ -162,11 +162,50 @@ export function WhatsAppInboxClient({ companyId, isConnected, waPhone, initialLe
 
   const refreshLeads = async () => {
     const supabase = createClient()
-    // Get leads that have WhatsApp messages
-    const { data } = await (supabase as any).rpc('get_wa_conversation_list', {
-      p_company_id: companyId,
-    })
-    if (data) setLeads(data as WALead[])
+    const { data: msgs, error: msgsErr } = await (supabase as any)
+      .from('whatsapp_messages')
+      .select('lead_id, message_text, created_at, direction')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+
+    if (msgsErr || !msgs) return
+
+    const leadMap = new Map<string, { last_message: string; last_message_at: string }>()
+    for (const msg of msgs) {
+      if (msg.lead_id && !leadMap.has(msg.lead_id)) {
+        leadMap.set(msg.lead_id, {
+          last_message: msg.message_text ?? '',
+          last_message_at: msg.created_at,
+        })
+      }
+    }
+
+    if (leadMap.size === 0) {
+      setLeads([])
+      return
+    }
+
+    const leadIds = Array.from(leadMap.keys())
+    const { data: leadRows, error: leadsErr } = await (supabase as any)
+      .from('leads')
+      .select('id, full_name, phone')
+      .in('id', leadIds)
+      .eq('company_id', companyId)
+
+    if (leadsErr || !leadRows) return
+
+    const resolvedLeads = leadRows.map((l: any) => ({
+      id: l.id,
+      full_name: l.full_name,
+      phone: l.phone,
+      ...leadMap.get(l.id),
+    }))
+
+    resolvedLeads.sort((a: any, b: any) =>
+      new Date(b.last_message_at ?? 0).getTime() - new Date(a.last_message_at ?? 0).getTime()
+    )
+
+    setLeads(resolvedLeads)
   }
 
   const handleSend = async () => {

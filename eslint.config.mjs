@@ -8,6 +8,7 @@ export default [
       'node_modules/**',
       'next-env.d.ts',
       'tsconfig.tsbuildinfo',
+      'supabase/functions/**',
     ],
   },
   ...nextVitals,

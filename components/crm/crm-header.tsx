@@ -251,9 +251,9 @@ function NotificationBell() {
   }, [])
 
   function entityHref(n: typeof notifications[0]) {
-    if (n.entity_type === 'lead') return `/dashboard/leads`
+    if (n.entity_type === 'lead') return n.entity_id ? `/dashboard/leads/${n.entity_id}` : `/dashboard/leads`
     if (n.entity_type === 'task') return `/dashboard/tasks`
-    if (n.entity_type === 'deal') return `/dashboard/pipeline`
+    if (n.entity_type === 'deal') return `/dashboard/deals`
     if (n.entity_type === 'message') return `/dashboard/whatsapp`
     return `/dashboard/notifications`
   }

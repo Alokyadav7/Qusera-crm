@@ -332,7 +332,7 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
               <SidebarGroupLabel>Admin Panels</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {(['owner', 'admin'].includes(userRole ?? '') || isSuperAdmin) && (
+                  {(['owner', 'admin', 'manager'].includes(userRole ?? '') || isSuperAdmin) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin') && !pathname.includes('/audit-logs') && !pathname.includes('/api')}>
                         <Link href="/dashboard/admin">
@@ -343,15 +343,17 @@ export function CRMSidebar({ user }: CRMSidebarProps) {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/audit-logs')}>
-                      <Link href="/dashboard/admin/audit-logs">
-                        <Shield className="size-4" />
-                        <span>Audit Logs</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {(userRole === 'company_admin' || isSuperAdmin) && (
+                  {(['owner', 'admin'].includes(userRole ?? '') || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/audit-logs')}>
+                        <Link href="/dashboard/admin/audit-logs">
+                          <Shield className="size-4" />
+                          <span>Audit Logs</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {(['owner', 'admin'].includes(userRole ?? '') || isSuperAdmin) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/api')}>
                         <Link href="/dashboard/admin/api">

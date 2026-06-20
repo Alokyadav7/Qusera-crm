@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Users, Clock, BarChart3, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DemoModal } from './demo-modal'
+import Link from 'next/link'
 
 const INTEGRATIONS = [
   { name: 'WhatsApp Business', cat: 'Communication', emoji: '💬' },
@@ -44,9 +45,9 @@ export function IntegrationsSection() {
         <div className="mt-8 text-center">
           <p className="text-xs text-muted-foreground">
             And many more via our open REST API →{' '}
-            <a href="/api-docs" className="font-semibold underline underline-offset-2 hover:text-foreground transition-colors">
+            <Link href="/api-docs" className="font-semibold underline underline-offset-2 hover:text-foreground transition-colors">
               Read the docs
-            </a>
+            </Link>
           </p>
         </div>
       </div>

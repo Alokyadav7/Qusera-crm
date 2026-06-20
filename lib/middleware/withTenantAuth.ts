@@ -153,6 +153,7 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
 
       const ctx: TenantContext = {
         userId: user.id,
+        userEmail: user.email ?? '',
         companyId: activeCompanyId,
         workspaceId: activeMembership?.workspace_id ?? null,
         role,

@@ -1,15 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
 import { InvoicesPageClient } from './invoices-client'
 
+export const dynamic = 'force-dynamic'
+
 export default async function InvoicesPage() {
   // Use session client — service client bypasses RLS but invoices page
   // does its own client-side fetch on mount anyway, so empty here is fine
+  let invoices: any[] = []
+  let contacts: any[] = []
+  let deals: any[] = []
+
   try {
     const supabase = await createClient()
     const [
-      { data: invoices },
-      { data: contacts },
-      { data: deals },
+      invRes,
+      conRes,
+      dealRes,
     ] = await Promise.all([
       (supabase as any).from('crm_invoices')
         .select('*, contact:contacts(full_name, email)')
@@ -23,16 +29,18 @@ export default async function InvoicesPage() {
         .order('created_at', { ascending: false }),
     ])
 
-    return (
-      <InvoicesPageClient
-        initialInvoices={invoices ?? []}
-        contacts={contacts ?? []}
-        deals={deals ?? []}
-      />
-    )
-  } catch {
-    return (
-      <InvoicesPageClient initialInvoices={[]} contacts={[]} deals={[]} />
-    )
+    invoices = invRes.data ?? []
+    contacts = conRes.data ?? []
+    deals = dealRes.data ?? []
+  } catch (err) {
+    console.error('Failed to load initial invoices page data:', err)
   }
+
+  return (
+    <InvoicesPageClient
+      initialInvoices={invoices}
+      contacts={contacts}
+      deals={deals}
+    />
+  )
 }

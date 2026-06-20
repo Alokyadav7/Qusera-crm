@@ -81,7 +81,7 @@ export function AutomationsPageClient({ initialAutomations, initialLogs }: { ini
     const logsChannel = supabase
       .channel('logs-rt')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'automation_logs' }, async (payload) => {
-        let newLog = payload.new as AutomationLog
+        const newLog = payload.new as AutomationLog
         const { data } = await supabase.from('automations').select('name').eq('id', newLog.automation_id).single()
         if (data) newLog.automation = data
         setLogs(prev => [newLog, ...prev])

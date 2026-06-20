@@ -32,13 +32,13 @@ interface Stage {
 }
 
 const STAGES: Stage[] = [
-  { id: 'new',         label: 'New',         textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <Target className="size-3.5" /> },
-  { id: 'contacted',  label: 'Contacted',   textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <Phone className="size-3.5" /> },
-  { id: 'interested', label: 'Interested',  textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <Star className="size-3.5" /> },
-  { id: 'verified',   label: 'Verified',    textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <ShieldCheck className="size-3.5" /> },
-  { id: 'negotiation',label: 'Negotiation', textColor: 'text-foreground',          bgColor: 'bg-muted/30',           borderColor: 'border-border', icon: <TrendingUp className="size-3.5" /> },
-  { id: 'closed_won', label: 'Won',         textColor: 'text-foreground font-semibold', bgColor: 'bg-muted/20',      borderColor: 'border-border', icon: <Trophy className="size-3.5" /> },
-  { id: 'closed_lost',label: 'Lost',        textColor: 'text-muted-foreground',    bgColor: 'bg-muted/10',           borderColor: 'border-border', icon: <AlertCircle className="size-3.5" /> },
+  { id: 'new', label: 'New', textColor: 'text-foreground', bgColor: 'bg-muted/30', borderColor: 'border-border', icon: <Target className="size-3.5" /> },
+  { id: 'contacted', label: 'Contacted', textColor: 'text-foreground', bgColor: 'bg-muted/30', borderColor: 'border-border', icon: <Phone className="size-3.5" /> },
+  { id: 'interested', label: 'Interested', textColor: 'text-foreground', bgColor: 'bg-muted/30', borderColor: 'border-border', icon: <Star className="size-3.5" /> },
+  { id: 'verified', label: 'Verified', textColor: 'text-foreground', bgColor: 'bg-muted/30', borderColor: 'border-border', icon: <ShieldCheck className="size-3.5" /> },
+  { id: 'negotiation', label: 'Negotiation', textColor: 'text-foreground', bgColor: 'bg-muted/30', borderColor: 'border-border', icon: <TrendingUp className="size-3.5" /> },
+  { id: 'closed_won', label: 'Won', textColor: 'text-foreground font-semibold', bgColor: 'bg-muted/20', borderColor: 'border-border', icon: <Trophy className="size-3.5" /> },
+  { id: 'closed_lost', label: 'Lost', textColor: 'text-muted-foreground', bgColor: 'bg-muted/10', borderColor: 'border-border', icon: <AlertCircle className="size-3.5" /> },
 ]
 
 function fmt(n: number) {

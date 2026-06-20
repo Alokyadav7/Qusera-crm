@@ -65,12 +65,12 @@ function Step0({ onNext }: { onNext: () => void }) {
       const supabase = createClient()
 
       // 1. Update password (15s timeout guard)
-      const { error } = await Promise.race([
+      const { error } = await (Promise.race([
         supabase.auth.updateUser({ password: form.password }),
         new Promise((resolve) =>
           setTimeout(() => resolve({ data: null, error: new Error('Connection timed out. Check your internet and try again.') }), 15000)
         ),
-      ])
+      ]) as Promise<any>)
 
       if (error) {
         setError(error.message)
@@ -92,7 +92,7 @@ function Step0({ onNext }: { onNext: () => void }) {
       toast.success('Password set! Continuing...')
       onNext()
 
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.')
       toast.error('Something went wrong. Please try again.')
       setSaving(false)

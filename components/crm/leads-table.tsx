@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useCallback } from 'react'
 import {
@@ -27,6 +27,7 @@ interface LeadsTableProps {
   onEditLead?: (lead: Lead) => void
   onLeadsChanged?: () => void
   aiScoringEnabled?: boolean
+  profiles?: Array<{ id: string; full_name: string; email: string; role: string }>
 }
 
 function getSentimentLabel(score: number) {
@@ -73,7 +74,7 @@ function getStatusLabel(status: string) {
   return status.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged, aiScoringEnabled = false }: LeadsTableProps) {
+export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged, aiScoringEnabled = false, profiles = [] }: LeadsTableProps) {
   const [selected, setSelected] = useState<string[]>([])
   const [bulkLoading, setBulkLoading] = useState<string | null>(null)
 
@@ -264,6 +265,7 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged, aiSc
               <TableHead>Intent</TableHead>
               <TableHead>Budget</TableHead>
               <TableHead>Compliance</TableHead>
+              <TableHead>Stored By</TableHead>
               <TableHead>Last Contact</TableHead>
               <TableHead className="w-12" />
             </TableRow>
@@ -303,6 +305,18 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged, aiSc
                     <div className="flex items-center gap-1">{getComplianceIcon(lead.gst_status)}<span className="text-xs">GST</span></div>
                     <div className="flex items-center gap-1">{getComplianceIcon(lead.pan_status)}<span className="text-xs">PAN</span></div>
                   </div>
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const creator = profiles.find(p => p.id === lead.user_id)
+                    if (!creator) return <span className="text-xs text-muted-foreground">—</span>
+                    return (
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-foreground">{creator.full_name}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{creator.role === 'sales' ? 'sales rep' : creator.role}</span>
+                      </div>
+                    )
+                  })()}
                 </TableCell>
                 <TableCell>
                   <span className="text-xs text-muted-foreground">

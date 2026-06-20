@@ -1,13 +1,27 @@
 'use client'
+
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import {
   Building2, Users, CreditCard, Settings, TrendingUp, Loader2,
-  CheckCircle2, Circle, Plug, FileText, UserPlus
+  CheckCircle2, Circle, Plug, FileText, UserPlus, ShieldAlert,
+  ArrowRight, Activity, Clock
 } from 'lucide-react'
 import Link from 'next/link'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { formatDistanceToNow } from 'date-fns'
+
+interface ActivityLog {
+  id: string
+  user_email: string
+  action: string
+  entity_type: string
+  created_at: string
+}
 
 interface CompanyStats {
+  companyName: string
   totalMembers: number
   activeMembers: number
   totalLeads: number
@@ -20,166 +34,251 @@ interface CompanyStats {
   integrationConnected: boolean
   firstLead: boolean
   firstDeal: boolean
+  recentActivity: ActivityLog[]
 }
 
 export default function CompanyAdminPage() {
   const [stats, setStats] = useState<CompanyStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [companyName, setCompanyName] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-
-      // Get company
-      const { data: memberData } = await (supabase as any)
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single()
-      const cid = memberData?.company_id
-      if (!cid) { setLoading(false); return }
-
-      const [
-        { data: company },
-        { count: totalMembers },
-        { count: activeMembers },
-        { count: totalLeads },
-        { count: totalDeals },
-        { data: profile },
-        { data: integrations },
-      ] = await Promise.all([
-        (supabase as any).from('companies').select('name, plan_id, setup_complete').eq('id', cid).single(),
-        (supabase as any).from('company_members').select('*', { count: 'exact', head: true }).eq('company_id', cid),
-        (supabase as any).from('company_members').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true),
-        supabase.from('leads').select('*', { count: 'exact', head: true }).eq('company_id' as any, cid),
-        (supabase as any).from('deals').select('*', { count: 'exact', head: true }).eq('company_id', cid),
-        (supabase as any).from('profiles').select('onboarding_completed').eq('id', user.id).single(),
-        (supabase as any).from('company_integrations').select('integration_type, is_active').eq('company_id', cid),
-      ])
-
-      setCompanyName(company?.name ?? '')
-      setStats({
-        totalMembers: totalMembers ?? 0,
-        activeMembers: activeMembers ?? 0,
-        totalLeads: totalLeads ?? 0,
-        totalDeals: totalDeals ?? 0,
-        planName: company?.plan_id ?? 'basic',
-        setupComplete: !!company?.setup_complete,
-        passwordChanged: !!profile?.onboarding_completed,
-        profileComplete: !!company?.name,
-        teamAdded: (totalMembers ?? 0) > 1,
-        integrationConnected: (integrations ?? []).some((i: any) => i.is_active),
-        firstLead: (totalLeads ?? 0) > 0,
-        firstDeal: (totalDeals ?? 0) > 0,
-      })
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/dashboard/admin/stats')
+      if (!res.ok) {
+        throw new Error('Failed to fetch admin stats')
+      }
+      const data = await res.json()
+      setStats(data)
+    } catch (err: any) {
+      setError(err.message || 'An error occurred while loading stats')
+    } finally {
       setLoading(false)
     }
-    load()
+  }
+
+  useEffect(() => {
+    fetchStats()
   }, [])
 
-  const statCards = stats ? [
-    { label: 'Total Employees', value: stats.totalMembers, icon: Users, href: '/dashboard/admin/team', color: 'text-blue-600' },
-    { label: 'Active Members', value: stats.activeMembers, icon: Users, href: '/dashboard/admin/team', color: 'text-emerald-600' },
-    { label: 'Total Leads', value: stats.totalLeads, icon: TrendingUp, href: '/dashboard/leads', color: 'text-amber-600' },
-    { label: 'Deals', value: stats.totalDeals, icon: CreditCard, href: '/dashboard/deals', color: 'text-violet-600' },
-  ] : []
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="size-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading workspace dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
-  const quickLinks = [
-    { label: 'Add Employee', desc: 'Invite team members', href: '/dashboard/admin/team', icon: UserPlus },
-    { label: 'Company Settings', desc: 'Branding, timezone, domain', href: '/dashboard/admin/settings', icon: Settings },
-    { label: 'Billing & Plan', desc: 'Subscription, invoices, usage', href: '/dashboard/admin/billing', icon: CreditCard },
-    { label: 'Integrations', desc: 'Email, WhatsApp, SMS', href: '/dashboard/admin/integrations', icon: Plug },
-    { label: 'Audit Logs', desc: 'Organization activity trail', href: '/dashboard/admin/audit-logs', icon: FileText },
+  if (error || !stats) {
+    return (
+      <div className="p-6">
+        <div className="border border-destructive/50 rounded-xl p-6 bg-destructive/5 text-destructive max-w-2xl flex items-start gap-4">
+          <ShieldAlert className="size-6 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-lg">Error Loading Dashboard</h3>
+            <p className="text-sm opacity-90 mt-1">{error || 'Could not load company statistics. Make sure you are logged in as an administrator.'}</p>
+            <button onClick={() => { setLoading(true); fetchStats() }} className="mt-4 text-xs font-semibold px-4 py-2 border border-destructive rounded-lg hover:bg-destructive/10 transition-colors">
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const statCards = [
+    { label: 'Total Employees', value: stats.totalMembers, icon: Users, href: '/dashboard/admin/team', color: 'text-blue-500 bg-blue-500/10' },
+    { label: 'Active Seats', value: stats.activeMembers, icon: Users, href: '/dashboard/admin/team', color: 'text-emerald-500 bg-emerald-500/10' },
+    { label: 'Total Leads', value: stats.totalLeads, icon: TrendingUp, href: '/dashboard/leads', color: 'text-amber-500 bg-amber-500/10' },
+    { label: 'Open Deals', value: stats.totalDeals, icon: CreditCard, href: '/dashboard/deals', color: 'text-violet-500 bg-violet-500/10' },
   ]
 
-  const setupChecklist = stats ? [
-    { label: 'Password changed', done: stats.passwordChanged },
-    { label: 'Company profile complete', done: stats.profileComplete },
-    { label: 'Team members added', done: stats.teamAdded },
-    { label: 'First integration connected', done: stats.integrationConnected },
-    { label: 'First lead created', done: stats.firstLead },
-    { label: 'First deal created', done: stats.firstDeal },
-  ] : []
+  const quickLinks = [
+    { label: 'Add Employee', desc: 'Invite new team members', href: '/dashboard/admin/team', icon: UserPlus },
+    { label: 'Company Settings', desc: 'Profile, billing address, tax details', href: '/dashboard/admin/company-settings', icon: Settings },
+    { label: 'Integrations', desc: 'Connect Email, WhatsApp & SMS', href: '/dashboard/admin/integrations', icon: Plug },
+    { label: 'Audit Logs', desc: 'Organization activity logs', href: '/dashboard/admin/audit-logs', icon: FileText },
+    { label: 'Billing & Plan', desc: 'Plan status and upgrades', href: '/dashboard/admin/billing', icon: CreditCard },
+  ]
+
+  const setupChecklist = [
+    { label: 'Change temporary password', done: stats.passwordChanged },
+    { label: 'Complete company profile details', done: stats.profileComplete },
+    { label: 'Add team members', done: stats.teamAdded },
+    { label: 'Connect an communication integration', done: stats.integrationConnected },
+    { label: 'Create your first lead', done: stats.firstLead },
+    { label: 'Create your first deal', done: stats.firstDeal },
+  ]
+
   const completedCount = setupChecklist.filter(i => i.done).length
+  const progressPercent = Math.round((completedCount / setupChecklist.length) * 100)
+
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case 'team.member_invited': return 'invited a new team member'
+      case 'team.member_reactivated': return 'reactivated team member'
+      case 'team.member_deactivated': return 'deactivated team member'
+      case 'team.member_removed': return 'removed team member'
+      case 'team.role_updated': return 'updated team member role'
+      case 'company.created': return 'completed company setup'
+      case 'integration.connected': return 'connected a new integration'
+      case 'lead.created': return 'created a new lead'
+      case 'deal.created': return 'created a new deal'
+      default: return action.replace(/\./g, ' ')
+    }
+  }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Building2 className="size-6" />
-          {companyName ? `${companyName} — ` : ''}Company Admin
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage your workspace, team, billing and integrations</p>
+    <div className="p-6 space-y-6 max-w-6xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-3">
+            <Building2 className="size-8 text-primary shrink-0" />
+            {stats.companyName ? `${stats.companyName} Workspace` : 'Company Admin Panel'}
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">Workspace configurations, team operations, integrations, and compliance auditing</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="px-3 py-1 text-xs font-semibold capitalize bg-primary/10 text-primary hover:bg-primary/15 border-0">
+            {stats.planName} Plan
+          </Badge>
+          {stats.setupComplete ? (
+            <Badge variant="outline" className="px-3 py-1 text-xs font-semibold text-emerald-600 border-emerald-500/20 bg-emerald-500/5">
+              Setup Active
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="px-3 py-1 text-xs font-semibold text-amber-600 border-amber-500/20 bg-amber-500/5 animate-pulse">
+              Onboarding Active
+            </Badge>
+          )}
+        </div>
       </div>
 
-      {loading ? <Loader2 className="size-6 animate-spin text-muted-foreground" /> : (
-        <>
-          {/* Stat Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {statCards.map(c => (
-              <Link key={c.label} href={c.href} className="border rounded-xl p-5 bg-card hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm text-muted-foreground">{c.label}</p>
-                  <c.icon className={`size-5 ${c.color}`} />
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((c, i) => (
+          <Link key={i} href={c.href}>
+            <Card className="hover:shadow-md hover:border-primary/20 transition-all cursor-pointer group h-full">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{c.label}</p>
+                  <p className="text-3xl font-bold tracking-tight group-hover:text-primary transition-colors">{c.value}</p>
                 </div>
-                <p className="text-3xl font-bold">{c.value}</p>
-              </Link>
-            ))}
-          </div>
+                <div className={`p-3 rounded-xl ${c.color} transition-transform group-hover:scale-110`}>
+                  <c.icon className="size-5" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Setup Checklist */}
-            {!stats?.setupComplete && (
-              <div className="border rounded-xl bg-card p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="font-semibold text-sm">Onboarding Checklist</p>
-                  <span className="text-xs text-muted-foreground">{completedCount}/6 complete</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Section - Quick Actions and Checklist */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Onboarding Checklist */}
+          {!stats.setupComplete && (
+            <Card className="border-amber-500/20 bg-amber-500/[0.02]">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-bold uppercase tracking-wider text-amber-700 dark:text-amber-500">Workspace Onboarding</CardTitle>
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-500">{completedCount} of {setupChecklist.length} steps completed</span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-1.5 mb-4">
-                  <div
-                    className="bg-primary rounded-full h-1.5 transition-all"
-                    style={{ width: `${(completedCount / 6) * 100}%` }}
-                  />
+                <CardDescription className="text-amber-700/80 dark:text-amber-400/85">Complete these setup steps to launch your CRM workspace for your team.</CardDescription>
+                <div className="pt-2">
+                  <Progress value={progressPercent} className="h-2 bg-amber-200/50 dark:bg-amber-950/50" />
                 </div>
-                <ul className="space-y-2.5">
-                  {setupChecklist.map(item => (
-                    <li key={item.label} className="flex items-center gap-2.5 text-sm">
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {setupChecklist.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-2.5 rounded-lg border bg-card/60 backdrop-blur-sm border-border/50">
                       {item.done ? (
-                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                        <CheckCircle2 className="size-5 text-emerald-500 shrink-0" />
                       ) : (
-                        <Circle className="size-4 text-muted-foreground/40 shrink-0" />
+                        <Circle className="size-5 text-muted-foreground/30 shrink-0" />
                       )}
-                      <span className={item.done ? 'text-muted-foreground line-through' : 'text-foreground'}>
+                      <span className={`text-xs font-medium ${item.done ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                         {item.label}
                       </span>
-                    </li>
+                    </div>
                   ))}
-                </ul>
-              </div>
-            )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-            {/* Quick Links */}
-            <div className="grid gap-2.5">
-              {quickLinks.map(l => (
-                <Link key={l.href} href={l.href} className="flex items-center gap-4 p-4 border rounded-xl bg-card hover:shadow-md transition-shadow">
-                  <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <l.icon className="size-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">{l.label}</p>
-                    <p className="text-xs text-muted-foreground">{l.desc}</p>
-                  </div>
-                  <span className="ml-auto text-muted-foreground">→</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
+          {/* Quick Actions Grid */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-bold">Quick Configurations</CardTitle>
+              <CardDescription>Configure user provisioning, company assets, billing statements, and communications</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {quickLinks.map((l, i) => (
+                  <Link key={i} href={l.href}>
+                    <div className="flex items-center gap-4 p-4 border border-border/55 rounded-xl hover:bg-muted/40 hover:border-primary/20 transition-all group cursor-pointer h-full">
+                      <div className="p-2.5 rounded-lg bg-primary/5 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all shrink-0">
+                        <l.icon className="size-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="font-semibold text-sm group-hover:text-primary transition-colors">{l.label}</p>
+                        <p className="text-xs text-muted-foreground leading-normal">{l.desc}</p>
+                      </div>
+                      <ArrowRight className="size-4 text-muted-foreground ml-auto group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Section - Recent Activity */}
+        <div className="space-y-6">
+          <Card className="h-full">
+            <CardHeader className="pb-3 border-b">
+              <div className="flex items-center gap-2">
+                <Activity className="size-4 text-primary shrink-0" />
+                <CardTitle className="text-base font-bold">Recent Activities</CardTitle>
+              </div>
+              <CardDescription>Last 10 administrative operations</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {stats.recentActivity.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Clock className="size-8 mb-2 opacity-30 animate-pulse" />
+                  <p className="text-xs">No admin logs recorded yet</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {stats.recentActivity.map((log) => (
+                    <div key={log.id} className="flex gap-3 text-xs leading-normal pb-3 border-b last:border-0 border-border/40">
+                      <div className="size-2 rounded-full bg-primary shrink-0 mt-1.5" />
+                      <div className="space-y-1 min-w-0">
+                        <p className="font-medium text-foreground dark:text-zinc-200">
+                          <span className="text-primary font-semibold truncate block max-w-full sm:inline">{log.user_email}</span>{' '}
+                          {getActionLabel(log.action)}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/80 flex items-center gap-1.5">
+                          <Badge variant="outline" className="px-1.5 py-0 text-[9px] uppercase border-border/50 text-muted-foreground">
+                            {log.entity_type}
+                          </Badge>
+                          <span>{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

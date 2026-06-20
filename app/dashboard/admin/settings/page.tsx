@@ -1,14 +1,14 @@
 'use client'
-import { useEffect, useState } from 'react'
+
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CRMHeader } from '@/components/crm/crm-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Save, Upload } from 'lucide-react'
+import { Loader2, Save, Upload, AlertTriangle, Download } from 'lucide-react'
 import { toast } from 'sonner'
-import { useRef } from 'react'
 
 const TIMEZONES = [
   'Asia/Kolkata', 'Asia/Dubai', 'Asia/Singapore', 'Asia/Tokyo',
@@ -20,6 +20,7 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [companyId, setCompanyId] = useState<string | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState({
@@ -101,16 +102,99 @@ export default function AdminSettingsPage() {
     }
   }
 
+  // Helper to trigger browser downloads
+  function triggerDownload(content: string, filename: string, contentType: string) {
+    const blob = new Blob([content], { type: contentType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Export workspace data as JSON format
+  async function exportAsJSON() {
+    if (!companyId) return
+    setExporting(true)
+    const supabase = createClient()
+
+    try {
+      const [leadsRes, dealsRes, tasksRes, membersRes] = await Promise.all([
+        supabase.from('leads').select('*').eq('company_id' as any, companyId),
+        (supabase as any).from('deals').select('*').eq('company_id', companyId),
+        (supabase as any).from('tasks').select('*').eq('user_id', companyId), // tasks might link differently, let's select all tasks or filter
+        (supabase as any).from('company_members').select('*').eq('company_id', companyId)
+      ])
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        companyId,
+        leads: leadsRes.data || [],
+        deals: dealsRes.data || [],
+        tasks: tasksRes.data || [],
+        members: membersRes.data || [],
+      }
+
+      triggerDownload(
+        JSON.stringify(exportData, null, 2),
+        `klinq-crm-export-${Date.now()}.json`,
+        'application/json'
+      )
+      toast.success('Workspace JSON data exported successfully!')
+    } catch (err: any) {
+      toast.error('Export failed: ' + err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // Export leads data as CSV format
+  async function exportLeadsAsCSV() {
+    if (!companyId) return
+    setExporting(true)
+    const supabase = createClient()
+
+    try {
+      const { data: leads } = await supabase.from('leads').select('*').eq('company_id' as any, companyId)
+      if (!leads || leads.length === 0) {
+        toast.error('No leads available to export')
+        setExporting(false)
+        return
+      }
+
+      const headers = ['id', 'full_name', 'email', 'phone_number', 'company', 'status', 'buying_intent', 'created_at']
+      const rows = leads.map((l: any) =>
+        headers.map(h => {
+          const val = l[h] ? String(l[h]).replace(/"/g, '""') : ''
+          return `"${val}"`
+        }).join(',')
+      )
+
+      const csvContent = [headers.join(','), ...rows].join('\n')
+      triggerDownload(csvContent, `klinq-leads-${Date.now()}.csv`, 'text/csv')
+      toast.success('Leads CSV data exported successfully!')
+    } catch (err: any) {
+      toast.error('Export failed: ' + err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <CRMHeader title="Company Settings" subtitle="Branding, localization, tax details, and workspace configuration" />
-      <div className="p-6 max-w-2xl">
-        {loading ? <Loader2 className="size-6 animate-spin text-muted-foreground" /> : (
+      <div className="p-6 max-w-2xl space-y-6">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="size-8 animate-spin text-primary" />
+          </div>
+        ) : (
           <form onSubmit={handleSave} className="space-y-6">
 
             {/* General */}
-            <div className="border rounded-xl p-6 bg-card space-y-5">
-              <p className="font-semibold text-sm border-b pb-3">General</p>
+            <div className="border rounded-xl p-6 bg-card space-y-5 shadow-sm border-border/50">
+              <p className="font-semibold text-sm border-b pb-3">General Details</p>
 
               <div className="space-y-1.5">
                 <Label>Company Name</Label>
@@ -137,11 +221,11 @@ export default function AdminSettingsPage() {
                     className="shrink-0 gap-1.5"
                   >
                     {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-                    {uploading ? 'Uploading…' : 'Upload'}
+                    {uploading ? 'Uploading…' : 'Upload Logo'}
                   </Button>
                 </div>
                 {form.logo_url && (
-                  <img src={form.logo_url} alt="Logo preview" className="h-10 w-auto mt-2 rounded border object-contain" />
+                  <img src={form.logo_url} alt="Logo preview" className="h-10 w-auto mt-2 rounded border object-contain bg-white p-1" />
                 )}
               </div>
 
@@ -152,7 +236,7 @@ export default function AdminSettingsPage() {
                     type="color"
                     value={form.brand_color}
                     onChange={f('brand_color')}
-                    className="size-10 rounded border cursor-pointer"
+                    className="size-10 rounded border cursor-pointer bg-transparent"
                   />
                   <Input value={form.brand_color} onChange={f('brand_color')} className="font-mono w-32" maxLength={7} />
                 </div>
@@ -162,14 +246,14 @@ export default function AdminSettingsPage() {
                 <div className="space-y-1.5">
                   <Label>Timezone</Label>
                   <Select value={form.timezone} onValueChange={v => setForm(p => ({ ...p, timezone: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="focus:ring-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{TIMEZONES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Currency</Label>
                   <Select value={form.currency} onValueChange={v => setForm(p => ({ ...p, currency: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="focus:ring-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
@@ -182,7 +266,7 @@ export default function AdminSettingsPage() {
             </div>
 
             {/* Tax & Billing Details */}
-            <div className="border rounded-xl p-6 bg-card space-y-5">
+            <div className="border rounded-xl p-6 bg-card space-y-5 shadow-sm border-border/50">
               <p className="font-semibold text-sm border-b pb-3">Tax & Billing Details</p>
 
               <div className="space-y-1.5">
@@ -208,11 +292,52 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            <Button type="submit" disabled={saving} className="gap-2">
+            <Button type="submit" disabled={saving} className="gap-2 shadow-sm w-full sm:w-auto">
               {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-              {saving ? 'Saving…' : 'Save Settings'}
+              {saving ? 'Saving Settings…' : 'Save Settings'}
             </Button>
           </form>
+        )}
+
+        {/* Danger Zone */}
+        {!loading && (
+          <div className="border border-destructive/20 rounded-xl p-6 bg-destructive/[0.02] space-y-5 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-destructive/10 pb-3 text-destructive">
+              <AlertTriangle className="size-5 shrink-0" />
+              <p className="font-bold text-sm">Danger Zone</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h4 className="text-sm font-semibold">Export Workspace Data</h4>
+                <p className="text-xs text-muted-foreground">Download all leads, deals, tasks, and member records for backup or offline analysis.</p>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={exportAsJSON}
+                  disabled={exporting}
+                  className="gap-1.5 border-border text-xs"
+                >
+                  <Download className="size-3.5" />
+                  Export as JSON
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={exportLeadsAsCSV}
+                  disabled={exporting}
+                  className="gap-1.5 border-border text-xs"
+                >
+                  <Download className="size-3.5" />
+                  Export Leads (CSV)
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

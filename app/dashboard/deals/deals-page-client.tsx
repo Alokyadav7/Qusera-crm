@@ -31,6 +31,7 @@ export interface Deal {
   close_date: string | null
   contact_id: string | null
   assigned_to: string | null
+  created_by?: string | null
   probability: number
   notes: string | null
   last_activity_at: string
@@ -40,7 +41,17 @@ export interface Deal {
 
 const STALE_DAYS = 7
 
-export function DealsPageClient({ initialDeals }: { initialDeals: Deal[] }) {
+export function DealsPageClient({
+  initialDeals,
+  userRole,
+  currentUserId,
+  companyId,
+}: {
+  initialDeals: Deal[]
+  userRole: string
+  currentUserId: string
+  companyId: string
+}) {
   const [deals, setDeals] = useState<Deal[]>(initialDeals)
   const [view, setView] = useState<'kanban' | 'list'>('kanban')
   const [search, setSearch] = useState('')
@@ -51,19 +62,21 @@ export function DealsPageClient({ initialDeals }: { initialDeals: Deal[] }) {
 
   // ── Fetch + Realtime ────────────────────────────────
   useEffect(() => {
-    // Refresh from API so RLS-blocked server render is covered
     const load = async () => {
       const supabase = createClient()
-      const { data, error } = await (supabase as any)
+      let q = (supabase as any)
         .from('deals')
         .select('*, contact:contacts(full_name, email)')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false })
-      if (!error && data) { setDeals(data as Deal[]) }
-      else {
-        // Fallback: API route
-        const res = await fetch('/api/data?table=deals&limit=200')
-        if (res.ok) { const j = await res.json(); if (j.data) setDeals(j.data as Deal[]) }
+      
+      const isManagerOrAdmin = ['owner', 'admin', 'manager'].includes(userRole)
+      if (!isManagerOrAdmin) {
+        q = q.or(`assigned_to.eq.${currentUserId},created_by.eq.${currentUserId}`)
       }
+      
+      const { data, error } = await q
+      if (!error && data) { setDeals(data as Deal[]) }
     }
     load()
 
@@ -71,12 +84,33 @@ export function DealsPageClient({ initialDeals }: { initialDeals: Deal[] }) {
     const ch = supabase
       .channel('deals-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deals' }, payload => {
-        if (payload.eventType === 'INSERT') setDeals(p => [payload.new as Deal, ...p])
-        else if (payload.eventType === 'UPDATE') setDeals(p => p.map(d => d.id === (payload.new as Deal).id ? { ...d, ...payload.new as Deal } : d))
-        else if (payload.eventType === 'DELETE') setDeals(p => p.filter(d => d.id !== (payload.old as any).id))
+        const newDeal = payload.new as Deal
+        const oldDeal = payload.old as Deal
+
+        if (payload.eventType === 'INSERT') {
+          if (newDeal.company_id === companyId) {
+            const isManagerOrAdmin = ['owner', 'admin', 'manager'].includes(userRole)
+            if (isManagerOrAdmin || newDeal.assigned_to === currentUserId || newDeal.created_by === currentUserId) {
+              setDeals(p => [newDeal, ...p])
+            }
+          }
+        }
+        else if (payload.eventType === 'UPDATE') {
+          if (newDeal.company_id === companyId) {
+            const isManagerOrAdmin = ['owner', 'admin', 'manager'].includes(userRole)
+            if (isManagerOrAdmin || newDeal.assigned_to === currentUserId || newDeal.created_by === currentUserId) {
+              setDeals(p => p.map(d => d.id === newDeal.id ? { ...d, ...newDeal } : d))
+            } else {
+              setDeals(p => p.filter(d => d.id !== newDeal.id))
+            }
+          }
+        }
+        else if (payload.eventType === 'DELETE') {
+          setDeals(p => p.filter(d => d.id !== oldDeal.id))
+        }
       }).subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [])
+  }, [companyId, userRole, currentUserId])
 
   const isStale = (d: Deal) => {
     if (['won', 'lost'].includes(d.stage)) return false

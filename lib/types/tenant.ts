@@ -1,4 +1,4 @@
-﻿// ─── Klinq CRM — Tenant TypeScript Types ───────────────────────────────────────
+// ─── Klinq CRM — Tenant TypeScript Types ───────────────────────────────────────
 // All multi-tenant data structures
 
 export type CompanyStatus = 'trial' | 'active' | 'suspended' | 'canceled' | 'deleted'
@@ -257,6 +257,7 @@ export interface ImpersonationSession {
 // ── Tenant Context (injected by middleware) ──────────────────
 export interface TenantContext {
   userId: string
+  userEmail: string
   companyId: string
   workspaceId: string | null
   role: MemberRole

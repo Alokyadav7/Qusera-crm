@@ -6,6 +6,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard,
   Building2,
+  UserPlus,
   Activity,
   FileText,
   HelpCircle,
@@ -38,7 +39,7 @@ const NAV_GROUPS = [
     label: 'Companies',
     items: [
       { href: '/super-admin/companies', label: 'Companies', icon: Building2, exact: false },
-      { href: '/super-admin/onboard-company', label: 'Onboard Company', icon: Settings, exact: false },
+      { href: '/super-admin/onboard-company', label: 'Onboard Company', icon: UserPlus, exact: false },
       { href: '/super-admin/demo-requests', label: 'Demo Requests', icon: Sparkles, exact: false },
     ],
   },
@@ -63,7 +64,7 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Config',
+    label: 'Configuration',
     items: [
       { href: '/super-admin/settings', label: 'Settings', icon: Settings, exact: false },
     ],

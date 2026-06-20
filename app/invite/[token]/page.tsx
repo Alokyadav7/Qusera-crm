@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { InviteAcceptForm } from './invite-accept-form'
 import { Shield, XCircle } from 'lucide-react'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,12 +39,12 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
               ? 'This invite has expired. Ask your admin to send a new one.'
               : 'This invite link is invalid or does not exist.'}
           </p>
-          <a
+          <Link
             href="/login"
             className="mt-6 inline-block text-sm text-zinc-500 hover:text-zinc-800 transition-colors"
           >
             ← Go to login
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -78,7 +79,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
         <p className="text-center text-xs text-zinc-400 mt-4">
           Already have an account?{' '}
-          <a href="/login" className="text-zinc-600 hover:text-zinc-900 transition-colors">Sign in</a>
+          <Link href="/login" className="text-zinc-600 hover:text-zinc-900 transition-colors">Sign in</Link>
         </p>
       </div>
     </div>

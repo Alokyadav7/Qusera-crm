@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Search, Plus, Building2, Users, MoreHorizontal, RefreshCw,
   Download, Play, Pause, Trash2, Mail, Eye, Calendar, Shield,
-  TrendingUp, Activity, AlertTriangle
+  TrendingUp, Activity, AlertTriangle, Edit2
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
+import { EditCompanyModal, DeleteModal } from '@/components/super-admin/company-crud-panel'
 
 type FilterStatus = 'all' | 'active' | 'trial' | 'suspended'
 
@@ -23,6 +24,8 @@ interface Company {
   created_at: string
   setup_complete: boolean
   member_count?: number
+  lead_count?: number
+  mrr?: number
   admin_name?: string
   admin_email?: string
   employee_count?: string
@@ -44,6 +47,8 @@ export default function CompaniesPage() {
   const [filter, setFilter] = useState<FilterStatus>('all')
   const [actingOn, setActingOn] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null)
+  const [deletingCompany, setDeletingCompany] = useState<Company | null>(null)
 
   const fetchCompanies = useCallback(async () => {
     setLoading(true)
@@ -58,7 +63,9 @@ export default function CompaniesPage() {
     }
   }, [])
 
-  useEffect(() => { fetchCompanies() }, [fetchCompanies])
+  useEffect(() => {
+    fetchCompanies()
+  }, [fetchCompanies])
 
   useEffect(() => {
     const handler = () => setOpenMenu(null)
@@ -92,10 +99,13 @@ export default function CompaniesPage() {
     setOpenMenu(null)
     try {
       if (action === 'view') {
-        const res = await fetch('/api/admin/impersonate', {
+        const res = await fetch('/api/super-admin/impersonate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ company_id: companyId }),
+          body: JSON.stringify({
+            companyId,
+            reason: `Super Admin access to ${companyName} from Companies List`,
+          }),
         })
         if (res.ok) {
           toast.success(`Now viewing as ${companyName}`)
@@ -114,7 +124,10 @@ export default function CompaniesPage() {
           body: JSON.stringify({ company_id: companyId }),
         })
         if (res.ok) toast.success(`Onboarding email resent to ${companyName} admin`)
-        else { const err = await res.json(); toast.error(err.error || 'Failed to resend') }
+        else {
+          const err = await res.json()
+          toast.error(err.error || 'Failed to resend')
+        }
         return
       }
 
@@ -142,7 +155,7 @@ export default function CompaniesPage() {
   }
 
   function exportCSV() {
-    const headers = ['Company Name', 'Health', 'Admin Email', 'Plan', 'Status', 'Employees', 'Onboarded']
+    const headers = ['Company Name', 'Health', 'Admin Email', 'Plan', 'Status', 'MRR', 'Usage', 'Onboarded']
     const rows = filtered.map(c => {
       const h = getHealthScore(c)
       return [
@@ -151,7 +164,8 @@ export default function CompaniesPage() {
         c.admin_email ?? '',
         c.subscription?.plan?.display_name ?? c.plan_id ?? 'Free',
         c.status,
-        c.employee_count ?? '',
+        c.mrr ?? 0,
+        c.lead_count ?? 0,
         new Date(c.created_at).toLocaleDateString('en-IN'),
       ]
     })
@@ -180,85 +194,84 @@ export default function CompaniesPage() {
   const suspendedCount = companies.filter(c => c.status === 'suspended').length
 
   return (
-    <div className="p-4 sm:p-6 xl:p-10 space-y-5 sm:space-y-6 max-w-[1600px] bg-black min-h-screen text-zinc-100">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto bg-zinc-950 min-h-screen text-zinc-100 font-mono">
 
-      {/* ── Page Header ─────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-zinc-900 pb-6">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-zinc-900 pb-5">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-bold tracking-widest uppercase mb-2 select-none">
             <Shield className="size-3" />
             <span>Corporate Instances</span>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Tenant Companies</h1>
-          <p className="text-zinc-500 text-xs mt-1">
-            Configure system states, isolate resources, track health indicators and impersonate workspaces.
+          <h1 className="text-xl font-bold text-white tracking-tight uppercase">Tenant Companies</h1>
+          <p className="text-zinc-500 text-xs mt-1 font-sans">
+            Configure system states, isolate resources, track health indicators, and impersonate workspaces.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 select-none">
           <button
             onClick={fetchCompanies}
             disabled={loading}
-            className="p-2 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded transition-all cursor-pointer"
+            className="p-2 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-850 rounded transition-all cursor-pointer"
             title="Refresh"
           >
             <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={exportCSV}
-            className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] font-semibold px-3 py-2 rounded transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-zinc-450 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-850 text-[11px] font-bold px-3 py-2 rounded transition-all cursor-pointer"
           >
             <Download className="size-3.5" />
             <span className="hidden sm:inline">Export CSV</span>
           </button>
           <Link
             href="/super-admin/onboard-company"
-            className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-zinc-100 text-zinc-900 text-[11px] font-bold px-3.5 py-2 rounded transition-all cursor-pointer whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-zinc-100 text-zinc-950 text-[11px] font-bold px-3.5 py-2 rounded transition-all whitespace-nowrap"
           >
             <Plus className="size-3.5" />
-            <span className="hidden sm:inline">Onboard Company</span>
-            <span className="sm:hidden">Onboard</span>
+            <span>Onboard Tenant</span>
           </Link>
         </div>
       </div>
 
-      {/* ── Stat Cards ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Stat Cards Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 select-none">
         {[
-          { label: 'Total Tenants', value: totalCompanies, icon: Building2, color: 'text-zinc-300', bg: 'bg-zinc-900 border-zinc-800' },
-          { label: 'Active', value: activeCount, icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/20' },
-          { label: 'In Trial', value: trialCount, icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/5 border-amber-500/20' },
-          { label: 'Suspended', value: suspendedCount, icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/5 border-red-500/20' },
+          { label: 'Total Tenants', value: totalCompanies, icon: Building2, color: 'text-zinc-350', border: 'border-zinc-800 bg-zinc-950' },
+          { label: 'Active sites', value: activeCount, icon: TrendingUp, color: 'text-emerald-400', border: 'border-zinc-800 bg-zinc-950' },
+          { label: 'In Trial', value: trialCount, icon: Activity, color: 'text-amber-400', border: 'border-zinc-800 bg-zinc-950' },
+          { label: 'Suspended', value: suspendedCount, icon: AlertTriangle, color: 'text-red-400', border: 'border-zinc-800 bg-zinc-950' },
         ].map(stat => (
-          <div key={stat.label} className={`flex items-center gap-3 px-4 py-3 rounded border ${stat.bg}`}>
-            <stat.icon className={`size-4 shrink-0 ${stat.color}`} />
+          <div key={stat.label} className={`flex items-center gap-3.5 px-4 py-3.5 rounded border ${stat.border}`}>
+            <stat.icon className={`size-4.5 shrink-0 ${stat.color}`} />
             <div>
-              <p className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">{stat.label}</p>
-              <p className={`text-xl font-black ${stat.color}`}>{loading ? '—' : stat.value}</p>
+              <p className="text-[9px] text-zinc-550 font-bold uppercase tracking-wider leading-none mb-1.5">{stat.label}</p>
+              <p className={`text-lg font-black leading-none ${stat.color}`}>{loading ? '—' : stat.value}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Search & Filter ──────────────────────────────────── */}
+      {/* Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-zinc-600 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search by name, slug or email…"
+            placeholder="Filter by name, slug or email..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full bg-zinc-900 border border-zinc-800 rounded pl-9 pr-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-700 transition-colors"
           />
         </div>
 
-        <div className="flex items-center gap-1 p-0.5 bg-zinc-900 border border-zinc-800 rounded w-full sm:w-auto">
+        <div className="flex items-center gap-1 p-0.5 bg-zinc-900 border border-zinc-800 rounded w-full sm:w-auto select-none">
           {FILTERS.map(f => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 text-[11px] font-bold rounded transition-colors cursor-pointer ${
+              className={`flex-1 sm:flex-initial px-3.5 py-1.5 text-[10px] font-bold rounded uppercase tracking-wider transition-colors cursor-pointer ${
                 filter === f.value
                   ? 'bg-zinc-700 text-white'
                   : 'text-zinc-500 hover:text-zinc-300'
@@ -270,183 +283,326 @@ export default function CompaniesPage() {
         </div>
 
         {filtered.length > 0 && (
-          <p className="text-zinc-600 text-xs ml-auto shrink-0">
-            {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+          <p className="text-zinc-600 text-xs ml-auto shrink-0 select-none">
+            {filtered.length} record{filtered.length !== 1 ? 's' : ''} found
           </p>
         )}
       </div>
 
-      {/* ── Table ───────────────────────────────────────────── */}
-      <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
+      {/* Main Companies Table / Cards Wrapper */}
+      <div className="bg-zinc-950 border border-zinc-800 rounded overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-24 text-zinc-500 text-xs font-mono gap-2">
-            <RefreshCw className="size-3.5 animate-spin text-zinc-400" />
-            <span>Fetching company clusters…</span>
+          <div className="flex items-center justify-center py-24 text-zinc-600 text-xs gap-2">
+            <RefreshCw className="size-3.5 animate-spin text-zinc-500" />
+            <span>Accessing cluster registry...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-24 gap-3 text-center">
-            <Building2 className="size-10 text-zinc-700 mb-1" />
-            <p className="text-zinc-400 text-xs font-bold">No instances found</p>
-            <p className="text-zinc-600 text-[11px]">
+          <div className="flex flex-col items-center py-20 gap-3 text-center">
+            <Building2 className="size-10 text-zinc-800 mb-1" />
+            <p className="text-zinc-500 text-xs font-bold uppercase">No matching environments</p>
+            <p className="text-zinc-650 text-[11px] font-sans">
               {search || filter !== 'all'
-                ? 'Adjust your filters or search query.'
-                : 'Onboard your first corporate tenant to get started.'}
+                ? 'Adjust your query criteria or filters.'
+                : 'No active workspaces are registered on the node.'}
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-900 bg-zinc-900/30 text-[9px] font-bold text-zinc-500 tracking-widest uppercase">
-                  <th className="px-5 py-3">Company</th>
-                  <th className="px-5 py-3">Health</th>
-                  <th className="px-5 py-3">Admin Owner</th>
-                  <th className="px-5 py-3">Members</th>
-                  <th className="px-5 py-3">Plan</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Onboarded</th>
-                  <th className="px-5 py-3">Last Active</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-900">
-                {filtered.map(company => {
-                  const health = getHealthScore(company)
-                  return (
-                    <tr key={company.id} className="hover:bg-zinc-900/20 transition-colors group">
+          <>
+            {/* Desktop & Tablet Viewport Table (>=640px) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-900 bg-zinc-900/25 text-[9px] font-bold text-zinc-550 tracking-widest uppercase select-none">
+                    <th className="px-5 py-3">Company Target</th>
+                    <th className="px-5 py-3">Plan</th>
+                    <th className="px-5 py-3">Health Status</th>
+                    <th className="px-5 py-3">Users</th>
+                    <th className="px-5 py-3 hidden lg:table-cell">MRR Pacing</th>
+                    <th className="px-5 py-3 hidden lg:table-cell">Usage (Leads)</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 hidden lg:table-cell">Last Active</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900">
+                  {filtered.map(company => {
+                    const health = getHealthScore(company)
+                    return (
+                      <tr key={company.id} className="hover:bg-zinc-900/10 transition-colors group">
+                        
+                        {/* Company profile & admin */}
+                        <td className="px-5 py-3.5">
+                          <p className="text-zinc-200 text-xs font-bold">{company.name}</p>
+                          <p className="text-zinc-650 text-[10px] font-mono mt-0.5">{company.slug} · {company.admin_email}</p>
+                        </td>
 
-                      {/* Company Profile */}
-                      <td className="px-5 py-3.5">
-                        <Link
-                          href={`/super-admin/companies/${company.id}`}
-                          className="text-zinc-200 text-xs font-bold hover:text-white transition-colors"
-                        >
-                          {company.name}
-                        </Link>
-                        <p className="text-zinc-600 text-[10px] font-mono mt-0.5">{company.slug}</p>
-                      </td>
+                        {/* Plan */}
+                        <td className="px-5 py-3.5">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-zinc-900 text-zinc-450 border border-zinc-800 select-none">
+                            {company.subscription?.plan?.display_name ?? company.plan_id ?? 'Free'}
+                          </span>
+                        </td>
 
-                      {/* Health Score */}
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 border rounded text-[9px] font-bold uppercase tracking-wider ${health.cls}`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                          {health.label}
-                        </span>
-                      </td>
+                        {/* Health status */}
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 border rounded text-[9px] font-bold uppercase tracking-wider ${health.cls}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                            {health.label}
+                          </span>
+                        </td>
 
-                      {/* Admin Owner */}
-                      <td className="px-5 py-3.5">
-                        <p className="text-zinc-300 text-xs font-semibold">{company.admin_name ?? '—'}</p>
-                        <p className="text-zinc-500 text-[10px] font-mono mt-0.5">{company.admin_email ?? '—'}</p>
-                      </td>
+                        {/* Users */}
+                        <td className="px-5 py-3.5 text-zinc-300 text-xs font-mono font-medium">
+                          {company.member_count ?? 0} nodes
+                        </td>
 
-                      {/* Members */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1.5 text-zinc-400">
-                          <Users className="size-3.5 text-zinc-600" />
-                          <span className="text-xs font-bold text-zinc-300">{company.member_count ?? 0}</span>
-                        </div>
-                      </td>
+                        {/* MRR (hidden on tablet) */}
+                        <td className="px-5 py-3.5 hidden lg:table-cell text-zinc-300 text-xs font-mono font-medium">
+                          ₹{(company.mrr ?? 0).toLocaleString('en-IN')}
+                        </td>
 
-                      {/* Plan */}
-                      <td className="px-5 py-3.5">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-zinc-900 text-zinc-400 border border-zinc-800 select-none">
-                          {company.subscription?.plan?.display_name ?? company.plan_id ?? 'Free'}
-                        </span>
-                      </td>
+                        {/* Usage (Leads) (hidden on tablet) */}
+                        <td className="px-5 py-3.5 hidden lg:table-cell text-zinc-400 text-xs font-mono">
+                          {company.lead_count ?? 0} leads
+                        </td>
 
-                      {/* Status */}
-                      <td className="px-5 py-3.5">
-                        <span className={STATUS_STYLE[company.status ?? 'trial'] ?? STATUS_STYLE.trial}>
-                          {company.status ?? 'trial'}
-                        </span>
-                      </td>
+                        {/* Status */}
+                        <td className="px-5 py-3.5 select-none">
+                          <span className={STATUS_STYLE[company.status] ?? STATUS_STYLE.trial}>
+                            {company.status}
+                          </span>
+                        </td>
 
-                      {/* Onboarded */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-mono">
-                          <Calendar className="size-3 text-zinc-700" />
-                          <span>{formatDistanceToNow(new Date(company.created_at), { addSuffix: true })}</span>
-                        </div>
-                      </td>
+                        {/* Last active (hidden on tablet) */}
+                        <td className="px-5 py-3.5 hidden lg:table-cell text-zinc-550 text-[10px] font-mono">
+                          {company.last_active_at
+                            ? formatDistanceToNow(new Date(company.last_active_at), { addSuffix: true })
+                            : '—'}
+                        </td>
 
-                      {/* Last Active */}
-                      <td className="px-5 py-3.5 text-zinc-500 text-[10px] font-mono">
-                        {company.last_active_at
-                          ? formatDistanceToNow(new Date(company.last_active_at), { addSuffix: true })
-                          : '—'}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1 relative">
-                          <button
-                            onClick={() => handleAction('view', company.id, company.name)}
-                            disabled={actingOn === company.id}
-                            title="Impersonate workspace"
-                            className="text-zinc-500 hover:text-white hover:bg-zinc-800 p-1.5 rounded border border-transparent hover:border-zinc-700 transition-all cursor-pointer disabled:opacity-40"
-                          >
-                            <Eye className="size-3.5" />
-                          </button>
-
-                          <div className="relative">
+                        {/* Actions dropdown */}
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1 relative">
                             <button
-                              onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === company.id ? null : company.id) }}
-                              className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded transition-colors cursor-pointer"
+                              onClick={() => handleAction('view', company.id, company.name)}
+                              disabled={actingOn === company.id}
+                              title="Impersonate workspace"
+                              className="text-zinc-500 hover:text-white hover:bg-zinc-900 p-1.5 rounded border border-transparent hover:border-zinc-800 transition-all cursor-pointer disabled:opacity-40"
                             >
-                              <MoreHorizontal className="size-3.5" />
+                              <Eye className="size-3.5" />
                             </button>
 
-                            {openMenu === company.id && (
-                              <div
-                                onClick={e => e.stopPropagation()}
-                                className="absolute right-0 top-8 z-50 w-44 bg-zinc-950 border border-zinc-800 rounded shadow-2xl py-1 text-xs text-left"
+                            <div className="relative">
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  setOpenMenu(openMenu === company.id ? null : company.id)
+                                }}
+                                className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-900 rounded transition-colors cursor-pointer"
                               >
-                                {company.status !== 'suspended' ? (
-                                  <button
-                                    onClick={() => handleAction('suspend', company.id, company.name)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-amber-400 hover:bg-zinc-900 transition-colors cursor-pointer"
-                                  >
-                                    <Pause className="size-3" /> Suspend Space
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleAction('activate', company.id, company.name)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-emerald-400 hover:bg-zinc-900 transition-colors cursor-pointer"
-                                  >
-                                    <Play className="size-3" /> Activate Space
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleAction('resend', company.id, company.name)}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-zinc-300 hover:bg-zinc-900 transition-colors cursor-pointer"
+                                <MoreHorizontal className="size-3.5" />
+                              </button>
+
+                              {openMenu === company.id && (
+                                <div
+                                  onClick={e => e.stopPropagation()}
+                                  className="absolute right-0 top-8 z-50 w-44 bg-zinc-950 border border-zinc-850 rounded shadow-2xl py-1 text-xs text-left"
                                 >
-                                  <Mail className="size-3" /> Resend Invite
-                                </button>
-                                <hr className="border-zinc-800 my-1" />
-                                <button
-                                  onClick={() => {
-                                    if (confirm(`Soft delete ${company.name}? Data retained for 30 days.`)) {
-                                      handleAction('delete', company.id, company.name)
-                                    }
-                                  }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                                >
-                                  <Trash2 className="size-3" /> Delete Tenant
-                                </button>
-                              </div>
-                            )}
+                                  {company.status !== 'suspended' ? (
+                                    <button
+                                      onClick={() => handleAction('suspend', company.id, company.name)}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-amber-400 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
+                                    >
+                                      <Pause className="size-3" /> Suspend Space
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleAction('activate', company.id, company.name)}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-emerald-450 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
+                                    >
+                                      <Play className="size-3" /> Activate Space
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleAction('resend', company.id, company.name)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-zinc-300 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
+                                  >
+                                    <Mail className="size-3" /> Resend Invite
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingCompany(company)
+                                      setOpenMenu(null)
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-zinc-300 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
+                                  >
+                                    <Edit2 className="size-3" /> Edit Details
+                                  </button>
+                                  <hr className="border-zinc-900 my-1" />
+                                  <button
+                                    onClick={() => {
+                                      setDeletingCompany(company)
+                                      setOpenMenu(null)
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer text-left"
+                                  >
+                                    <Trash2 className="size-3" /> Delete Tenant
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Viewport Card List (<640px) */}
+            <div className="sm:hidden p-3.5 space-y-4">
+              {filtered.map(company => {
+                const health = getHealthScore(company)
+                return (
+                  <div key={company.id} className="bg-zinc-950 border border-zinc-800 rounded p-4 space-y-4">
+                    
+                    {/* Header */}
+                    <div className="flex justify-between items-start border-b border-zinc-900 pb-2">
+                      <div>
+                        <p className="text-xs font-bold text-white leading-tight">{company.name}</p>
+                        <p className="text-[10px] text-zinc-550 font-mono mt-0.5">{company.slug}</p>
+                      </div>
+                      <span className={STATUS_STYLE[company.status] ?? STATUS_STYLE.trial}>
+                        {company.status}
+                      </span>
+                    </div>
+
+                    {/* Stats details */}
+                    <div className="grid grid-cols-2 gap-3 text-[10px] font-mono text-zinc-500">
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-zinc-650">Plan tier</span>
+                        <p className="text-zinc-350 mt-0.5">{company.subscription?.plan?.display_name ?? company.plan_id ?? 'Free'}</p>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-zinc-650">MRR Pacing</span>
+                        <p className="text-zinc-350 mt-0.5">₹{(company.mrr ?? 0).toLocaleString('en-IN')}</p>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-zinc-650">Health status</span>
+                        <p className="text-zinc-350 mt-0.5">{health.label}</p>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-zinc-650">Users</span>
+                        <p className="text-zinc-350 mt-0.5">{company.member_count ?? 0} active</p>
+                      </div>
+                    </div>
+
+                    {/* Mobile touch-optimized buttons (min 44px) */}
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        onClick={() => handleAction('view', company.id, company.name)}
+                        disabled={actingOn === company.id}
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-zinc-900 border border-zinc-800 text-zinc-350 text-xs font-bold h-11 rounded hover:bg-zinc-850 active:bg-zinc-800 transition-colors"
+                      >
+                        <Eye className="size-4" />
+                        <span>Impersonate</span>
+                      </button>
+
+                      <div className="relative">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation()
+                            setOpenMenu(openMenu === company.id ? null : company.id)
+                          }}
+                          className="w-11 h-11 flex items-center justify-center bg-zinc-900 border border-zinc-800 text-zinc-350 rounded hover:bg-zinc-850 active:bg-zinc-850 transition-colors"
+                          aria-label="More actions"
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </button>
+
+                        {openMenu === company.id && (
+                          <div
+                            onClick={e => e.stopPropagation()}
+                            className="absolute right-0 bottom-12 z-50 w-48 bg-zinc-950 border border-zinc-850 rounded shadow-2xl py-1.5 text-xs text-left"
+                          >
+                            {company.status !== 'suspended' ? (
+                              <button
+                                onClick={() => handleAction('suspend', company.id, company.name)}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-amber-400 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
+                              >
+                                <Pause className="size-3.5" /> Suspend Workspace
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleAction('activate', company.id, company.name)}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-emerald-400 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
+                              >
+                                <Play className="size-3.5" /> Activate Workspace
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleAction('resend', company.id, company.name)}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-zinc-300 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
+                            >
+                              <Mail className="size-3.5" /> Resend Onboarding
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingCompany(company)
+                                setOpenMenu(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-zinc-300 hover:bg-zinc-900 transition-colors cursor-pointer text-left"
+                            >
+                              <Edit2 className="size-3.5" /> Edit Details
+                            </button>
+                            <hr className="border-zinc-900 my-1" />
+                            <button
+                              onClick={() => {
+                                setDeletingCompany(company)
+                                setOpenMenu(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer text-left"
+                            >
+                              <Trash2 className="size-3.5" /> Delete Workspace
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
+
+      {/* Modals */}
+      {editingCompany && (
+        <EditCompanyModal
+          company={editingCompany as any}
+          onClose={() => setEditingCompany(null)}
+          onSaved={() => {
+            setEditingCompany(null)
+            fetchCompanies()
+          }}
+        />
+      )}
+
+      {deletingCompany && (
+        <DeleteModal
+          company={deletingCompany as any}
+          onClose={() => setDeletingCompany(null)}
+          onDeleted={() => {
+            setDeletingCompany(null)
+            fetchCompanies()
+          }}
+        />
+      )}
+
     </div>
   )
 }

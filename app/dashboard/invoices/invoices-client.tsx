@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -75,7 +75,7 @@ export function InvoicesPageClient({
       .channel('crm-invoices-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_invoices' }, async (payload) => {
         if (payload.eventType === 'INSERT') {
-          let newInv = payload.new as Invoice
+          const newInv = payload.new as Invoice
           if (newInv.contact_id) {
             const { data } = await supabase.from('contacts').select('full_name, email').eq('id', newInv.contact_id).single()
             if (data) newInv.contact = data as any

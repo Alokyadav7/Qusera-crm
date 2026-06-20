@@ -12,7 +12,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Company {
+export interface Company {
   id: string
   name: string
   slug: string
@@ -21,6 +21,8 @@ interface Company {
   industry?: string
   created_at: string
   suspension_reason?: string
+  plan?: string
+  plan_id?: string
 }
 
 interface Member {
@@ -70,7 +72,7 @@ function StatusBadge({ status }: { status: string }) {
 
 // ─── Edit Company Modal ───────────────────────────────────────────────────────
 
-function EditCompanyModal({
+export function EditCompanyModal({
   company,
   onClose,
   onSaved,
@@ -85,6 +87,7 @@ function EditCompanyModal({
     status: company.status,
     owner_email: company.owner_email ?? '',
     industry: company.industry ?? '',
+    plan: company.plan ?? company.plan_id ?? 'basic',
   })
   const [saving, setSaving] = useState(false)
 
@@ -148,15 +151,31 @@ function EditCompanyModal({
             </div>
           ))}
 
-          <div>
-            <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Status</label>
-            <select
-              value={form.status}
-              onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-              className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
-            >
-              {STATUSES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Status</label>
+              <select
+                value={form.status}
+                onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
+              >
+                {STATUSES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Plan Tier</label>
+              <select
+                value={form.plan}
+                onChange={e => setForm(f => ({ ...f, plan: e.target.value }))}
+                className="w-full bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
+              >
+                <option value="free">Free</option>
+                <option value="basic">Basic Core</option>
+                <option value="pro">Pro Enterprise</option>
+                <option value="enterprise">Custom Node</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -180,7 +199,7 @@ function EditCompanyModal({
 
 // ─── Delete Confirm Modal ─────────────────────────────────────────────────────
 
-function DeleteModal({ company, onClose, onDeleted }: { company: Company; onClose: () => void; onDeleted: () => void }) {
+export function DeleteModal({ company, onClose, onDeleted }: { company: Company; onClose: () => void; onDeleted: () => void }) {
   const [confirm, setConfirm] = useState('')
   const [deleting, setDeleting] = useState(false)
 
@@ -248,6 +267,7 @@ function DeleteModal({ company, onClose, onDeleted }: { company: Company; onClos
     </div>
   )
 }
+
 
 // ─── Members Panel ────────────────────────────────────────────────────────────
 

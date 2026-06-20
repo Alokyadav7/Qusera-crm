@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { Plus, Filter, Download, Upload, Search, LayoutGrid, List, Users } from 'lucide-react'
@@ -34,9 +34,10 @@ import { toast } from 'sonner'
 interface LeadsPageClientProps {
   initialLeads: Lead[]
   aiScoringEnabled?: boolean
+  profiles?: Array<{ id: string; full_name: string; email: string; role: string }>
 }
 
-export function LeadsPageClient({ initialLeads, aiScoringEnabled = false }: LeadsPageClientProps) {
+export function LeadsPageClient({ initialLeads, aiScoringEnabled = false, profiles = [] }: LeadsPageClientProps) {
   const { leads, refetch } = useRealtimeLeads(initialLeads)
   const displayLeads = leads
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
@@ -338,6 +339,7 @@ export function LeadsPageClient({ initialLeads, aiScoringEnabled = false }: Lead
             onEditLead={(lead) => setSelectedLead(lead)}
             onLeadsChanged={refetch}
             aiScoringEnabled={aiScoringEnabled}
+            profiles={profiles}
           />
         )}
       </main>
@@ -348,6 +350,7 @@ export function LeadsPageClient({ initialLeads, aiScoringEnabled = false }: Lead
           lead={selectedLead} 
           onClose={() => setSelectedLead(null)}
           onLeadUpdated={refetch}
+          profiles={profiles}
         />
       )}
 

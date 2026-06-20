@@ -51,7 +51,9 @@ export default function MonitoringPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    fetchData()
+  }, [])
 
   async function resolveAlert(alertId: string) {
     setResolving(alertId)
@@ -71,9 +73,9 @@ export default function MonitoringPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black gap-2 text-zinc-500 text-xs font-mono">
-        <Loader2 className="size-4 animate-spin text-zinc-400" />
-        Loading monitoring data...
+      <div className="flex items-center justify-center min-h-[calc(100vh-56px)] bg-zinc-955 gap-2 text-zinc-550 text-xs font-mono">
+        <Loader2 className="size-4 animate-spin text-zinc-650" />
+        Syncing telemetry...
       </div>
     )
   }
@@ -92,19 +94,19 @@ export default function MonitoringPage() {
     {
       name: 'Email (Gmail SMTP)',
       online: data.services.email.configured,
-      detail: data.services.email.configured ? 'Configured' : 'GMAIL_USER or GMAIL_APP_PASSWORD missing',
+      detail: data.services.email.configured ? 'Configured' : 'GMAIL credentials missing',
       icon: Mail,
     },
     {
       name: 'WhatsApp (Meta API)',
       online: data.services.whatsapp.configured,
-      detail: data.services.whatsapp.configured ? 'Configured' : 'META_SYSTEM_USER_TOKEN missing',
+      detail: data.services.whatsapp.configured ? 'Configured' : 'System token missing',
       icon: MessageSquare,
     },
     {
       name: 'SMS (Fast2SMS)',
       online: data.services.sms.configured,
-      detail: data.services.sms.configured ? 'Configured' : 'FAST2SMS_API_KEY missing',
+      detail: data.services.sms.configured ? 'Configured' : 'SMS API key missing',
       icon: Wifi,
     },
   ]
@@ -118,202 +120,215 @@ export default function MonitoringPage() {
   ]
 
   return (
-    <div className="p-6 xl:p-10 space-y-6 bg-black min-h-screen text-zinc-100 selection:bg-zinc-800">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 bg-zinc-950 min-h-screen text-zinc-100 font-mono select-none">
 
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-bold tracking-wider uppercase mb-2">
             <Shield className="size-3" />
             <span>Platform Monitoring</span>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Monitoring</h1>
-          <p className="text-zinc-500 text-xs mt-0.5">Real-time service status, platform activity, and error logs. All data from live database.</p>
+          <h1 className="text-xl font-bold text-white tracking-tight uppercase">Monitoring</h1>
+          <p className="text-zinc-500 text-xs mt-1 font-sans">
+            Real-time service status, background queues, and incident outputs from the core node.
+          </p>
         </div>
         <button
           onClick={() => fetchData(true)}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 bg-zinc-950 hover:bg-zinc-900 text-zinc-300 text-xs font-bold px-3.5 py-2 rounded border border-zinc-900 transition-colors cursor-pointer disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-350 hover:text-white text-xs font-bold px-3.5 py-2 rounded border border-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
         >
           <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          Refresh Nodes
         </button>
       </div>
 
-      {/* Section 1: Service Status */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Service Status</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Service Status: Responsive 1/2/4 Grid */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Service Status Matrix</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {services.map(svc => (
             <div key={svc.name} className={`bg-zinc-950 border rounded p-4 flex items-start gap-3 transition-colors ${
-              svc.online ? 'border-zinc-800' : 'border-red-900/50 bg-red-950/10'
+              svc.online ? 'border-zinc-800' : 'border-red-950/60 bg-red-950/5'
             }`}>
               <div className={`mt-0.5 size-7 rounded flex items-center justify-center shrink-0 ${
-                svc.online ? 'bg-zinc-900' : 'bg-red-950/30'
+                svc.online ? 'bg-zinc-900 border border-zinc-850' : 'bg-red-950/25 border border-red-900/30'
               }`}>
                 <svc.icon className={`size-4 ${svc.online ? 'text-zinc-400' : 'text-red-400'}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">{svc.name}</p>
-                <div className="flex items-center gap-1.5 mt-1">
+                <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{svc.name}</p>
+                <div className="flex items-center gap-1.5 mt-1.5">
                   {svc.online
                     ? <CheckCircle2 className="size-3 text-emerald-400 shrink-0" />
                     : <XCircle className="size-3 text-red-400 shrink-0" />}
                   <span className={`text-xs font-bold ${svc.online ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {svc.online ? 'Online' : 'Error'}
+                    {svc.online ? 'ONLINE' : 'ERROR'}
                   </span>
                 </div>
-                <p className="text-[10px] text-zinc-500 font-mono mt-0.5 truncate">{svc.detail}</p>
+                <p className="text-[10px] text-zinc-550 font-mono mt-1 truncate">{svc.detail}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Section 2: 24h Activity */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Platform Activity — Last 24 Hours</p>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-zinc-900 border border-zinc-900 rounded overflow-hidden">
+      {/* platform Activity: Responsive 2/3/5 Grid */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Node Activity — 24h Pacing</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
           {activity.map(a => (
-            <div key={a.label} className="bg-zinc-950 px-4 py-4">
-              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{a.label}</p>
-              <p className={`text-2xl font-bold mt-1 ${
-                a.label === 'Failed Logins' && a.value > 0 ? 'text-red-400' : 'text-white'
+            <div key={a.label} className="bg-zinc-950 border border-zinc-800 rounded p-4 font-mono">
+              <p className="text-[9px] font-bold text-zinc-550 uppercase tracking-wider">{a.label}</p>
+              <p className={`text-2xl font-black mt-2 tracking-tight ${
+                a.label === 'Failed Logins' && a.value > 0 ? 'text-red-400 animate-pulse' : 'text-white'
               }`}>{a.value}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Section 3: Queue Stats */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Background Job Queue</p>
-        <div className="grid grid-cols-3 gap-3">
+      {/* Background job Queue: Responsive 1/3 Grid */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Daemon Queues</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           {[
-            { label: 'Processing', val: data.queue.processing, cls: 'text-zinc-300' },
-            { label: 'Pending', val: data.queue.pending, cls: 'text-zinc-400' },
-            { label: 'Failed', val: data.queue.failed, cls: data.queue.failed > 0 ? 'text-red-400' : 'text-zinc-400' },
+            { label: 'Processing Nodes', val: data.queue.processing, border: 'border-zinc-800' },
+            { label: 'Pending Jobs', val: data.queue.pending, border: 'border-zinc-800' },
+            { label: 'Failed Jobs', val: data.queue.failed, border: data.queue.failed > 0 ? 'border-red-950 bg-red-950/5' : 'border-zinc-800' },
           ].map(q => (
-            <div key={q.label} className={`bg-zinc-950 border rounded p-4 ${
-              q.label === 'Failed' && data.queue.failed > 0 ? 'border-red-900/50' : 'border-zinc-900'
-            }`}>
-              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{q.label}</p>
-              <p className={`text-2xl font-bold font-mono mt-1.5 ${q.cls}`}>{q.val}</p>
+            <div key={q.label} className={`bg-zinc-950 border rounded p-4 ${q.border}`}>
+              <p className="text-[9px] font-bold text-zinc-550 uppercase tracking-wider">{q.label}</p>
+              <p className={`text-2xl font-black mt-2 font-mono tracking-tight ${
+                q.label === 'Failed Jobs' && data.queue.failed > 0 ? 'text-red-400' : 'text-zinc-200'
+              }`}>{q.val}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Section 3: Active Alerts */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Active Alerts</p>
-          {data.alerts.length > 0 && (
-            <span className="text-[10px] font-bold text-red-400 bg-red-950/20 border border-red-900/40 px-2 py-0.5 rounded">
-              {data.alerts.length} unresolved
-            </span>
-          )}
+      {/* Grid for incident reports & error console streams */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        
+        {/* Active alerts panel */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono">Active Incidents</p>
+            {data.alerts.length > 0 && (
+              <span className="text-[9px] font-bold text-red-400 bg-red-950/20 border border-red-900/30 px-2 py-0.5 rounded">
+                {data.alerts.length} UNRESOLVED
+              </span>
+            )}
+          </div>
+          <div className="bg-zinc-950 border border-zinc-800 rounded overflow-hidden">
+            {data.alerts.length === 0 ? (
+              <div className="py-14 text-center text-zinc-650 text-xs">
+                No incidents detected. Cluster is stable.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-900 bg-zinc-900/10 text-[9px] font-bold text-zinc-500 tracking-wider uppercase">
+                      <th className="px-4 py-2.5">Severity</th>
+                      <th className="px-4 py-2.5">Alert Node</th>
+                      <th className="px-4 py-2.5">Tenant</th>
+                      <th className="px-4 py-2.5">Time</th>
+                      <th className="px-4 py-2.5 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-900">
+                    {data.alerts.map(alert => (
+                      <tr key={alert.id} className="hover:bg-zinc-900/5 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider ${
+                            alert.severity === 'critical' ? 'text-red-400'
+                            : alert.severity === 'warning' ? 'text-amber-400'
+                            : 'text-zinc-400'
+                          }`}>
+                            <span className="w-1 h-1 rounded-full bg-current" />
+                            {alert.severity}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-zinc-250 font-medium leading-normal">{alert.title}</td>
+                        <td className="px-4 py-3 text-xs text-zinc-500 font-mono">{alert.company_name ?? '—'}</td>
+                        <td className="px-4 py-3 text-[10px] text-zinc-550 font-mono whitespace-nowrap">
+                          {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => resolveAlert(alert.id)}
+                            disabled={resolving === alert.id}
+                            className="text-[10px] font-bold text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2 py-1 rounded transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            {resolving === alert.id ? 'Resolving...' : 'Resolve'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
-          {data.alerts.length === 0 ? (
-            <div className="py-10 text-center text-zinc-600 text-xs font-mono">
-              No active alerts — platform healthy
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-900 bg-zinc-900/10">
-                  <th className="px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Severity</th>
-                  <th className="px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Alert</th>
-                  <th className="px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Company</th>
-                  <th className="px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Time</th>
-                  <th className="px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-900">
-                {data.alerts.map(alert => (
-                  <tr key={alert.id} className="hover:bg-zinc-900/10 transition-colors">
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
-                        alert.severity === 'critical' ? 'text-red-400'
-                        : alert.severity === 'warning' ? 'text-amber-400'
-                        : 'text-blue-400'
-                      }`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {alert.severity}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-zinc-200 font-medium">{alert.title}</td>
-                    <td className="px-4 py-3 text-xs text-zinc-500 font-mono">{alert.company_name ?? '—'}</td>
-                    <td className="px-4 py-3 text-xs text-zinc-500 font-mono whitespace-nowrap">
-                      {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => resolveAlert(alert.id)}
-                        disabled={resolving === alert.id}
-                        className="text-[10px] font-bold text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1.5 rounded transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        {resolving === alert.id ? 'Resolving...' : 'Resolve'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+
+        {/* Recent Errors console */}
+        <div className="space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Live Error Stream</p>
+          <div className="bg-zinc-950 border border-zinc-800 rounded overflow-hidden">
+            {data.recentErrors.length === 0 ? (
+              <div className="py-14 text-center text-zinc-650 text-xs">
+                No error reports in ledger.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-900 bg-zinc-900/10 text-[9px] font-bold text-zinc-500 tracking-wider uppercase">
+                      <th className="px-4 py-2.5">Action Source</th>
+                      <th className="px-4 py-2.5">Tenant</th>
+                      <th className="px-4 py-2.5 text-right">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-900">
+                    {data.recentErrors.map(err => (
+                      <tr key={err.id} className="hover:bg-zinc-900/5 transition-colors">
+                        <td className="px-4 py-2.5 text-xs font-mono text-zinc-300 break-all">{err.action}</td>
+                        <td className="px-4 py-2.5 text-xs text-zinc-500">{err.company_name}</td>
+                        <td className="px-4 py-2.5 text-[10px] text-zinc-550 font-mono text-right whitespace-nowrap">
+                          {formatDistanceToNow(new Date(err.created_at), { addSuffix: true })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
 
-      {/* Section 4: Recent Errors */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Recent Errors (from Audit Logs)</p>
-        <div className="bg-zinc-950 border border-zinc-900 rounded overflow-hidden">
-          {data.recentErrors.length === 0 ? (
-            <div className="py-10 text-center text-zinc-600 text-xs font-mono">
-              No recent errors found
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-900 bg-zinc-900/10">
-                  <th className="px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Action</th>
-                  <th className="px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Company</th>
-                  <th className="px-4 py-2.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-900">
-                {data.recentErrors.map(err => (
-                  <tr key={err.id} className="hover:bg-zinc-900/10 transition-colors">
-                    <td className="px-4 py-2.5 text-xs font-mono text-zinc-300">{err.action}</td>
-                    <td className="px-4 py-2.5 text-xs text-zinc-500">{err.company_name}</td>
-                    <td className="px-4 py-2.5 text-xs text-zinc-500 font-mono whitespace-nowrap">
-                      {formatDistanceToNow(new Date(err.created_at), { addSuffix: true })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Failed Jobs */}
+      {/* Failed Background Jobs logs output */}
       {data.failedJobs.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Failed Background Jobs</p>
-          <div className="bg-zinc-950 border border-red-900/30 rounded overflow-hidden divide-y divide-zinc-900">
+        <div className="space-y-3 pt-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Exceptions Console</p>
+          <div className="bg-zinc-950 border border-zinc-800 rounded overflow-hidden divide-y divide-zinc-900">
             {data.failedJobs.map(job => (
-              <div key={job.id} className="p-4 space-y-1.5">
+              <div key={job.id} className="p-4 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-white font-bold font-mono">{job.task_name}</span>
-                  <span className="text-zinc-500 font-mono text-[10px]">
-                    {job.attempts} attempts · {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
+                  <span className="text-zinc-200 font-bold font-mono">{job.task_name}</span>
+                  <span className="text-zinc-650 font-mono text-[9px]">
+                    Attempts: {job.attempts} · {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                   </span>
                 </div>
-                <p className="text-red-400 text-[10.5px] font-mono bg-red-950/20 border border-red-900/30 p-2.5 rounded">
+                
+                {/* Scrollable vertical error logs containing text wraps and no horizontal overflow */}
+                <pre className="bg-zinc-950 border border-zinc-900 text-red-400 text-[10.5px] font-mono p-3 rounded overflow-y-auto max-h-48 whitespace-pre-wrap break-all leading-normal select-text">
                   {job.error_message}
-                </p>
+                </pre>
               </div>
             ))}
           </div>

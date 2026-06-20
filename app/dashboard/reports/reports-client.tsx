@@ -97,7 +97,7 @@ export function ReportsPageClient({
   }
 
   const chartData = processChartData()
-  const COLORS = ['#000000', '#333333', '#666666', '#999999', '#cccccc', '#e5e5e5']
+  const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#10b981', '#f59e0b']
 
   const handleSaveReport = async () => {
     if (!reportName.trim()) {
@@ -274,7 +274,7 @@ export function ReportsPageClient({
                         <XAxis dataKey="name" stroke="#888888" fontSize={11} />
                         <YAxis stroke="#888888" fontSize={11} />
                         <Tooltip />
-                        <Bar dataKey="count" fill="#000000" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     ) : chartType === 'line' ? (
                       <LineChart data={chartData}>
@@ -282,7 +282,7 @@ export function ReportsPageClient({
                         <XAxis dataKey="name" stroke="#888888" fontSize={11} />
                         <YAxis stroke="#888888" fontSize={11} />
                         <Tooltip />
-                        <Line type="monotone" dataKey="count" stroke="#000000" strokeWidth={2.5} activeDot={{ r: 6 }} />
+                        <Line type="monotone" dataKey="count" stroke="#a855f7" strokeWidth={2.5} activeDot={{ r: 6 }} />
                       </LineChart>
                     ) : (
                       <PieChart>
