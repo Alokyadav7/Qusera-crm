@@ -188,7 +188,7 @@ function Step1({ companyId, onNext }: { companyId: string; onNext: () => void })
     async function loadCompany() {
       try {
         const supabase = createClient()
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from('companies')
           .select('name, industry, website, timezone, currency')
           .eq('id', companyId)

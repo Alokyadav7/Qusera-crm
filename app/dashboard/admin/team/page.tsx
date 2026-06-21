@@ -82,17 +82,13 @@ export default function AdminTeamPage() {
   const [reassignToUserId, setReassignToUserId] = useState<string>('')
   const [deleting, setDeleting] = useState(false)
 
-  const loadInvites = useCallback(async (cid: string) => {
+  const loadInvites = useCallback(async (cid: string | null) => {
+    if (!cid) return
     const supabase = createClient()
     const { data } = await (supabase as any)
       .from('invites')
-<<<<<<< HEAD
       .select('id, email, role, expires_at, created_at')
-      .eq('company_id', companyId)
-=======
-      .select('id, invited_email, invited_name, role, expires_at, created_at')
       .eq('company_id', cid)
->>>>>>> 8a63691 ( implement comprehensive CRM dashboard, admin settings, and super-admin management infrastructure)
       .is('accepted_at', null)
       .order('created_at', { ascending: false })
     setPendingInvites(data ?? [])
@@ -161,23 +157,11 @@ export default function AdminTeamPage() {
       profile: Array.isArray(m.profiles) ? m.profiles[0] : m.profiles,
     }))
 
-<<<<<<< HEAD
-    // Load pending invites after getting cid
-    const { data: inviteData } = await (supabase as any)
-      .from('invites')
-      .select('id, email, role, expires_at, created_at')
-      .eq('company_id', cid)
-      .is('accepted_at', null)
-      .order('created_at', { ascending: false })
-    setPendingInvites(inviteData ?? [])
-  }, [])
-=======
     setMembers(formattedMembers)
     loadInvites(cid)
     computePerformance(cid, formattedMembers)
     setLoading(false)
   }, [loadInvites, computePerformance])
->>>>>>> 8a63691 ( implement comprehensive CRM dashboard, admin settings, and super-admin management infrastructure)
 
   useEffect(() => { loadMembers() }, [loadMembers])
 
@@ -299,23 +283,11 @@ export default function AdminTeamPage() {
     const res = await fetch('/api/invites/resend', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-<<<<<<< HEAD
-      body: JSON.stringify({
-        email: invite.email,
-        role: invite.role,
-        company_id: companyId,
-      }),
-    })
-    if (res.ok) {
-      toast.success(`Invite resent to ${invite.email}`)
-      loadInvites()
-=======
       body: JSON.stringify({ inviteId: invite.id }),
     })
     if (res.ok) {
-      toast.success(`Invite resent to ${invite.invited_email}`)
+      toast.success(`Invite resent to ${invite.email}`)
       loadInvites(companyId)
->>>>>>> 8a63691 ( implement comprehensive CRM dashboard, admin settings, and super-admin management infrastructure)
     } else {
       const err = await res.json().catch(() => ({}))
       toast.error(err.error || 'Failed to resend invite')
@@ -502,80 +474,19 @@ export default function AdminTeamPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold flex items-center gap-2">
                 <Clock className="size-4 text-muted-foreground" />
-<<<<<<< HEAD
-                Pending Invitations
-                <Badge variant="secondary" className="text-xs">{pendingInvites.length}</Badge>
-              </p>
-              <Button variant="ghost" size="sm" onClick={loadInvites} className="h-7 gap-1">
-                <RefreshCw className="size-3" /> Refresh
-              </Button>
-            </div>
-            <div className="border rounded-xl bg-card overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/30">
-                    {['Email', 'Role', 'Sent', 'Expiry', 'Action'].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-xs text-muted-foreground font-medium">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingInvites.map(invite => {
-                    const expired = isPast(new Date(invite.expires_at))
-                    return (
-                      <tr key={invite.id} className="border-b last:border-0 hover:bg-muted/20">
-                        <td className="px-4 py-3">
-                          <div>
-                            <p className="font-medium">{invite.email}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-                            {invite.role.replace(/_/g, ' ')}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(invite.created_at), { addSuffix: true })}
-                        </td>
-                        <td className="px-4 py-3">
-                          {expired ? (
-                            <Badge variant="destructive" className="text-[10px]">Expired</Badge>
-                          ) : (
-                            <span className="text-xs text-amber-600 dark:text-amber-400">
-                              {formatDistanceToNow(new Date(invite.expires_at), { addSuffix: true })}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Button
-                            variant="outline" size="sm"
-                            onClick={() => handleResendInvite(invite)}
-                            disabled={resendingId === invite.id}
-                            className="h-7 text-xs gap-1"
-                          >
-                            {resendingId === invite.id
-                              ? <Loader2 className="size-3 animate-spin" />
-                              : <Mail className="size-3" />}
-                            {expired ? 'Re-invite' : 'Resend'}
-                          </Button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-=======
                 Pending Workspace Invitations
                 <Badge variant="secondary" className="text-xs px-2 py-0.5 rounded-full">{pendingInvites.length}</Badge>
               </h2>
->>>>>>> 8a63691 ( implement comprehensive CRM dashboard, admin settings, and super-admin management infrastructure)
+              <Button variant="ghost" size="sm" onClick={() => loadInvites(companyId)} className="h-7 gap-1">
+                <RefreshCw className="size-3" /> Refresh
+              </Button>
             </div>
             <Card className="overflow-hidden border-border/60">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40">
-                      {['Invitee', 'Role', 'Sent', 'Expires In', 'Actions'].map(h => (
+                      {['Email', 'Role', 'Sent', 'Expires In', 'Actions'].map(h => (
                         <th key={h} className="px-4 py-2.5 text-left text-xs text-muted-foreground font-semibold uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
@@ -587,8 +498,7 @@ export default function AdminTeamPage() {
                         <tr key={invite.id} className="border-b last:border-0 hover:bg-muted/10 transition-colors">
                           <td className="px-4 py-3">
                             <div>
-                              <p className="font-semibold text-xs text-foreground">{invite.invited_email}</p>
-                              {invite.invited_name && <p className="text-[10px] text-muted-foreground">{invite.invited_name}</p>}
+                              <p className="font-semibold text-xs text-foreground">{invite.email}</p>
                             </div>
                           </td>
                           <td className="px-4 py-3">

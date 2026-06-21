@@ -2,49 +2,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withTenantAuth } from '@/lib/middleware/withTenantAuth'
 import { createServiceClient } from '@/lib/supabase/service'
 import { emitEvent } from '@/lib/events/emit'
-<<<<<<< HEAD
-=======
 import { logAudit } from '@/lib/audit'
 import { sendEmail, teamInviteEmailHtml } from '@/lib/email'
->>>>>>> 8a63691 ( implement comprehensive CRM dashboard, admin settings, and super-admin management infrastructure)
 
 // POST /api/invites/send
 export const POST = withTenantAuth(
   async (req: NextRequest, ctx) => {
-<<<<<<< HEAD
-    const body = await req.json()
-    const { email, role: rawRole, workspaceId } = body
-
-    if (!email || !rawRole) {
-      return NextResponse.json({ error: 'email and role are required' }, { status: 400 })
-    }
-
-    // Map UI roles to database CHECK constraint allowed roles
-    let role = rawRole
-    if (role === 'company_admin') role = 'admin'
-    else if (role === 'sales_manager') role = 'manager'
-    else if (role === 'sales_rep') role = 'sales'
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
-    }
-=======
     try {
       const body = await req.json()
-      const { email, role, fullName, department } = body
+      const { email, role: rawRole, fullName, department } = body
 
-      if (!email || !role || !fullName) {
+      if (!email || !rawRole || !fullName) {
         return NextResponse.json({ error: 'email, role, and fullName are required' }, { status: 400 })
       }
+
+      // Map UI roles to database CHECK constraint allowed roles
+      let role = rawRole
+      if (role === 'company_admin') role = 'admin'
+      else if (role === 'sales_manager') role = 'manager'
+      else if (role === 'sales_rep') role = 'sales'
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
         return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
       }
->>>>>>> 8a63691 ( implement comprehensive CRM dashboard, admin settings, and super-admin management infrastructure)
 
       const svc = createServiceClient()
 
@@ -151,49 +133,6 @@ export const POST = withTenantAuth(
       const token = require('crypto').randomBytes(32).toString('hex')
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
-<<<<<<< HEAD
-    // Send email directly (synchronous for immediate delivery)
-    const { data: inviterProfile } = await svc
-      .from('profiles')
-      .select('full_name')
-      .eq('id', ctx.userId)
-      .maybeSingle()
-
-    const { sendEmail, teamInviteEmailHtml } = await import('@/lib/email')
-
-    const emailResult = await sendEmail({
-      to: email,
-      subject: `You've been invited to join ${company.name} on Klinq CRM`,
-      html: teamInviteEmailHtml({
-        companyName: company.name,
-        inviterName: inviterProfile?.full_name ?? 'Your admin',
-        role: rawRole,
-        inviteUrl,
-        expiryDays: 7,
-      }),
-    })
-
-    if (!emailResult.success) {
-      console.error('[INVITE] Email send failed:', emailResult.error)
-      // Return success but with warnings so client/user is aware the email dispatch had issues
-      return NextResponse.json({
-        message: `Invite created in DB, but email failed: ${emailResult.error}`,
-        inviteId: invite.id,
-        emailError: emailResult.error,
-      })
-    }
-
-    // Emit event
-    await emitEvent({
-      companyId: ctx.companyId,
-      actorId: ctx.userId,
-      eventType: 'invite.sent',
-      resourceType: 'invite',
-      resourceId: invite.id,
-      resourceLabel: email,
-      metadata: { role, email },
-    })
-=======
       // Delete any previous pending invites for this email in this company
       await svc.from('invites')
         .delete()
@@ -216,7 +155,6 @@ export const POST = withTenantAuth(
       if (inviteError || !invite) {
         return NextResponse.json({ error: 'Failed to create invite token: ' + inviteError?.message }, { status: 500 })
       }
->>>>>>> 8a63691 ( implement comprehensive CRM dashboard, admin settings, and super-admin management infrastructure)
 
       const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/invite/${invite.token}`
 
@@ -225,23 +163,28 @@ export const POST = withTenantAuth(
         .from('profiles')
         .select('full_name')
         .eq('id', ctx.userId)
-        .single()
+        .maybeSingle()
 
-      // Send email directly via nodemailer
-      try {
-        await sendEmail({
-          to: email,
-          subject: `You've been invited to join ${company.name}`,
-          html: teamInviteEmailHtml({
-            companyName: company.name,
-            inviterName: inviter?.full_name ?? 'An administrator',
-            role,
-            inviteUrl,
-            expiryDays: 7,
-          })
+      // Send email directly
+      const emailResult = await sendEmail({
+        to: email,
+        subject: `You've been invited to join ${company.name}`,
+        html: teamInviteEmailHtml({
+          companyName: company.name,
+          inviterName: inviter?.full_name ?? 'An administrator',
+          role,
+          inviteUrl,
+          expiryDays: 7,
         })
-      } catch (err: any) {
-        console.error('[Invite Email] NodeMailer send failed:', err.message)
+      })
+
+      if (!emailResult.success) {
+        console.error('[INVITE] Email send failed:', emailResult.error)
+        return NextResponse.json({
+          message: `Invite created in DB, but email failed: ${emailResult.error}`,
+          inviteId: invite.id,
+          emailError: emailResult.error,
+        })
       }
 
       // Emit event
