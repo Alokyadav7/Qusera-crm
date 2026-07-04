@@ -5,25 +5,36 @@ import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, message, contact_id, company_id } = await req.json()
+    const sessionClient = await createClient()
+    const { data: { user } } = await sessionClient.auth.getUser()
+    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+
+    const { phone, message, contact_id } = await req.json()
 
     if (!phone || !message) {
       return NextResponse.json({ success: false, error: 'phone and message are required' }, { status: 400 })
     }
 
-    const sessionClient = await createClient()
-    const { data: { user } } = await sessionClient.auth.getUser()
-    if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    const supabase = createServiceClient()
 
-    // Rate limit: 10 SMS per minute per company
-    if (company_id) {
-      const rl = checkRateLimit('sms', company_id)
-      const denied = rateLimitResponse(rl)
-      if (denied) return denied
+    // Get company_id from user's active company — NOT from request body
+    const { data: uac } = await (supabase as any)
+      .from('user_active_company')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+
+    const companyId: string | null = uac?.company_id ?? null
+    if (!companyId) {
+      return NextResponse.json({ success: false, error: 'No active company found' }, { status: 403 })
     }
 
-    // Get Fast2SMS credentials: first try integrations table, then env vars
-    const supabase = createServiceClient()
+    // Rate limit: 10 SMS per minute per company
+    const rl = checkRateLimit('sms', companyId)
+    const denied = rateLimitResponse(rl)
+    if (denied) return denied
+
+    // Get Fast2SMS credentials: first try integrations table (by company), then env vars
     let apiKey = process.env.FAST2SMS_API_KEY || null
     let senderId = process.env.FAST2SMS_SENDER_ID || 'FSTSMS'
 
@@ -31,7 +42,7 @@ export async function POST(req: NextRequest) {
       const { data: intg } = await (supabase as any)
         .from('integrations')
         .select('fast2sms_api_key, fast2sms_sender_id')
-        .eq('user_id', user.id)
+        .eq('company_id', companyId)
         .single()
       if (intg?.fast2sms_api_key) {
         apiKey = intg.fast2sms_api_key
@@ -81,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     // Log to sms_messages table
     await (supabase as any).from('sms_messages').insert({
-      company_id: company_id || null,
+      company_id: companyId,
       contact_id: contact_id || null,
       user_id: user.id,
       phone,
@@ -96,3 +107,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }
+

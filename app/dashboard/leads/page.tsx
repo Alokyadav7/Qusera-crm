@@ -30,8 +30,9 @@ async function getLeadsData() {
     .select('*')
     .eq('company_id' as any, companyId)
 
-  // Gating check: if not owner, admin, or manager, scope to assigned user
-  const isManagerOrAdmin = role && ['owner', 'admin', 'manager'].includes(role)
+  // Gating check: if not admin/manager, scope to assigned user
+  // DB stores: 'company_admin', 'sales_manager', 'sales_rep', 'viewer'
+  const isManagerOrAdmin = role && ['owner', 'company_admin', 'admin', 'sales_manager', 'manager'].includes(role)
   if (!isManagerOrAdmin) {
     query = query.eq('assigned_to', user.id)
   }

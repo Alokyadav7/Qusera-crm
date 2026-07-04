@@ -1,4 +1,4 @@
-﻿// ─── Klinq CRM — Super Admin Auth Middleware ───────────────────────────────────
+// ─── Klinq CRM — Super Admin Auth Middleware ───────────────────────────────────
 // Wraps API routes that require platform admin (super admin) access.
 // Only for /api/super-admin/* routes.
 
@@ -53,9 +53,8 @@ export function withSuperAdmin(handler: SuperAdminHandler) {
       void emitEvent({
         actorId: user.id,
         actorType: 'super_admin',
-        eventType: 'company.updated',
+        eventType: 'super_admin.api_access',   // FIX W3: was incorrectly 'company.updated'
         metadata: {
-          _type: 'super_admin_api_access',
           path: req.nextUrl.pathname,
           method: req.method,
         },

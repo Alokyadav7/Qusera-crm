@@ -150,9 +150,6 @@ export function Footer() {
                 <span className="size-1.5 rounded-full bg-emerald-500" />
                 Made in India
               </span>
-              <Badge variant="outline" className="text-[10px] font-mono border-border px-1.5 py-0">
-                SOC 2 Type II
-              </Badge>
             </div>
           </div>
 
@@ -208,9 +205,6 @@ export function Footer() {
               <span className="size-1.5 rounded-full bg-emerald-500" />
               Made in India
             </span>
-            <Badge variant="outline" className="text-[10px] font-mono border-border px-1.5 py-0">
-              SOC 2 Type II
-            </Badge>
           </div>
         </div>
       </div>

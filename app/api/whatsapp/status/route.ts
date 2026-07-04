@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { normalizeRole } from '@/lib/permissions'
 
 /**
  * GET /api/whatsapp/status
@@ -70,7 +71,8 @@ export async function DELETE(req: NextRequest) {
       .eq('is_active', true)
       .single()
 
-    if (!member || !['admin', 'owner'].includes(member.role)) {
+    const norm = normalizeRole(member?.role)
+    if (!member || norm !== 'company_admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 

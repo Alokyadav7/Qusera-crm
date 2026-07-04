@@ -4,10 +4,15 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { emitEvent } from '@/lib/events/emit'
 import { logAudit } from '@/lib/audit'
 import { sendEmail, teamInviteEmailHtml } from '@/lib/email'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 // POST /api/invites/send
 export const POST = withTenantAuth(
   async (req: NextRequest, ctx) => {
+    // Rate limit: max 20 invites per hour per company
+    const rl = checkRateLimit('email', ctx.companyId)
+    const denied = rateLimitResponse(rl)
+    if (denied) return denied
     try {
       const body = await req.json()
       const { email, role: rawRole, fullName, department } = body
@@ -61,9 +66,18 @@ export const POST = withTenantAuth(
       let userId: string
       let isNewUser = false
 
-      // Try to find if user already exists in auth
-      const { data: authSearch } = await svc.auth.admin.listUsers()
-      const existingAuthUser = authSearch?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      // Check if auth user already exists using profiles lookup and then getUserById
+      const { data: existingProfile } = await svc
+        .from('profiles')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .maybeSingle()
+
+      let existingAuthUser = null
+      if (existingProfile) {
+        const { data: authData } = await svc.auth.admin.getUserById(existingProfile.id)
+        existingAuthUser = authData?.user ?? null
+      }
 
       if (existingAuthUser) {
         userId = existingAuthUser.id

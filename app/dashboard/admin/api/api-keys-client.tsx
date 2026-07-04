@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -10,7 +10,27 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { Key, Plus, Trash2, KeyRound, Globe, Copy, ShieldAlert, Sparkles, AlertCircle, Eye } from 'lucide-react'
+import { Key, Plus, Trash2, KeyRound, Globe, Copy, ShieldAlert, Sparkles, AlertCircle, Eye, EyeOff } from 'lucide-react'
+
+// ── FIX W2: Webhook signing secret masked by default, reveal on explicit click ──
+function WebhookSecretCell({ secret }: { secret: string }) {
+  const [revealed, setRevealed] = useState(false)
+  if (!secret) return <span className="text-muted-foreground">—</span>
+  const masked = secret.slice(0, 6) + '••••••••••••' + secret.slice(-4)
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="font-mono text-xs">{revealed ? secret : masked}</span>
+      <button
+        type="button"
+        onClick={() => setRevealed(v => !v)}
+        className="text-muted-foreground hover:text-foreground transition-colors"
+        title={revealed ? 'Hide secret' : 'Reveal secret'}
+      >
+        {revealed ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+      </button>
+    </span>
+  )
+}
 
 export interface ApiKeyRecord {
   id: string
@@ -287,7 +307,9 @@ export function ApiKeysPageClient({
                             ))}
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{w.secret}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          <WebhookSecretCell secret={w.secret} />
+                        </td>
                         <td className="px-4 py-3">
                           <Button variant="ghost" size="icon" className="size-7 hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteWebhook(w.id)}>
                             <Trash2 className="size-3.5" />

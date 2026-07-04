@@ -370,3 +370,60 @@ export function companyReactivatedEmailHtml(opts: {
     </div>
   `)
 }
+
+// ─── Template 6: Welcome Email ────────────────────────────────────────────────
+
+export function welcomeEmailHtml(opts: {
+  userName: string
+  companyName: string
+  loginUrl?: string
+}): string {
+  const loginUrl = opts.loginUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login`
+  return baseWrapper(`
+    <!-- Top accent bar - violet/indigo -->
+    <div style="height:4px;background:linear-gradient(90deg,#6366f1,#8b5cf6);"></div>
+
+    <div style="padding:40px 40px 32px;">
+      <h1 style="margin:0 0 16px;font-size:24px;font-weight:800;color:#18181b;">
+        Welcome to Klinq CRM, ${opts.userName}!
+      </h1>
+      <p style="margin:0 0 20px;font-size:15px;color:#52525b;line-height:1.7;">
+        We're thrilled to have you join us. Your workspace for <strong>${opts.companyName}</strong> is fully set up and ready to go.
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;color:#52525b;line-height:1.7;">
+        Here are a few things you can do to get started:
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+        <tr>
+          <td style="padding:8px 0;font-size:14px;color:#52525b;line-height:1.5;">
+            🚀 <strong>Import Leads:</strong> Bring your existing leads via CSV or manually add them.
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;font-size:14px;color:#52525b;line-height:1.5;">
+            💬 <strong>Connect Integrations:</strong> Hook up WhatsApp, Email, or SMS to automate outreach.
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;font-size:14px;color:#52525b;line-height:1.5;">
+            👥 <strong>Invite Team:</strong> Add your sales managers and reps to collaborate seamlessly.
+          </td>
+        </tr>
+      </table>
+
+      <div style="text-align:center;margin-bottom:24px;">
+        <a href="${loginUrl}" style="display:inline-block;background:#6366f1;color:#ffffff;padding:14px 36px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:700;">
+          Get Started Now
+        </a>
+      </div>
+
+      <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:14px 16px;">
+        <p style="margin:0;font-size:13px;color:#5b21b6;">
+          Need a quick tour or help setting up? Check our documentation or drop us a line anytime.
+        </p>
+      </div>
+    </div>
+  `)
+}
+

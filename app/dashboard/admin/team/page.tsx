@@ -190,8 +190,9 @@ export default function AdminTeamPage() {
     setInviting(false)
   }
 
-  async function handleRoleChange(userId: string, newRole: string) {
-    const res = await fetch(`/api/team/${userId}/role`, {
+  async function handleRoleChange(memberId: string, userId: string, newRole: string) {
+    // memberId = company_members.id (for the API endpoint)
+    const res = await fetch(`/api/team/members/${memberId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: newRole }),
@@ -207,10 +208,10 @@ export default function AdminTeamPage() {
 
   async function handleToggleStatus(member: Member) {
     const newStatus = !member.is_active
-    const res = await fetch(`/api/team/${member.user_id}/deactivate`, {
+    const res = await fetch(`/api/team/members/${member.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: newStatus }),
+      body: JSON.stringify({ is_active: newStatus }),
     })
     if (res.ok) {
       toast.success(`Member ${newStatus ? 'reactivated' : 'deactivated'} successfully`)
@@ -362,7 +363,7 @@ export default function AdminTeamPage() {
                                 {m.role === 'owner' ? (
                                   <Badge className={`${ROLE_COLORS.owner} border`}>Owner</Badge>
                                 ) : (
-                                  <Select defaultValue={m.role} onValueChange={v => handleRoleChange(m.user_id, v)}>
+                                  <Select defaultValue={m.role} onValueChange={v => handleRoleChange(m.id, m.user_id, v)}>
                                     <SelectTrigger className="h-7 w-28 text-xs focus:ring-0">
                                       <SelectValue />
                                     </SelectTrigger>

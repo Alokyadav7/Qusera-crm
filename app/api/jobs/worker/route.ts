@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { claimPendingJobs, markJobDone, markJobFailed } from '@/lib/jobs/enqueue'
 import type { QueuedJob } from '@/lib/types/tenant'
-import { sendEmail, teamInviteEmailHtml } from '@/lib/email'
+import { sendEmail, teamInviteEmailHtml, welcomeEmailHtml } from '@/lib/email'
 import { processActiveSequences } from '@/lib/email-sequences'
 
 // POST /api/jobs/worker
@@ -98,6 +98,12 @@ async function handleSendEmail(job: QueuedJob): Promise<void> {
       role: String(data.role ?? 'member'),
       inviteUrl: String(data.inviteUrl ?? ''),
       expiryDays: Number(data.expiresInDays ?? 7),
+    })
+  } else if (template === 'welcome') {
+    subject = `Welcome to Klinq CRM!`
+    html = welcomeEmailHtml({
+      userName: String(data.userName ?? 'User'),
+      companyName: String(data.companyName ?? 'Klinq CRM'),
     })
   } else {
     // Generic fallback

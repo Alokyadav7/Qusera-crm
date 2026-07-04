@@ -77,15 +77,7 @@ export function CTASection() {
 
       <section className="py-14 sm:py-20 bg-background border-t border-border/60">
         <div className="container mx-auto px-4 md:px-6">
-          {/* Stats Grid */}
-          <div className="mx-auto max-w-3xl mb-12 sm:mb-16 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            {STATS.map(s => (
-              <div key={s.label} className="flex flex-col items-start p-5 border border-border/50 bg-card rounded-xl">
-                <span className="text-2xl font-bold tracking-tight text-foreground">{s.val}</span>
-                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-1">{s.label}</span>
-              </div>
-            ))}
-          </div>
+
 
           {/* CTA Block */}
           <div className="mx-auto max-w-2xl text-center">

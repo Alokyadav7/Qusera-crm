@@ -9,7 +9,7 @@ const FAQS = [
   },
   {
     q: 'Is my data secure?',
-    a: 'We use AES-256 encryption for all data at rest and in transit. Servers are hosted in India for data localization compliance. We are ISO 27001 certified and conduct regular third-party security audits.',
+    a: 'We use AES-256 encryption for all data at rest and in transit. Servers are hosted in India for data localization compliance. We follow strict security practices and conduct regular third-party security audits.',
   },
   {
     q: 'Can I import my existing leads?',

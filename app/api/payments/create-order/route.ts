@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 /**
  * Razorpay Payment Order Creation
  * POST /api/payments/create-order
- * Body: { amount: number (paise), currency?: string, planId: string, userId: string }
+ * Body: { amount: number (paise), currency?: string, planId: string }
  */
 export async function POST(req: NextRequest) {
   try {
-    const { amount, currency = 'INR', planId, userId, notes } = await req.json()
+    // Auth check — userId comes from session, not request body
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { amount, currency = 'INR', planId, notes } = await req.json()
 
     if (!amount || !planId) {
       return NextResponse.json({ error: 'Missing: amount, planId' }, { status: 400 })
     }
+
+    const userId = user.id
 
     const KEY_ID = process.env.RAZORPAY_KEY_ID
     const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET

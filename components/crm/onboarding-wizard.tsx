@@ -281,8 +281,18 @@ function Step1({ companyId, onNext }: { companyId: string; onNext: () => void })
 }
 
 // ── Step 2 — Invite Team ──────────────────────────────────────────────────────
+// Helper: derive a display name from an email address
+function nameFromEmail(email: string): string {
+  const local = email.split('@')[0] ?? ''
+  return local
+    .replace(/[._+-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase()) || 'Team Member'
+}
+
 function Step2({ companyId, onNext, onSkip }: { companyId: string; onNext: () => void; onSkip: () => void }) {
-  const [rows, setRows] = useState([{ email: '', role: 'sales_rep' }])
+  const [rows, setRows] = useState([{ email: '', role: 'sales_rep', fullName: '' }])
   const [sending, setSending] = useState(false)
 
   const send = async () => {
@@ -296,10 +306,12 @@ function Step2({ companyId, onNext, onSkip }: { companyId: string; onNext: () =>
 
     for (const r of valid) {
       try {
+        // fullName is required by /api/invites/send — use typed name or derive from email
+        const fullName = r.fullName.trim() || nameFromEmail(r.email.trim())
         const res = await fetch('/api/invites/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: r.email.trim(), role: r.role }),
+          body: JSON.stringify({ email: r.email.trim(), role: r.role, fullName }),
         })
         const data = await res.json().catch(() => ({}))
         if (res.ok && !data.emailError) {
@@ -328,6 +340,10 @@ function Step2({ companyId, onNext, onSkip }: { companyId: string; onNext: () =>
         body: JSON.stringify({ step: 2 }),
       }).catch(() => {})
       onNext()
+    } else if (failedCount > 0 && sentCount === 0) {
+      // Allow user to skip if all failed
+      setSending(false)
+      return
     }
     setSending(false)
   }
@@ -335,27 +351,31 @@ function Step2({ companyId, onNext, onSkip }: { companyId: string; onNext: () =>
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Add team members — they'll receive an email invite.</p>
+      <p className="text-sm text-muted-foreground">Add team members — they'll receive an email invite with a secure link to set their password.</p>
       {rows.map((row, i) => (
-        <div key={i} className="flex gap-2 items-center">
-          <Input className="flex-1" type="email" placeholder="teammate@company.com"
-            value={row.email} onChange={e => setRows(p => p.map((r, j) => j === i ? { ...r, email: e.target.value } : r))} />
-          <Select value={row.role} onValueChange={v => setRows(p => p.map((r, j) => j === i ? { ...r, role: v } : r))}>
-            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {['company_admin', 'sales_manager', 'sales_rep', 'viewer'].map(r => (
-                <SelectItem key={r} value={r} className="text-xs capitalize">{r.replace(/_/g, ' ')}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {rows.length > 1 && (
-            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setRows(p => p.filter((_, j) => j !== i))}>
-              <X className="size-4" />
-            </Button>
-          )}
+        <div key={i} className="flex flex-col gap-2">
+          <div className="flex gap-2 items-center">
+            <Input className="flex-1" placeholder="Full Name (optional)"
+              value={row.fullName} onChange={e => setRows(p => p.map((r, j) => j === i ? { ...r, fullName: e.target.value } : r))} />
+            <Input className="flex-1" type="email" placeholder="teammate@company.com"
+              value={row.email} onChange={e => setRows(p => p.map((r, j) => j === i ? { ...r, email: e.target.value } : r))} />
+            <Select value={row.role} onValueChange={v => setRows(p => p.map((r, j) => j === i ? { ...r, role: v } : r))}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {['company_admin', 'sales_manager', 'sales_rep', 'viewer'].map(r => (
+                  <SelectItem key={r} value={r} className="text-xs capitalize">{r.replace(/_/g, ' ')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {rows.length > 1 && (
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setRows(p => p.filter((_, j) => j !== i))}>
+                <X className="size-4" />
+              </Button>
+            )}
+          </div>
         </div>
       ))}
-      <Button variant="outline" size="sm" onClick={() => setRows(p => [...p, { email: '', role: 'sales_rep' }])}>
+      <Button variant="outline" size="sm" onClick={() => setRows(p => [...p, { email: '', role: 'sales_rep', fullName: '' }])}>
         + Add Another
       </Button>
       <div className="flex gap-2 pt-2">

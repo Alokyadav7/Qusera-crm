@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import { sendEmail, teamInviteEmailHtml } from '@/lib/email'
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 // POST /api/invites/resend — Refresh token, reset expiry, resend email
 export async function POST(req: NextRequest) {
@@ -36,6 +37,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
+    // Rate limit: prevent spam resending
+    const rl = checkRateLimit('email', invite.company_id)
+    const denied = rateLimitResponse(rl)
+    if (denied) return denied
+
     // Generate new token, reset expiry
     const crypto = require('crypto')
     const newToken = crypto.randomBytes(32).toString('hex')
@@ -60,21 +66,26 @@ export async function POST(req: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Send email directly
-    try {
-      await sendEmail({
-        to: invite.email,
-        subject: `You've been invited to join ${company?.name ?? 'Klinq CRM'}`,
-        html: teamInviteEmailHtml({
-          companyName: company?.name ?? 'Klinq CRM',
-          inviterName: inviterProfile?.full_name ?? 'Your Admin',
-          role: invite.role,
-          inviteUrl,
-          expiryDays: 7,
-        }),
+    // Send email — surface errors to the caller instead of hiding them
+    const emailResult = await sendEmail({
+      to: invite.email,
+      subject: `You've been invited to join ${company?.name ?? 'Klinq CRM'}`,
+      html: teamInviteEmailHtml({
+        companyName: company?.name ?? 'Klinq CRM',
+        inviterName: inviterProfile?.full_name ?? 'Your Admin',
+        role: invite.role,
+        inviteUrl,
+        expiryDays: 7,
+      }),
+    })
+
+    if (!emailResult.success) {
+      return NextResponse.json({
+        message: `Invite token refreshed, but email failed to send: ${emailResult.error}`,
+        inviteId,
+        emailFailed: true,
+        emailError: emailResult.error,
       })
-    } catch (err: any) {
-      console.error('[Resend Email] Failed:', err.message)
     }
 
     return NextResponse.json({ message: `Invite resent to ${invite.email}` })
@@ -82,3 +93,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message ?? 'Internal server error' }, { status: 500 })
   }
 }
+

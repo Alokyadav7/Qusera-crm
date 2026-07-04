@@ -33,10 +33,15 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: 'Deal not found', code: 'NOT_FOUND' }, { status: 404 })
     }
 
-    // Company isolation check
-    const reqCompanyId = company_id || (existing as any).company_id
-    if ((existing as any).company_id && reqCompanyId && (existing as any).company_id !== reqCompanyId) {
-      return NextResponse.json({ error: 'Forbidden', code: 'COMPANY_MISMATCH' }, { status: 403 })
+    // Verify caller belongs to the same company as the lead
+    const { data: uac } = await (supabase as any)
+      .from('user_active_company')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!uac || uac.company_id !== (existing as any).company_id) {
+      return NextResponse.json({ error: 'Forbidden: deal belongs to another company', code: 'COMPANY_MISMATCH' }, { status: 403 })
     }
 
     const prevStage = from_stage || (existing as any).status
@@ -100,6 +105,17 @@ export async function DELETE(req: NextRequest, ctx: RouteContext) {
     const supabase = createServiceClient()
     const { data: existing } = await supabase.from('leads').select('*').eq('id', id).single()
     if (!existing) return NextResponse.json({ error: 'Not found', code: 'NOT_FOUND' }, { status: 404 })
+
+    // Verify caller belongs to the same company as the lead
+    const { data: uac } = await (supabase as any)
+      .from('user_active_company')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!uac || uac.company_id !== (existing as any).company_id) {
+      return NextResponse.json({ error: 'Forbidden: lead belongs to another company', code: 'COMPANY_MISMATCH' }, { status: 403 })
+    }
 
     const { error } = await supabase.from('leads').delete().eq('id', id)
     if (error) return NextResponse.json({ error: error.message, code: 'DELETE_FAILED' }, { status: 500 })

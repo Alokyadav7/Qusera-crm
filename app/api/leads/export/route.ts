@@ -1,4 +1,5 @@
-﻿import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -11,24 +12,44 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch all leads for this user
-    const { data: leads, error } = await supabase
+    // ── FIX W1: Use service client and add explicit company_id filter.
+    // Defence-in-depth — RLS alone is not sufficient if policies drift.
+    const svc = createServiceClient()
+
+    const { data: uac } = await (svc as any)
+      .from('user_active_company')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+
+    const companyId = (uac as any)?.company_id as string | null
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'No active company found. Please complete onboarding.' },
+        { status: 400 }
+      )
+    }
+
+    // Fetch leads scoped to this company only
+    const { data: leads, error } = await (svc as any)
       .from('leads')
       .select('*')
+      .eq('company_id', companyId)      // ← explicit tenant isolation
       .order('created_at', { ascending: false })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    const headers = [
+      'Full Name', 'Phone', 'Email', 'Company', 'Status', 'Buying Intent',
+      'Source', 'City', 'State', 'Deal Value (₹)', 'Estimated Budget (₹)',
+      'Sentiment Score', 'GST Status', 'PAN Status', 'AI Summary',
+      'Last Contacted', 'Created At'
+    ]
+
     if (!leads || leads.length === 0) {
-      // Return empty CSV with headers only
-      const headers = [
-        'Full Name', 'Phone', 'Email', 'Company', 'Status', 'Buying Intent',
-        'Source', 'City', 'State', 'Deal Value (₹)', 'Estimated Budget (₹)',
-        'Sentiment Score', 'GST Status', 'PAN Status', 'AI Summary',
-        'Last Contacted', 'Created At'
-      ]
       const csv = headers.join(',') + '\n'
       return new NextResponse(csv, {
         headers: {
@@ -38,29 +59,20 @@ export async function GET() {
       })
     }
 
-    // Build CSV
-    const headers = [
-      'Full Name', 'Phone', 'Email', 'Company', 'Status', 'Buying Intent',
-      'Source', 'City', 'State', 'Deal Value (₹)', 'Estimated Budget (₹)',
-      'Sentiment Score', 'GST Status', 'PAN Status', 'AI Summary',
-      'Last Contacted', 'Created At'
-    ]
-
     const escape = (val: string | number | boolean | null | undefined): string => {
       if (val === null || val === undefined) return ''
       const str = String(val)
-      // Escape quotes and wrap in quotes if contains comma, quote, or newline
       if (str.includes(',') || str.includes('"') || str.includes('\n')) {
         return `"${str.replace(/"/g, '""')}"`
       }
       return str
     }
 
-    const rows = leads.map(lead => {
+    const rows = leads.map((lead: any) => {
       const l = lead as any
       return [
         escape(l.full_name),
-        escape(l.phone_number),
+        escape(l.phone || l.phone_number),
         escape(l.email),
         escape(l.company),
         escape(l.status),

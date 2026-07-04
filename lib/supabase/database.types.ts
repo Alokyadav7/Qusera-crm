@@ -1,8 +1,7 @@
-﻿// ─── Klinq CRM — Supabase Database Types ──────────────────────────────────────
+// ─── Klinq CRM — Supabase Database Types ──────────────────────────────────────
 // Covers all multi-tenant tables. Wire this into createClient<Database>().
 
-// Recursive JSON type that properly accepts plain objects and arrays.
-// Using a simpler, widely-compatible definition.
+
 export type Json =
   | string
   | number
@@ -224,12 +223,21 @@ export interface Database {
         Row: {
           id: string
           full_name: string | null
+          email: string | null
+          phone: string | null
           avatar_url: string | null
           role: string
+          department: string | null
           is_active: boolean
+          is_super_admin: boolean | null
           onboarding_completed: boolean | null
-          created_at: string
+          temp_password_used: boolean | null
+          last_login_at: string | null
+          invited_by: string | null
+          joined_at: string | null
           updated_at: string
+          company_id: string | null
+          created_at: string
         }
         Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { id: string }
         Update: Partial<Database['public']['Tables']['profiles']['Row']>

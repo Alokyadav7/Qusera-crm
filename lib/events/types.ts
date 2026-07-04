@@ -1,4 +1,4 @@
-﻿// ─── Klinq CRM — Activity Event Types ─────────────────────────────────────────
+// ─── Klinq CRM — Activity Event Types ─────────────────────────────────────────
 
 export type ActivityEventType =
   // Lead events
@@ -46,6 +46,7 @@ export type ActivityEventType =
   // Impersonation
   | 'impersonation.started'
   | 'impersonation.ended'
+  | 'super_admin.api_access'
   // Automation & AI
   | 'automation.triggered'
   | 'automation.completed'

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { CRMHeader } from '@/components/crm/crm-header'
@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, AlertCircle, Copy, ExternalLink, Loader2, Save, Eye, EyeOff } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Copy, ExternalLink, Loader2, Save, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useActiveCompany } from '@/lib/company-context'
 import { toast } from 'sonner'
 
 interface Integration {
@@ -21,16 +22,20 @@ interface Integration {
   fast2sms_api_key: string
   fast2sms_sender_id: string
   sms_connected: boolean
-  whatsapp_phone_number_id: string
-  whatsapp_connected: boolean
   webhook_secret: string
+}
+
+interface WhatsAppConfig {
+  phone_number: string
+  display_name: string
+  waba_id: string
+  is_active: boolean
 }
 
 const EMPTY: Integration = {
   meta_page_access_token: '', meta_page_id: '', meta_app_id: '', meta_connected: false,
   google_ads_customer_id: '', google_connected: false,
   fast2sms_api_key: '', fast2sms_sender_id: 'klinqC', sms_connected: false,
-  whatsapp_phone_number_id: '', whatsapp_connected: false,
   webhook_secret: '',
 }
 
@@ -61,11 +66,29 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 export default function IntegrationsPage() {
+  const { companyId } = useActiveCompany()
   const [data, setData] = useState<Integration>(EMPTY)
   const [userId, setUserId] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [domain, setDomain] = useState('')
+  const [waConfig, setWaConfig] = useState<WhatsAppConfig | null>(null)
+  const [waLoading, setWaLoading] = useState(false)
+
+  // Load WhatsApp config for company
+  const loadWhatsApp = useCallback(async () => {
+    if (!companyId) return
+    setWaLoading(true)
+    const supabase = createClient()
+    const { data: wa } = await (supabase as any)
+      .from('company_whatsapp')
+      .select('phone_number, display_name, waba_id, is_active')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+    setWaConfig(wa ?? null)
+    setWaLoading(false)
+  }, [companyId])
 
   useEffect(() => {
     setDomain(window.location.origin)
@@ -95,6 +118,8 @@ export default function IntegrationsPage() {
 
     return () => { supabase.removeChannel(channel) }
   }, [])
+
+  useEffect(() => { loadWhatsApp() }, [loadWhatsApp])
 
   const save = useCallback(async (section: string, fields: Partial<Integration>) => {
     setSaving(section)
@@ -183,7 +208,7 @@ export default function IntegrationsPage() {
       id: 'sms',
       name: 'Bulk SMS — Fast2SMS',
       icon: '📱',
-      description: 'Send bulk SMS campaigns to your leads. India\'s leading SMS gateway.',
+      description: "Send bulk SMS campaigns to your leads. India's leading SMS gateway.",
       badge: data.sms_connected ? 'Connected' : 'Not Connected',
       badgeOk: data.sms_connected,
       setupUrl: 'https://www.fast2sms.com/register',
@@ -211,32 +236,6 @@ export default function IntegrationsPage() {
       ),
       onSave: () => save('SMS', { fast2sms_api_key: data.fast2sms_api_key, fast2sms_sender_id: data.fast2sms_sender_id, sms_connected: !!data.fast2sms_api_key }),
     },
-    {
-      id: 'whatsapp',
-      name: 'WhatsApp Business API',
-      icon: '💬',
-      description: 'Send & receive WhatsApp messages directly from CRM.',
-      badge: data.whatsapp_connected ? 'Connected' : 'Not Connected',
-      badgeOk: data.whatsapp_connected,
-      setupUrl: 'https://business.whatsapp.com',
-      fields: (
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Phone Number ID</Label>
-            <Input value={data.whatsapp_phone_number_id} onChange={e => setData(d => ({ ...d, whatsapp_phone_number_id: e.target.value }))} placeholder="102030405060708" />
-            <p className="text-xs text-muted-foreground">Found in Meta Business → WhatsApp → Phone Numbers</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Page Access Token</Label>
-            <MaskedInput value={data.meta_page_access_token} onChange={v => setData(d => ({ ...d, meta_page_access_token: v }))} placeholder="EAAxxxxxx..." />
-            <p className="text-xs text-muted-foreground">(Same token as Meta integration above)</p>
-          </div>
-          <CopyField label="WhatsApp Webhook URL" value={webhookUrl('/api/webhooks/whatsapp')} />
-          <CopyField label="Verify Token" value="KlinqCRM_webhook_verify_2024" />
-        </div>
-      ),
-      onSave: () => save('WhatsApp', { whatsapp_phone_number_id: data.whatsapp_phone_number_id, whatsapp_connected: !!data.whatsapp_phone_number_id }),
-    },
   ]
 
   if (loading) return (
@@ -248,7 +247,7 @@ export default function IntegrationsPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <CRMHeader title="Integrations" subtitle="Connect Facebook, Instagram, Google Ads, SMS — leads flow in automatically" />
+      <CRMHeader title="Integrations" subtitle="Connect Facebook, Instagram, Google Ads, SMS, WhatsApp — leads flow in automatically" />
       <main className="flex-1 p-4 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
 
         {/* Your unique webhook ID */}
@@ -262,7 +261,117 @@ export default function IntegrationsPage() {
           </Card>
         )}
 
-        {/* Platform cards */}
+        {/* ── WhatsApp Business Card (company-level, uses company_whatsapp table) ── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">💬</span>
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    WhatsApp Business API
+                    {waLoading ? (
+                      <Badge variant="outline" className="text-xs">
+                        <Loader2 className="size-3 mr-1 animate-spin" />Checking...
+                      </Badge>
+                    ) : waConfig?.is_active ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">
+                        <CheckCircle2 className="size-3 mr-1" />Connected
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        <AlertCircle className="size-3 mr-1" />Not Connected
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Send & receive WhatsApp messages directly from CRM. Uses Meta Business WhatsApp API.
+                  </CardDescription>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => window.open('https://business.whatsapp.com', '_blank')}>
+                <ExternalLink className="size-4 mr-1" />Open Meta
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {waConfig?.is_active ? (
+              <div className="space-y-3">
+                {/* Connected info */}
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+                  <p className="text-sm font-semibold text-emerald-800 flex items-center gap-2">
+                    <CheckCircle2 className="size-4" />WhatsApp is connected
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 text-xs text-emerald-700">
+                    <div>
+                      <p className="text-emerald-500">Phone Number</p>
+                      <p className="font-semibold">{waConfig.phone_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-emerald-500">Display Name</p>
+                      <p className="font-semibold">{waConfig.display_name || '—'}</p>
+                    </div>
+                    {waConfig.waba_id && (
+                      <div className="col-span-2">
+                        <p className="text-emerald-500">WABA ID</p>
+                        <p className="font-mono text-xs">{waConfig.waba_id}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => window.location.href = '/dashboard/whatsapp'}
+                  >
+                    Open WhatsApp Inbox
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={loadWhatsApp}
+                  >
+                    <RefreshCw className="size-4" />
+                  </Button>
+                </div>
+                {/* Webhook setup info */}
+                <CopyField label="WhatsApp Webhook URL (paste in Meta App Dashboard)" value={`${domain}/api/webhooks/whatsapp`} />
+                <CopyField label="Webhook Verify Token" value="kling_crm_webhook_2025" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 space-y-2">
+                  <p className="font-semibold">⚠️ WhatsApp Business API requires Meta verification</p>
+                  <p className="text-xs leading-relaxed">
+                    To connect WhatsApp, you need a verified Meta Business account with a WhatsApp Business Account (WABA) and approved phone number.
+                    The connection is set up via the WhatsApp inbox page.
+                  </p>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-2">
+                  <p className="font-semibold">Setup Steps:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                    <li>Go to <strong>Meta Business Suite</strong> → Create a WhatsApp Business Account</li>
+                    <li>Add and verify your phone number in the WABA</li>
+                    <li>Create a Meta App at <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener" className="text-primary underline">developers.facebook.com</a></li>
+                    <li>Add WhatsApp product to your app and get the system user token</li>
+                    <li>Use the button below to complete the OAuth connection</li>
+                  </ol>
+                </div>
+                <CopyField label="WhatsApp Webhook URL (configure in Meta App)" value={`${domain}/api/webhooks/whatsapp`} />
+                <CopyField label="Webhook Verify Token" value="kling_crm_webhook_2025" />
+                <Button
+                  className="w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white"
+                  onClick={() => window.location.href = '/dashboard/whatsapp'}
+                >
+                  💬 Set Up WhatsApp Connection
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Platform cards (Meta Leads, Google, SMS) */}
         {PLATFORMS.map(p => (
           <Card key={p.id}>
             <CardHeader className="pb-3">

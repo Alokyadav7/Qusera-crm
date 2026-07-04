@@ -71,7 +71,7 @@ const MATRIX: Record<Action, Role[]> = {
   'email.send':           ['company_admin', 'sales_manager', 'sales_rep'],
   'reports.view':         ['company_admin', 'sales_manager', 'viewer'],
   'automations.manage':   ['company_admin', 'sales_manager'],
-  'team.manage':          ['company_admin'],
+  'team.manage':          ['company_admin', 'sales_manager'],
   'audit_logs.view':      ['company_admin', 'sales_manager'],
   'invoices.create':      ['company_admin', 'sales_manager', 'sales_rep'],
   'invoices.view':        ['company_admin', 'sales_manager', 'sales_rep', 'viewer'],

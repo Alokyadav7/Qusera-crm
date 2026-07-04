@@ -21,10 +21,11 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 interface TeamMember {
-  id: string
+  id: string        // company_members row id
+  user_id?: string  // user's auth id
   email: string
   full_name: string | null
-  role: 'owner' | 'admin' | 'member'
+  role: 'owner' | 'admin' | 'member' | 'company_admin' | 'sales_manager' | 'sales_rep' | 'viewer'
   created_at: string
 }
 
@@ -86,20 +87,28 @@ export default function SettingsPage() {
       })
     }
 
-    // Fetch team members sharing the same company_id
-    let query = (supabase as any)
-      .from('profiles')
-      .select('id, email, full_name, role, created_at')
-      .order('created_at', { ascending: true })
-
+    // ✅ Load team members from company_members (correct table) joined with profiles
     if (prof?.company_id) {
-      query = query.eq('company_id', prof.company_id)
-    } else {
-      query = query.eq('id', currentUser.id)
-    }
+      const { data: members } = await (supabase as any)
+        .from('company_members')
+        .select('id, role, is_active, user_id, profiles:user_id (id, email, full_name)')
+        .eq('company_id', prof.company_id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .limit(50)
 
-    const { data: members } = await query.limit(50)
-    setTeamMembers((members || []) as TeamMember[])
+      const formatted = (members || []).map((m: any) => ({
+        id: m.id,              // company_members row id
+        user_id: m.user_id,
+        email: (Array.isArray(m.profiles) ? m.profiles[0]?.email : m.profiles?.email) || '',
+        full_name: (Array.isArray(m.profiles) ? m.profiles[0]?.full_name : m.profiles?.full_name) || null,
+        role: m.role,
+        created_at: m.created_at,
+      }))
+      setTeamMembers(formatted)
+    } else {
+      setTeamMembers([])
+    }
   }, [])
 
   // Sync settings and set up real-time postgres subscription
@@ -178,41 +187,38 @@ export default function SettingsPage() {
     if (!inviteEmail) return
     setInviting(true)
     try {
-      const res = await fetch('/api/email/send', {
+      // ✅ Use proper invite system — creates token, creates user account, sends secure email with accept link
+      const res = await fetch('/api/invites/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: [inviteEmail],
-          subject: `You've been invited to KlinqCRM`,
-          html: `
-            <div style="font-family: sans-serif; padding: 24px; color: #333;">
-              <h2>You've been invited to join KlinqCRM</h2>
-              <p style="font-size: 14px; line-height: 1.5; color: #555;">${user?.email} has invited you to collaborate as a <strong>${inviteRole}</strong>.</p>
-              <p style="margin: 24px 0;">
-                <a href="${typeof window !== 'undefined' ? window.location.origin : ''}/login" 
-                   style="background: #6366f1; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">
-                  Accept Invitation
-                </a>
-              </p>
-              <hr style="border: 0; border-top: 1px solid #eee; margin: 24px 0;" />
-              <p style="font-size: 12px; color: #777;">If you did not expect this invitation, you can safely ignore this email.</p>
-            </div>
-          `,
+          email: inviteEmail.trim(),
+          role: inviteRole === 'admin' ? 'company_admin' : 'sales_rep',
+          fullName: inviteEmail.split('@')[0]
+            .replace(/[._+-]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\b\w/g, (c: string) => c.toUpperCase()) || 'Team Member',
         }),
       })
       const data = await res.json()
-      if (data.success) {
-        toast.success(`Invitation successfully sent to ${inviteEmail}${data.mock ? ' (sandbox mode — mock email sent)' : ''}`)
+      if (res.ok) {
+        if (data.emailError) {
+          toast.warning(`Invite created but email failed: ${data.emailError}`)
+        } else {
+          toast.success(`Invitation sent to ${inviteEmail} — they'll receive a secure link to set their password.`)
+        }
+        setInviteEmail('')
+        loadSettings()
       } else {
         toast.error('Invite failed: ' + (data.error || 'Server error'))
       }
-      setInviteEmail('')
     } catch (err: any) {
       toast.error('Invite error: ' + (err.message || 'Could not reach server'))
     } finally {
       setInviting(false)
     }
-  }, [inviteEmail, inviteRole, user])
+  }, [inviteEmail, inviteRole, loadSettings])
 
   const changePassword = useCallback(async () => {
     const supabase = createClient()
@@ -489,13 +495,16 @@ export default function SettingsPage() {
                                 size="icon"
                                 className="size-8 text-muted-foreground hover:text-destructive transition-colors rounded-lg"
                                 onClick={async () => {
-                                  const supabase = createClient()
-                                  const { error } = await (supabase as any)
-                                    .from('profiles')
-                                    .update({ company_name: null, role: 'member' })
-                                    .eq('id', member.id)
-                                  if (error) {
-                                    toast.error('Failed to unlink member: ' + error.message)
+                                  if (!confirm('Remove this member from your team?')) return
+                                  // ✅ Call correct API — deactivates company_members record
+                                  const res = await fetch(`/api/team/members/${member.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ is_active: false }),
+                                  })
+                                  if (!res.ok) {
+                                    const err = await res.json().catch(() => ({}))
+                                    toast.error('Failed to remove member: ' + (err.error || res.statusText))
                                   } else {
                                     toast.success('Member removed from team!')
                                     loadSettings()
@@ -682,7 +691,7 @@ export default function SettingsPage() {
                           }
                           const amountMap: Record<string, number> = { Starter: 99900, Growth: 249900 }
                           try {
-                            const res = await fetch('/api/payments/create-order', {
+                            const res = await fetch('/api/billing/create-order', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ 

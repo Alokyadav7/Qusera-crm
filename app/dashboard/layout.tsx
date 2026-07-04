@@ -29,29 +29,26 @@ function QuickAddLeadFAB() {
   async function handleSave() {
     if (!form.name) return
     setLoading(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoading(false); return }
 
-    const { error } = await (supabase as any).from('leads').insert({
-      user_id: user.id,
-      full_name: form.name,
-      phone_number: form.phone || null,
-      company: form.company || null,
-      source: form.source,
-      deal_value: form.value ? Number(form.value) : null,
-      status: 'new',
-      buying_intent: 'medium',
-      sentiment_score: 0,
-      gst_status: 'pending',
-      pan_status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    // Use the /api/leads endpoint which auto-stamps company_id from user_active_company
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: form.name,
+        phone: form.phone || null,          // DB column is 'phone', not 'phone_number'
+        company: form.company || null,
+        source: form.source,
+        deal_value: form.value ? Number(form.value) : null,
+        status: 'new',
+        buying_intent: 'medium',
+      }),
     })
 
     setLoading(false)
-    if (error) {
-      toast.error('Failed to add lead: ' + error.message)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      toast.error('Failed to add lead: ' + (err.error || res.statusText))
     } else {
       toast.success(`Lead "${form.name}" added! ✅`)
       setForm({ name: '', phone: '', company: '', source: 'manual', value: '' })
@@ -203,8 +200,22 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       }
 
       if (!(profile as any)?.onboarding_completed) {
-        router.push('/onboarding')
-        return
+        // Check if this user is an invited member who has already joined a company.
+        // Invited members don't go through onboarding — they accept the invite and land on dashboard.
+        // FIX W7: reuse the existing `supabase` client instead of creating a second one
+        const { data: memberRecord } = await (supabase as any)
+          .from('company_members')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (!memberRecord) {
+          // No active company membership = new owner who needs to complete onboarding
+          router.push('/onboarding')
+          return
+        }
+        // Has active membership = accepted invite user — skip onboarding, go to dashboard
       }
 
       setUser(user)

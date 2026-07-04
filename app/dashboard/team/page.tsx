@@ -30,6 +30,7 @@ export default function TeamPage() {
   const [myRole, setMyRole] = useState<string | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteFullName, setInviteFullName] = useState('')
   const [inviteRole, setInviteRole] = useState<Role>('sales_rep')
   const [inviting, setInviting] = useState(false)
 
@@ -57,19 +58,38 @@ export default function TeamPage() {
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !companyId) return
     setInviting(true)
-    const res = await fetch('/api/team/members', {
+
+    // Derive full name from email if not provided
+    const fullName = inviteFullName.trim() || inviteEmail.split('@')[0]
+      .replace(/[._+-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (c: string) => c.toUpperCase()) || 'Team Member'
+
+    // Use /api/invites/send — creates a proper tokenized invite link + sends email
+    const res = await fetch('/api/invites/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_id: companyId, email: inviteEmail.trim(), role: inviteRole }),
+      body: JSON.stringify({
+        email: inviteEmail.trim(),
+        role: inviteRole,
+        fullName,
+      }),
     })
     if (res.ok) {
-      toast.success(`Invitation sent to ${inviteEmail}`)
+      const data = await res.json()
+      if (data.emailError) {
+        toast.warning(`Invite created but email failed: ${data.emailError}`)
+      } else {
+        toast.success(`Invitation sent to ${inviteEmail}`)
+      }
       setInviteOpen(false)
       setInviteEmail('')
+      setInviteFullName('')
       fetchMembers()
     } else {
       const err = await res.json()
-      toast.error(err.error || 'Failed to invite')
+      toast.error(err.error || 'Failed to send invite')
     }
     setInviting(false)
   }
@@ -268,16 +288,37 @@ export default function TeamPage() {
         </div>
       </main>
 
-      {/* Invite Dialog */}
+      {/* Invite Dialog — now uses /api/invites/send for proper token-based invites */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><UserPlus className="size-5" /> Invite Team Member</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="size-5" /> Invite Team Member
+            </DialogTitle>
+          </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
+              <Label>Full Name <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                type="text"
+                placeholder="John Smith"
+                value={inviteFullName}
+                onChange={e => setInviteFullName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
               <Label>Email Address *</Label>
-              <Input type="email" placeholder="sarah@company.com" value={inviteEmail}
+              <Input
+                type="email"
+                placeholder="sarah@company.com"
+                value={inviteEmail}
                 onChange={e => setInviteEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleInvite()} autoFocus />
+                onKeyDown={e => e.key === 'Enter' && handleInvite()}
+              />
+              <p className="text-xs text-muted-foreground">
+                They will receive an email with a secure link to set their password and join your team.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label>Role</Label>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { normalizeRole } from '@/lib/permissions'
 
 /**
  * POST /api/whatsapp/connect
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest) {
       .eq('is_active', true)
       .single()
 
-    if (!member || !['admin', 'owner'].includes(member.role)) {
+    const normalized = normalizeRole(member?.role)
+    if (!member || !normalized || !['company_admin'].includes(normalized)) {
       return NextResponse.json({ error: 'Admin access required', code: 'FORBIDDEN' }, { status: 403 })
     }
 

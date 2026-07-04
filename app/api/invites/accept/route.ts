@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { emitEvent } from '@/lib/events/emit'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 // POST /api/invites/accept
 // Called from the invite acceptance page — public (no auth required yet)
 export async function POST(req: NextRequest) {
   try {
+    // ── FIX W5: Rate limit by IP — max 10 attempts per 15 min per IP to prevent brute-force token guessing
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      req.headers.get('x-real-ip') ||
+      'unknown'
+    const rl = rateLimit({ key: `invite_accept:${ip}`, limit: 10, windowMs: 15 * 60_000 })
+    const denied = rateLimitResponse(rl)
+    if (denied) return denied
     const body = await req.json()
     const { token, password, fullName } = body
 
@@ -25,7 +34,7 @@ export async function POST(req: NextRequest) {
       .select('*, company:companies(id, name)')
       .eq('token', token)
       .is('accepted_at', null)
-      .single()
+      .maybeSingle()
 
     if (!invite) {
       return NextResponse.json({ error: 'Invalid or expired invite link' }, { status: 404 })
@@ -35,9 +44,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This invite has expired. Ask your admin to resend it.' }, { status: 410 })
     }
 
-    // Check if auth user already exists
-    const { data: authSearch } = await svc.auth.admin.listUsers()
-    const authUser = authSearch?.users?.find(u => u.email?.toLowerCase() === invite.email.toLowerCase())
+    // Check if auth user already exists using profiles lookup and then getUserById
+    const { data: existingProfile } = await svc
+      .from('profiles')
+      .select('id')
+      .eq('email', invite.email.toLowerCase())
+      .maybeSingle()
+
+    let authUser = null
+    if (existingProfile) {
+      const { data: authData } = await svc.auth.admin.getUserById(existingProfile.id)
+      authUser = authData?.user ?? null
+    }
     let userId: string
 
     if (authUser) {

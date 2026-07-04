@@ -27,15 +27,17 @@ export async function POST(req: NextRequest) {
   try {
     const rawBody = await req.text()
 
-    // ── Security: Verify Meta HMAC signature ────────────────────────────────
+    // ── Security: Verify Meta HMAC signature (MANDATORY) ─────────────────────
     const APP_SECRET = process.env.META_APP_SECRET || process.env.META_WHATSAPP_APP_SECRET
-    if (APP_SECRET) {
-      const sig = req.headers.get('x-hub-signature-256') ?? ''
-      const expected = 'sha256=' + createHmac('sha256', APP_SECRET).update(rawBody).digest('hex')
-      if (sig !== expected) {
-        console.error('WhatsApp webhook: invalid signature')
-        return new NextResponse('Unauthorized', { status: 401 })
-      }
+    if (!APP_SECRET) {
+      console.error('WhatsApp webhook: META_APP_SECRET not configured — rejecting request')
+      return new NextResponse('Webhook not configured', { status: 503 })
+    }
+    const sig = req.headers.get('x-hub-signature-256') ?? ''
+    const expected = 'sha256=' + createHmac('sha256', APP_SECRET).update(rawBody).digest('hex')
+    if (sig !== expected) {
+      console.error('WhatsApp webhook: invalid signature')
+      return new NextResponse('Unauthorized', { status: 401 })
     }
 
     const body = JSON.parse(rawBody)
@@ -141,7 +143,7 @@ async function processInboundMessage({
     .from('leads')
     .select('id, assigned_to')
     .eq('company_id', companyId)
-    .or(`phone.ilike.%${last10}%,phone_number.ilike.%${last10}%`)
+    .ilike('phone', `%${last10}%`)
     .maybeSingle()
 
   if (!lead) {
@@ -151,7 +153,7 @@ async function processInboundMessage({
       .select('user_id')
       .eq('company_id', companyId)
       .eq('is_active', true)
-      .in('role', ['owner', 'admin', 'member'])
+      .in('role', ['owner', 'admin', 'manager'])
       .order('created_at', { ascending: true })
       .limit(1)
       .single()

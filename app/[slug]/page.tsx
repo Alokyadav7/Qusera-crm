@@ -594,7 +594,7 @@ print(response.json())`}
       'community': { title: 'Developer Community', subtitle: 'Contribute and exchange ideas', category: 'Resources' },
       'privacy': { title: 'Privacy Policy', subtitle: 'How we guard your leads & transcript records', category: 'Legal' },
       'terms': { title: 'Terms of Service', subtitle: 'General terms and pricing agreements', category: 'Legal' },
-      'security': { title: 'Security & Encryption', subtitle: 'SOC 2 certifications and Meta tokens', category: 'Legal' },
+      'security': { title: 'Security & Encryption', subtitle: 'Data localization and Meta tokens', category: 'Legal' },
       'gdpr': { title: 'GDPR Compliance', subtitle: 'Lead tracking consents and user controls', category: 'Legal' },
       'cookies': { title: 'Cookie Policy', subtitle: 'Session storage and preferences', category: 'Legal' }
     }

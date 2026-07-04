@@ -51,6 +51,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unknown plan: ${plan_id}` }, { status: 400 })
     }
 
+    // Guard: reject if Razorpay keys are still placeholders
+    const keyId = process.env.RAZORPAY_KEY_ID ?? ''
+    const keySecret = process.env.RAZORPAY_KEY_SECRET ?? ''
+    if (!keyId || keyId.includes('replace') || !keySecret || keySecret.includes('replace')) {
+      return NextResponse.json({
+        error: 'Payment system not configured. RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set with real credentials in .env.',
+        setup_required: true,
+      }, { status: 503 })
+    }
+
     // Create Razorpay order
     const razorpay = getRazorpay()
     const order = await razorpay.orders.create({

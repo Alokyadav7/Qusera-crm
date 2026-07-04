@@ -11,17 +11,24 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('x-razorpay-signature') ?? ''
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET ?? ''
 
-    // ── Verify webhook signature ──────────────────────────────
-    if (secret) {
-      const expectedSig = crypto
-        .createHmac('sha256', secret)
-        .update(rawBody)
-        .digest('hex')
+    // ── FIX B4: Block ALL requests when webhook secret is unconfigured.
+    // The old code silently accepted any payload when secret was empty/placeholder
+    // — attackers could forge payment events to activate subscriptions for free.
+    const isPlaceholderSecret = !secret || secret.startsWith('replace')
+    if (isPlaceholderSecret) {
+      console.error('[billing/webhook] RAZORPAY_WEBHOOK_SECRET not configured. Set a real secret in your environment variables.')
+      return NextResponse.json({ error: 'Payment webhook not configured' }, { status: 503 })
+    }
 
-      if (expectedSig !== signature) {
-        console.warn('[webhook] Invalid signature')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
-      }
+    // ── Verify webhook signature ──────────────────────────────
+    const expectedSig = crypto
+      .createHmac('sha256', secret)
+      .update(rawBody)
+      .digest('hex')
+
+    if (expectedSig !== signature) {
+      console.warn('[billing/webhook] Invalid signature — possible forged request')
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     const event = JSON.parse(rawBody)

@@ -19,20 +19,28 @@ export interface TenantAuthOptions {
   requiredFeature?: string
 }
 
-const ROLE_HIERARCHY: Record<MemberRole, number> = {
-  owner: 100,
-  admin: 90,
-  manager: 70,
-  sales: 50,
-  support: 50,
-  marketing: 50,
-  viewer: 10,
+// Maps BOTH old alias roles AND the actual DB-stored values
+// DB stores: 'company_admin' | 'sales_manager' | 'sales_rep' | 'viewer'
+// Legacy aliases: 'owner' | 'admin' | 'manager' | 'sales'
+const ROLE_HIERARCHY: Record<string, number> = {
+  // Actual DB values
+  company_admin:  90,
+  sales_manager:  70,
+  sales_rep:      50,
+  viewer:         10,
+  // Legacy / alias values (kept for backward compat)
+  owner:         100,
+  admin:          90,
+  manager:        70,
+  sales:          50,
+  support:        50,
+  marketing:      50,
 }
 
-function hasRequiredRole(userRole: MemberRole, required: MemberRole[]): boolean {
+function hasRequiredRole(userRole: string, required: MemberRole[]): boolean {
   if (required.length === 0) return true
   const userLevel = ROLE_HIERARCHY[userRole] ?? 0
-  return required.some(r => userLevel >= ROLE_HIERARCHY[r])
+  return required.some(r => userLevel >= (ROLE_HIERARCHY[r] ?? 0))
 }
 
 /**
@@ -62,15 +70,20 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
 
       if (impersonationSessionId) {
         const svc = createServiceClient()
-        const { data: imp } = await svc
-          .from('impersonation_sessions')
-          .select('target_company_id')
-          .eq('id', impersonationSessionId)
-          .is('ended_at', null)
-          .single()
-        if (imp) {
-          activeCompanyId = imp.target_company_id
-          isImpersonating = true
+        try {
+          const { data: imp } = await svc
+            .from('impersonation_sessions')
+            .select('target_company_id')
+            .eq('id', impersonationSessionId)
+            .is('ended_at', null)
+            .single()
+          if (imp) {
+            activeCompanyId = imp.target_company_id
+            isImpersonating = true
+          }
+        } catch {
+          // impersonation_sessions table may not exist yet — skip silently
+          console.warn('[withTenantAuth] impersonation_sessions table not found — impersonation disabled')
         }
       }
 

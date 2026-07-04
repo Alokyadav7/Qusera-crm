@@ -5,7 +5,8 @@
  */
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import type { Role } from '@/lib/roles'
+import type { Role } from '@/lib/permissions'
+import { normalizeRole } from '@/lib/permissions'
 
 export interface SessionUser {
   id: string
@@ -125,7 +126,8 @@ export async function requireSuperAdmin(): Promise<SessionUser> {
 export async function requireCompanyAdmin(): Promise<SessionUser> {
   const session = await requireSession()
   if (session.isSuperAdmin) return session // super admin can see everything
-  if (session.role !== 'owner' && session.role !== 'admin') {
+  const normalized = session.role ? normalizeRole(session.role) : null
+  if (normalized !== 'company_admin') {
     const { redirect } = await import('next/navigation')
     redirect('/dashboard')
   }

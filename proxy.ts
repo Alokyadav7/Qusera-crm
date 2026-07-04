@@ -334,4 +334,14 @@ export async function proxy(request: NextRequest) {
   return response
 }
 
-// config lives in middleware.ts — Next.js requires it to be statically defined there.
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths EXCEPT:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico, sitemap.xml, robots.txt
+     */
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+  ],
+}

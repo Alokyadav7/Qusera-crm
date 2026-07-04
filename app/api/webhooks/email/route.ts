@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { createHmac } from 'crypto'
 
 /**
  * Email Inbound Webhook
@@ -21,24 +22,45 @@ export async function POST(req: NextRequest) {
     let body = ''
     let toEmail = ''
 
+    // Read raw body first for signature check
+    const reqClone = req.clone()
+    const rawBody = await reqClone.text()
+
+    // ── Security: Verify HMAC signature or Webhook Secret ─────────────────────
+    const WEBHOOK_SECRET = process.env.EMAIL_WEBHOOK_SECRET || process.env.RESEND_WEBHOOK_SECRET || process.env.WHATSAPP_VERIFY_TOKEN || 'klinq_crm_webhook_2025'
+    const authHeader = req.headers.get('Authorization')
+    const querySecret = req.nextUrl.searchParams.get('secret')
+    const isApiKeyValid = (authHeader === `Bearer ${WEBHOOK_SECRET}`) || (querySecret === WEBHOOK_SECRET)
+
+    const signature = req.headers.get('x-webhook-signature-256') || req.headers.get('x-resend-signature') || req.headers.get('x-hub-signature-256')
+    let isSignatureValid = false
+    if (signature) {
+      const cleanSig = signature.replace('sha256=', '')
+      const expected = createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest('hex')
+      isSignatureValid = (cleanSig === expected)
+    }
+
+    if (!isApiKeyValid && !isSignatureValid) {
+      console.error('Email webhook: unauthorized request')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Now parse payload
     if (contentType.includes('application/json')) {
-      // Resend inbound format
-      const json = await req.json()
+      const json = JSON.parse(rawBody)
       fromEmail = json.from || json.sender || ''
       subject = json.subject || ''
       body = json.html || json.text || json.body || ''
       toEmail = json.to || ''
     } else if (contentType.includes('multipart/form-data')) {
-      // SendGrid Inbound Parse format
       const formData = await req.formData()
       fromEmail = formData.get('from')?.toString() || ''
       subject = formData.get('subject')?.toString() || ''
       body = formData.get('html')?.toString() || formData.get('text')?.toString() || ''
       toEmail = formData.get('to')?.toString() || ''
     } else {
-      // Fallback: treat as JSON
       try {
-        const json = await req.json()
+        const json = JSON.parse(rawBody)
         fromEmail = json.from || ''
         subject = json.subject || ''
         body = json.text || json.html || ''
@@ -58,9 +80,38 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient()
 
-    // Get default company
-    const { data: companies } = await (supabase as any).from('companies').select('id').limit(1)
-    const defaultCompanyId = companies?.[0]?.id || null
+    // Match recipient company by custom_domain or website domain
+    let defaultCompanyId: string | null = null
+    const toEmailMatch = toEmail.match(/<(.+?)>/) || [null, toEmail.trim()]
+    const recipientEmail = toEmailMatch[1]?.toLowerCase() || toEmail.toLowerCase()
+    const recipientDomain = recipientEmail.split('@')[1]
+
+    if (recipientDomain) {
+      // Try matching custom_domain or website containing this domain
+      const { data: matchedCompany } = await (supabase as any)
+        .from('companies')
+        .select('id')
+        .or(`custom_domain.ilike.%${recipientDomain}%,website.ilike.%${recipientDomain}%`)
+        .is('deleted_at', null)
+        .limit(1)
+        .maybeSingle()
+      defaultCompanyId = matchedCompany?.id || null
+
+      if (!defaultCompanyId) {
+        const { data: matchedProfile } = await (supabase as any)
+          .from('profiles')
+          .select('company_id')
+          .eq('email', recipientEmail)
+          .limit(1)
+          .maybeSingle()
+        defaultCompanyId = matchedProfile?.company_id || null
+      }
+    }
+
+    if (!defaultCompanyId) {
+      console.warn(`Email webhook: No company matched for recipient domain "${recipientDomain}" / "${recipientEmail}"`)
+      return NextResponse.json({ error: 'No matching company found', code: 'COMPANY_NOT_FOUND' }, { status: 404 })
+    }
 
     // ── Match sender to existing lead/contact by email ───────────────────────
     let leadId: string | null = null
@@ -84,7 +135,19 @@ export async function POST(req: NextRequest) {
         .select('user_id, company_id')
         .eq('company_id', defaultCompanyId)
         .limit(1)
-      const owner = ownerRows?.[0]
+      
+      let owner = ownerRows?.[0]
+      if (!owner) {
+        const { data: firstProfile } = await (supabase as any)
+          .from('profiles')
+          .select('id, company_id')
+          .eq('company_id', defaultCompanyId)
+          .limit(1)
+          .maybeSingle()
+        if (firstProfile) {
+          owner = { user_id: firstProfile.id, company_id: firstProfile.company_id }
+        }
+      }
 
       if (owner) {
         const { data: newLead } = await (supabase as any)

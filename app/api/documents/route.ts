@@ -17,6 +17,9 @@ export async function GET(req: NextRequest) {
     const company_id = searchParams.get('company_id')
     if (!entity_id || !company_id) return NextResponse.json({ error: 'entity_id, company_id required', code: 'MISSING' }, { status: 400 })
 
+    const { allowed } = await checkPermission(user.id, company_id, 'leads.view_own')
+    if (!allowed) return NextResponse.json({ error: 'Forbidden', code: 'FORBIDDEN' }, { status: 403 })
+
     const supabase = createServiceClient()
     let query = (supabase as any).from('documents').select('*').eq('company_id', company_id).eq('entity_id', entity_id)
     if (entity_type) query = query.eq('entity_type', entity_type)

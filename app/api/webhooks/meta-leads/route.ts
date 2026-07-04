@@ -1,7 +1,12 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'KlinqCRM_webhook_verify_2024'
+// ── FIX B2: Read WHATSAPP_VERIFY_TOKEN (what's set in .env), with fallback to
+// META_WEBHOOK_VERIFY_TOKEN for forward compatibility.
+const VERIFY_TOKEN =
+  process.env.WHATSAPP_VERIFY_TOKEN ||
+  process.env.META_WEBHOOK_VERIFY_TOKEN ||
+  'KlinqCRM_webhook_verify_2024'
 
 // GET — Meta verification challenge
 export async function GET(request: NextRequest) {
@@ -23,6 +28,8 @@ export async function POST(request: NextRequest) {
 
     // Look up this company's Meta token from their integrations row
     let pageAccessToken = process.env.META_WHATSAPP_TOKEN || ''
+    let companyId: string | null = null
+
     if (userId) {
       const { data: intg } = await supabase
         .from('integrations')
@@ -30,6 +37,15 @@ export async function POST(request: NextRequest) {
         .eq('user_id', userId)
         .single()
       if (intg?.meta_page_access_token) pageAccessToken = intg.meta_page_access_token
+
+      // ── FIX W4: Resolve company_id from user_active_company so leads are
+      // scoped to the company and visible to ALL team members, not just the user.
+      const { data: uac } = await (supabase as any)
+        .from('user_active_company')
+        .select('company_id')
+        .eq('user_id', userId)
+        .single()
+      companyId = uac?.company_id ?? null
     }
 
     for (const entry of body.entry || []) {
@@ -56,11 +72,18 @@ export async function POST(request: NextRequest) {
           fields.full_name || fields.name || 'Meta Lead'
         const platform = entry.platform === 'instagram' ? 'instagram_ads' : 'facebook_ads'
 
+        // Guard: skip if we can't resolve company_id — without it the lead is invisible to the team
+        if (!companyId) {
+          console.warn(`[Meta Webhook] Skipping lead "${fullName}" — could not resolve company_id for user ${userId}`)
+          continue
+        }
+
         const { data: newLead, error } = await (supabase as any).from('leads').insert({
           user_id: userId || null,
+          company_id: companyId,            // ← required: makes lead visible to all company members
           full_name: fullName,
           email: fields.email || null,
-          phone_number: fields.phone_number || fields.mobile || null,
+          phone: fields.phone_number || fields.mobile || null,
           company: fields.company_name || null,
           city: fields.city || null,
           state: fields.state || null,
@@ -80,6 +103,7 @@ export async function POST(request: NextRequest) {
         if (!error && newLead && userId) {
           await (supabase as any).from('notifications').insert({
             user_id: userId,
+            company_id: companyId,
             type: 'lead',
             priority: 'high',
             title: `New ${platform === 'instagram_ads' ? 'Instagram 📸' : 'Facebook 📘'} lead: ${fullName}`,
@@ -91,7 +115,7 @@ export async function POST(request: NextRequest) {
           })
         }
         if (error) console.error('[Meta Webhook] Error:', error.message)
-        else console.log(`[Meta Webhook] Lead saved: ${fullName} → user ${userId}`)
+        else console.log(`[Meta Webhook] Lead saved: ${fullName} → user ${userId} → company ${companyId}`)
       }
     }
 

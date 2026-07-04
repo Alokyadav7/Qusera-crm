@@ -259,7 +259,7 @@ export function WhatsAppInboxClient({ companyId, isConnected, waPhone, initialLe
           Connect your company's WhatsApp Business number to start sending and receiving messages.
         </p>
         <Link
-          href="/dashboard/admin/integrations"
+          href="/dashboard/integrations"
           className="inline-flex items-center gap-2 bg-white text-zinc-950 text-sm font-bold px-5 py-2.5 rounded-xl hover:bg-zinc-100 transition-colors"
         >
           <svg viewBox="0 0 24 24" className="size-4 fill-[#25D366]" xmlns="http://www.w3.org/2000/svg">

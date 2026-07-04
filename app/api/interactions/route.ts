@@ -1,26 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { withTenantAuth } from '@/lib/middleware/withTenantAuth'
 
-// POST /api/interactions — Create an interaction with user_id + company_id stamped
-export async function POST(req: NextRequest) {
+// POST /api/interactions — Create an interaction with tenant context
+export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
   try {
-    const sessionClient = await createClient()
-    const { data: { user } } = await sessionClient.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const body = await req.json()
     const supabase = createServiceClient()
 
-    const { data: uac } = await (supabase as any)
-      .from('user_active_company')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .single()
-
     const interaction = {
-      user_id: user.id,
-      company_id: (uac as any)?.company_id || null,
+      user_id: ctx.userId,
+      company_id: ctx.companyId,
       lead_id: body.lead_id || null,
       contact_id: body.contact_id || null,
       type: body.type || 'voice',
@@ -31,6 +21,19 @@ export async function POST(req: NextRequest) {
       ai_summary: body.ai_summary || null,
       ai_extracted_data: body.ai_extracted_data || null,
       created_at: new Date().toISOString(),
+    }
+
+    // Verify lead belongs to the same company if provided
+    if (body.lead_id) {
+      const { data: lead } = await (supabase as any)
+        .from('leads')
+        .select('id')
+        .eq('id', body.lead_id)
+        .eq('company_id', ctx.companyId)
+        .maybeSingle()
+      if (!lead) {
+        return NextResponse.json({ error: 'Lead not found in your company' }, { status: 404 })
+      }
     }
 
     const { data, error } = await (supabase as any)
@@ -44,4 +47,5 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
-}
+})
+
