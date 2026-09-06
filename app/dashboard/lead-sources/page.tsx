@@ -67,8 +67,8 @@ const PLATFORM_INTEGRATIONS = [
       'Add "Leads Access" permission to your App',
       'Go to Webhooks → Subscribe to "leadgen" on your Page',
       'Set Callback URL to your domain + /api/webhooks/meta-leads',
-      'Set Verify Token: KlinqCRM_webhook_verify_2024',
-      'Add META_WHATSAPP_TOKEN (Page Access Token) to .env',
+      'Set Verify Token to the server META_WEBHOOK_VERIFY_TOKEN value',
+      'Add META_WHATSAPP_TOKEN (Page Access Token) to your server env',
     ],
     sources: ['facebook_ads', 'instagram_ads'],
   },
@@ -84,7 +84,7 @@ const PLATFORM_INTEGRATIONS = [
       'Go to Google Ads → Campaigns → Lead Form Extensions',
       'Enable Lead Delivery via Webhook',
       'Set Webhook URL: your domain + /api/webhooks/google-leads',
-      'Set Key: KlinqCRM_google_key (or add GOOGLE_LEADS_WEBHOOK_KEY to .env)',
+      'Set Key to the server GOOGLE_LEADS_WEBHOOK_KEY value',
       'New form submissions flow in automatically',
     ],
     sources: ['google_ads'],
@@ -100,7 +100,7 @@ const PLATFORM_INTEGRATIONS = [
     steps: [
       'Sign up at fast2sms.com (free 50 SMS)',
       'Get your API Key from the Dashboard',
-      'Add FAST2SMS_API_KEY to .env',
+      'Add FAST2SMS_API_KEY to your server env',
       'Register DLT templates (required by TRAI for India)',
       'Use Bulk SMS page to send campaigns',
     ],
@@ -117,7 +117,7 @@ const PLATFORM_INTEGRATIONS = [
     steps: [
       'Apply for WhatsApp Business API at business.whatsapp.com',
       'Get approved Meta Business Account',
-      'Add META_WHATSAPP_TOKEN and META_WHATSAPP_PHONE_NUMBER_ID to .env',
+      'Add META_WHATSAPP_TOKEN and META_WHATSAPP_PHONE_NUMBER_ID to your server env',
       'Set webhook URL: your domain + /api/webhooks/whatsapp',
     ],
     sources: ['whatsapp'],
@@ -346,16 +346,16 @@ export default function LeadSourcesPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { label: 'Meta (Facebook + Instagram) Lead Ads', url: 'https://YOUR_DOMAIN/api/webhooks/meta-leads', token: 'KlinqCRM_webhook_verify_2024', icon: '📘' },
-              { label: 'Google Ads Lead Form', url: 'https://YOUR_DOMAIN/api/webhooks/google-leads', token: 'GET: health check', icon: '🔍' },
-              { label: 'WhatsApp Business', url: 'https://YOUR_DOMAIN/api/webhooks/whatsapp', token: 'KlinqCRM_webhook_verify_2024', icon: '💬' },
+              { label: 'Meta (Facebook + Instagram) Lead Ads', url: 'https://YOUR_DOMAIN/api/webhooks/meta-leads', token: 'META_WEBHOOK_VERIFY_TOKEN', icon: '📘' },
+              { label: 'Google Ads Lead Form', url: 'https://YOUR_DOMAIN/api/webhooks/google-leads', token: 'GOOGLE_LEADS_WEBHOOK_KEY', icon: '🔍' },
+              { label: 'WhatsApp Business', url: 'https://YOUR_DOMAIN/api/webhooks/whatsapp', token: 'WHATSAPP_VERIFY_TOKEN', icon: '💬' },
             ].map(w => (
               <div key={w.label} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
                 <span className="text-xl shrink-0">{w.icon}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{w.label}</p>
                   <code className="text-xs text-primary">{w.url}</code>
-                  <p className="text-xs text-muted-foreground mt-0.5">Verify Token: <code className="bg-muted px-1 rounded">{w.token}</code></p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Server env: <code className="bg-muted px-1 rounded">{w.token}</code></p>
                 </div>
                 <Button size="sm" variant="outline" className="shrink-0"
                   onClick={() => { navigator.clipboard.writeText(w.url); toast.success('Copied!') }}>

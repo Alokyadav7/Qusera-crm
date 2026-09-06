@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
+
+function secureCompare(a: string, b: string): boolean {
+  const aBuffer = Buffer.from(a)
+  const bBuffer = Buffer.from(b)
+  return aBuffer.length === bBuffer.length && timingSafeEqual(aBuffer, bBuffer)
+}
 
 /**
  * Email Inbound Webhook
@@ -27,17 +33,24 @@ export async function POST(req: NextRequest) {
     const rawBody = await reqClone.text()
 
     // ── Security: Verify HMAC signature or Webhook Secret ─────────────────────
-    const WEBHOOK_SECRET = process.env.EMAIL_WEBHOOK_SECRET || process.env.RESEND_WEBHOOK_SECRET || process.env.WHATSAPP_VERIFY_TOKEN || 'klinq_crm_webhook_2025'
+    const WEBHOOK_SECRET = process.env.EMAIL_WEBHOOK_SECRET || process.env.RESEND_WEBHOOK_SECRET
+    if (!WEBHOOK_SECRET) {
+      return NextResponse.json({ error: 'Email webhook secret not configured' }, { status: 503 })
+    }
+
     const authHeader = req.headers.get('Authorization')
     const querySecret = req.nextUrl.searchParams.get('secret')
-    const isApiKeyValid = (authHeader === `Bearer ${WEBHOOK_SECRET}`) || (querySecret === WEBHOOK_SECRET)
+    const suppliedBearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : ''
+    const isApiKeyValid =
+      secureCompare(suppliedBearer, WEBHOOK_SECRET) ||
+      secureCompare(querySecret ?? '', WEBHOOK_SECRET)
 
     const signature = req.headers.get('x-webhook-signature-256') || req.headers.get('x-resend-signature') || req.headers.get('x-hub-signature-256')
     let isSignatureValid = false
     if (signature) {
       const cleanSig = signature.replace('sha256=', '')
       const expected = createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest('hex')
-      isSignatureValid = (cleanSig === expected)
+      isSignatureValid = secureCompare(cleanSig, expected)
     }
 
     if (!isApiKeyValid && !isSignatureValid) {

@@ -73,11 +73,14 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
         try {
           const { data: imp } = await svc
             .from('impersonation_sessions')
-            .select('target_company_id')
+            .select('target_company_id, super_admin_id')
             .eq('id', impersonationSessionId)
             .is('ended_at', null)
             .single()
           if (imp) {
+            if (imp.super_admin_id !== user.id) {
+              return NextResponse.json({ error: 'Unauthorized impersonation session' }, { status: 403 })
+            }
             activeCompanyId = imp.target_company_id
             isImpersonating = true
           }
@@ -89,6 +92,7 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
 
       // 3. Get user's active company (from user_active_company table)
       // Use service client to bypass RLS — anon client can block this during onboarding
+      let workspaceId: string | null = null
       if (!activeCompanyId) {
         const svcForUac = createServiceClient()
         const { data: activeCompany } = await svcForUac
@@ -97,6 +101,15 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
           .eq('user_id', user.id)
           .single()
         activeCompanyId = activeCompany?.company_id ?? null
+        workspaceId = activeCompany?.workspace_id ?? null
+      } else {
+        const svcForUac = createServiceClient()
+        const { data: activeCompany } = await svcForUac
+          .from('user_active_company')
+          .select('workspace_id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        workspaceId = activeCompany?.workspace_id ?? null
       }
 
       if (!activeCompanyId) {
@@ -140,7 +153,7 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
         )
       }
 
-      const role = (member?.role ?? 'viewer') as MemberRole
+      const role = (isImpersonating ? 'company_admin' : (member?.role ?? 'viewer')) as MemberRole
 
       // 5. RBAC check
       if (options.requiredRoles && options.requiredRoles.length > 0) {
@@ -167,12 +180,6 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
       }
 
       // 7. Get workspace and plan
-      const { data: activeMembership } = await svc
-        .from('user_active_company')
-        .select('workspace_id')
-        .eq('user_id', user.id)
-        .single()
-
       const { data: subscription } = await svc
         .from('subscriptions')
         .select('plan_id')
@@ -183,11 +190,39 @@ export function withTenantAuth(handler: TenantHandler, options: TenantAuthOption
         userId: user.id,
         userEmail: user.email ?? '',
         companyId: activeCompanyId,
-        workspaceId: activeMembership?.workspace_id ?? null,
+        workspaceId,
         role,
         planId: subscription?.plan_id ?? '',
         isImpersonating,
         impersonationSessionId,
+      }
+
+      // Log write actions taken during impersonation
+      if (isImpersonating && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+        const svcForLog = createServiceClient()
+        try {
+          const { data: currentSession } = await svcForLog
+            .from('impersonation_sessions')
+            .select('actions_taken')
+            .eq('id', impersonationSessionId!)
+            .single()
+
+          const newAction = {
+            method: req.method,
+            path: req.nextUrl.pathname,
+            timestamp: new Date().toISOString(),
+            query: Object.fromEntries(req.nextUrl.searchParams.entries())
+          }
+
+          const updatedActions = [...(currentSession?.actions_taken || []), newAction]
+
+          await svcForLog
+            .from('impersonation_sessions')
+            .update({ actions_taken: updatedActions })
+            .eq('id', impersonationSessionId!)
+        } catch (logErr) {
+          console.error('[withTenantAuth] Failed to log impersonation write:', logErr)
+        }
       }
 
       return handler(req, ctx)

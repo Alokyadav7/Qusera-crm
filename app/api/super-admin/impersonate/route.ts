@@ -28,8 +28,7 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
     .single()
 
-  const metaFlag = user.user_metadata?.is_platform_admin === true
-  if (!admin?.is_active && !metaFlag) {
+  if (!admin?.is_active) {
     return NextResponse.json({ error: 'Super admin access required' }, { status: 403 })
   }
 

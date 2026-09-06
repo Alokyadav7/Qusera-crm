@@ -45,6 +45,7 @@ export function LeadsPageClient({ initialLeads, aiScoringEnabled = false, profil
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [intentFilter, setIntentFilter] = useState('all')
+  const [sourceFilter, setSourceFilter] = useState('all')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -57,7 +58,11 @@ export function LeadsPageClient({ initialLeads, aiScoringEnabled = false, profil
       (lead.email?.toLowerCase().includes(searchQuery.toLowerCase()))
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter
     const matchesIntent = intentFilter === 'all' || lead.buying_intent === intentFilter
-    return matchesSearch && matchesStatus && matchesIntent
+    const matchesSource = sourceFilter === 'all' || 
+      (sourceFilter === 'Meta Ads' && (lead.source === 'Meta Ads' || lead.source === 'facebook_ads' || lead.source === 'instagram_ads')) ||
+      (sourceFilter === 'Google Ads' && (lead.source === 'Google Ads' || lead.source === 'google_ads')) ||
+      lead.source === sourceFilter
+    return matchesSearch && matchesStatus && matchesIntent && matchesSource
   })
 
   const hotLeads = displayLeads.filter(l => l.buying_intent === 'high').length
@@ -263,6 +268,24 @@ export function LeadsPageClient({ initialLeads, aiScoringEnabled = false, profil
                 <SelectItem value="high">High Intent</SelectItem>
                 <SelectItem value="medium">Medium Intent</SelectItem>
                 <SelectItem value="low">Low Intent</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="w-[130px] h-8 text-xs">
+                <SelectValue placeholder="Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="manual">Manual Entry</SelectItem>
+                <SelectItem value="website">Website</SelectItem>
+                <SelectItem value="Meta Ads">Meta Ads</SelectItem>
+                <SelectItem value="Google Ads">Google Ads</SelectItem>
+                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                <SelectItem value="referral">Referral</SelectItem>
+                <SelectItem value="cold_call">Cold Call</SelectItem>
+                <SelectItem value="voice">Voice Note</SelectItem>
+                <SelectItem value="csv_import">CSV Import</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm" className="h-8">

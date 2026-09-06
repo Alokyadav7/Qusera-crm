@@ -3,10 +3,10 @@ import Razorpay from 'razorpay'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
-function getRazorpay(): Razorpay {
+function getRazorpay(keyId: string, keySecret: string): Razorpay {
   return new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret',
+    key_id: keyId,
+    key_secret: keySecret,
   })
 }
 
@@ -56,13 +56,13 @@ export async function POST(req: NextRequest) {
     const keySecret = process.env.RAZORPAY_KEY_SECRET ?? ''
     if (!keyId || keyId.includes('replace') || !keySecret || keySecret.includes('replace')) {
       return NextResponse.json({
-        error: 'Payment system not configured. RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set with real credentials in .env.',
+        error: 'Payment system not configured. RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set with real credentials.',
         setup_required: true,
       }, { status: 503 })
     }
 
     // Create Razorpay order
-    const razorpay = getRazorpay()
+    const razorpay = getRazorpay(keyId, keySecret)
     const order = await razorpay.orders.create({
       amount: plan.amount,
       currency: 'INR',

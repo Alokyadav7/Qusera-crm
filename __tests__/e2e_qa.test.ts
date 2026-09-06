@@ -11,6 +11,8 @@ const COOKIE_NAME = 'sb-eqllqrppeodrhalpiajx-auth-token'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const WORKER_SECRET = process.env.WORKER_SECRET ?? ''
+const EMAIL_WEBHOOK_SECRET = process.env.EMAIL_WEBHOOK_SECRET ?? process.env.RESEND_WEBHOOK_SECRET ?? ''
 
 // Admin service role client to manage users/cleanup
 const adminClient = createServiceClient()
@@ -130,7 +132,7 @@ describe('Klinq CRM E2E QA Test Suite', () => {
     const workerRes = await fetch(`${BASE_URL}/api/jobs/worker`, {
       method: 'POST',
       headers: {
-        'x-worker-secret': 'dev-worker-secret'
+        'x-worker-secret': WORKER_SECRET
       }
     })
     expect(workerRes.status).toBe(200)
@@ -385,7 +387,7 @@ describe('Klinq CRM E2E QA Test Suite', () => {
       text: 'Hello, please send me your pricing options.'
     }
 
-    const res = await fetch(`${BASE_URL}/api/webhooks/email`, {
+    const res = await fetch(`${BASE_URL}/api/webhooks/email?secret=${encodeURIComponent(EMAIL_WEBHOOK_SECRET)}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

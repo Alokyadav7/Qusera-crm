@@ -1,11 +1,16 @@
 // Create missing profile row + complete super-admin setup for info@qusera.in
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = 'https://eqllqrppeodrhalpiajx.supabase.co'
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxbGxxcnBwZW9kcmhhbHBpYWp4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2NzQ5MiwiZXhwIjoyMDkzNjQzNDkyfQ.tP-MhWOW0PuhFXXTA39YWiO5dHlmmUG1gtjF-pSpKyE'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const ADMIN_EMAIL = 'info@qusera.in'
 const ADMIN_USER_ID = '15ac0cc0-dc51-4e16-ab99-321808abee64'
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+  process.exit(1)
+}
 
 const svc = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }

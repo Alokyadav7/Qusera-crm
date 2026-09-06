@@ -1,7 +1,7 @@
 const { Client } = require('pg');
 
 // Use the exact non-pooling URL with sslmode=require from .env
-const connectionString = 'postgres://postgres.eqllqrppeodrhalpiajx:fcFxfE8Z7BjLbX99@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require';
+const connectionString = (process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL);
 
 console.log('Initializing pg client...');
 const client = new Client({

@@ -2,9 +2,14 @@
 // Runs the auth column migrations and sets super admin
 // Usage: node scripts/run-auth-migration.mjs
 
-const SUPABASE_URL = 'https://eqllqrppeodrhalpiajx.supabase.co'
-const SERVICE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxbGxxcnBwZW9kcmhhbHBpYWp4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2NzQ5MiwiZXhwIjoyMDkzNjQzNDkyfQ.tP-MhWOW0PuhFXXTA39YWiO5dHlmmUG1gtjF-pSpKyE'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY
 const SUPER_ADMIN_EMAIL = 'info@qusera.in'
+
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+  process.exit(1)
+}
 
 const headers = {
   'apikey': SERVICE_KEY,

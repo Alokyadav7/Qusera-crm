@@ -290,7 +290,7 @@ function LoginFormContent() {
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_active, onboarding_completed, company_id')
+        .select('is_active, onboarding_completed, company_id, companies(status, suspension_reason, deleted_at)')
         .eq('id', user.id)
         .maybeSingle()
 
@@ -302,11 +302,7 @@ function LoginFormContent() {
       }
 
       if (profile?.company_id) {
-        const { data: company } = await supabase
-          .from('companies')
-          .select('status, suspension_reason, deleted_at')
-          .eq('id', profile.company_id)
-          .maybeSingle()
+        const company = (profile as any).companies
 
         if (!company || company.deleted_at || company.status === 'deleted') {
           await supabase.auth.signOut()

@@ -1,11 +1,16 @@
 // setup-super-admin.mjs
 // Run: node scripts/setup-super-admin.mjs
 
-const SUPABASE_URL   = 'https://eqllqrppeodrhalpiajx.supabase.co'
-const SERVICE_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxbGxxcnBwZW9kcmhhbHBpYWp4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODA2NzQ5MiwiZXhwIjoyMDkzNjQzNDkyfQ.tP-MhWOW0PuhFXXTA39YWiO5dHlmmUG1gtjF-pSpKyE'
+const SUPABASE_URL   = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SERVICE_KEY    = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const EMAIL    = 'info@qusera.in'
-const PASSWORD = 'Qusera@2026'
+const PASSWORD = process.env.SUPER_ADMIN_PASSWORD
+
+if (!SUPABASE_URL || !SERVICE_KEY || !PASSWORD) {
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or SUPER_ADMIN_PASSWORD')
+  process.exit(1)
+}
 
 const headers = {
   'apikey': SERVICE_KEY,

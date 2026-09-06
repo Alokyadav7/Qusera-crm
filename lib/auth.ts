@@ -53,10 +53,10 @@ export async function getSession(): Promise<SessionUser | null> {
     }
   }
 
-  // 2. Check company member
+  // 2. Check company member & company details via join
   const { data: member } = await (svc as any)
     .from('company_members')
-    .select('company_id, role, is_active')
+    .select('company_id, role, is_active, companies(onboarding_completed_at, status, deleted_at)')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .is('deleted_at', null)
@@ -73,12 +73,7 @@ export async function getSession(): Promise<SessionUser | null> {
     }
   }
 
-  // 3. Check onboarding completion and deletion status
-  const { data: company } = await svc
-    .from('companies')
-    .select('onboarding_completed_at, status, deleted_at')
-    .eq('id', member.company_id)
-    .maybeSingle()
+  const company = member.companies
 
   if (!company || company.deleted_at || company.status === 'deleted') {
     return null

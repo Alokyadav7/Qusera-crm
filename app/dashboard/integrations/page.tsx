@@ -162,7 +162,7 @@ export default function IntegrationsPage() {
             </div>
           </div>
           <CopyField label="Your Webhook URL (paste in Meta)" value={webhookUrl('/api/webhooks/meta-leads')} />
-          <CopyField label="Verify Token (paste in Meta)" value="KlinqCRM_webhook_verify_2024" />
+          <CopyField label="Verify Token env name" value="META_WEBHOOK_VERIFY_TOKEN" />
           <div className="p-3 bg-blue-50 rounded-lg text-xs text-blue-800 space-y-1">
             <p className="font-semibold">Steps to connect:</p>
             <ol className="list-decimal list-inside space-y-0.5">
@@ -337,7 +337,7 @@ export default function IntegrationsPage() {
                 </div>
                 {/* Webhook setup info */}
                 <CopyField label="WhatsApp Webhook URL (paste in Meta App Dashboard)" value={`${domain}/api/webhooks/whatsapp`} />
-                <CopyField label="Webhook Verify Token" value="kling_crm_webhook_2025" />
+                <CopyField label="Webhook Verify Token env name" value="WHATSAPP_VERIFY_TOKEN" />
               </div>
             ) : (
               <div className="space-y-3">
@@ -359,7 +359,7 @@ export default function IntegrationsPage() {
                   </ol>
                 </div>
                 <CopyField label="WhatsApp Webhook URL (configure in Meta App)" value={`${domain}/api/webhooks/whatsapp`} />
-                <CopyField label="Webhook Verify Token" value="kling_crm_webhook_2025" />
+                <CopyField label="Webhook Verify Token env name" value="WHATSAPP_VERIFY_TOKEN" />
                 <Button
                   className="w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white"
                   onClick={() => window.location.href = '/dashboard/whatsapp'}

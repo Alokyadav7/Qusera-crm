@@ -4,17 +4,28 @@ import { claimPendingJobs, markJobDone, markJobFailed } from '@/lib/jobs/enqueue
 import type { QueuedJob } from '@/lib/types/tenant'
 import { sendEmail, teamInviteEmailHtml, welcomeEmailHtml } from '@/lib/email'
 import { processActiveSequences } from '@/lib/email-sequences'
+import { timingSafeEqual } from 'crypto'
 
 // POST /api/jobs/worker
 // Called by Supabase pg_cron every minute (or Vercel cron)
 // Processes pending jobs from the job_queue table
 
-const WORKER_SECRET = process.env.WORKER_SECRET ?? 'dev-worker-secret'
+const WORKER_SECRET = process.env.WORKER_SECRET
+
+function secureCompare(a: string, b: string): boolean {
+  const aBuffer = Buffer.from(a)
+  const bBuffer = Buffer.from(b)
+  return aBuffer.length === bBuffer.length && timingSafeEqual(aBuffer, bBuffer)
+}
 
 export async function POST(req: NextRequest) {
+  if (!WORKER_SECRET) {
+    return NextResponse.json({ error: 'Worker secret not configured' }, { status: 503 })
+  }
+
   // Validate worker secret to prevent unauthorized execution
   const auth = req.headers.get('x-worker-secret')
-  if (auth !== WORKER_SECRET) {
+  if (!auth || !secureCompare(auth, WORKER_SECRET)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -25,30 +25,109 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: 'AI lead scoring is disabled' }), { headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Calculate AI score (0-100) based on logic:
-    // 1. Buying Intent: high (+30), medium (+15), low (+5)
-    // 2. Budget: value > 500,000 (+25), value > 100,000 (+15)
-    // 3. Source Quality: website (+15), referral (+25), manual (+10)
-    // 4. Sentiment score: positive (+10), negative (-10)
-    let score = 10
+    // Calculate AI score (0-100) using Gemini, falling back to rule-based logic if it fails or times out.
+    const geminiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('GEMINI_KEY')
+    let score = 0
+    let usedGemini = false
 
-    if (record.buying_intent === 'high') score += 30
-    else if (record.buying_intent === 'medium') score += 15
-    else score += 5
+    if (geminiKey && !geminiKey.includes('replace_with') && geminiKey.length >= 10) {
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
 
-    const val = record.deal_value || record.estimated_budget || 0
-    if (val >= 500000) score += 25
-    else if (val >= 100000) score += 15
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: `You are an AI lead scoring engine. Score this lead's purchase intent and qualification from 0 to 100 based on their CRM data.
+                      Lead Name: ${record.full_name || 'Unknown'}
+                      Buying Intent: ${record.buying_intent || 'medium'}
+                      Source: ${record.source || 'manual'}
+                      Estimated Budget: ${record.estimated_budget || 0}
+                      Deal Value: ${record.deal_value || 0}
+                      Sentiment Score: ${record.sentiment_score || 0}
+                      Status: ${record.status || 'new'}
+                      Company: ${record.company || 'Unknown'}
+                      City/State: ${record.city || ''}, ${record.state || ''}
 
-    if (record.source === 'referral') score += 25
-    else if (record.source === 'website') score += 15
-    else score += 10
+                      Return a JSON object containing "score" (integer 0-100) and "reasoning" (string).`
+                    }
+                  ]
+                }
+              ],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                  type: 'OBJECT',
+                  properties: {
+                    score: {
+                      type: 'INTEGER',
+                      description: 'A score from 0 to 100 representing the lead\'s quality/intent.'
+                    },
+                    reasoning: {
+                      type: 'STRING',
+                      description: 'Short explanation.'
+                    }
+                  },
+                  required: ['score', 'reasoning']
+                }
+              }
+            }),
+            signal: controller.signal
+          }
+        )
+        clearTimeout(timeoutId)
 
-    if (record.sentiment_score >= 0.3) score += 10
-    else if (record.sentiment_score <= -0.3) score -= 10
+        if (response.ok) {
+          const resData = await response.json()
+          const text = resData.candidates?.[0]?.content?.parts?.[0]?.text
+          if (text) {
+            const parsed = JSON.parse(text)
+            if (typeof parsed.score === 'number') {
+              score = Math.max(0, Math.min(100, Math.round(parsed.score)))
+              usedGemini = true
+              console.log(`[ai-lead-scoring] Gemini score: ${score}, reasoning: ${parsed.reasoning}`)
+            }
+          }
+        } else {
+          console.warn(`[ai-lead-scoring] Gemini API response error: ${response.status}`)
+        }
+      } catch (err: any) {
+        console.warn('[ai-lead-scoring] Gemini API failed or timed out:', err?.message || err)
+      }
+    } else {
+      console.warn('[ai-lead-scoring] GEMINI_API_KEY not configured or invalid')
+    }
 
-    // Clamp score between 0 and 100
-    score = Math.max(0, Math.min(100, score))
+    if (!usedGemini) {
+      console.log('[ai-lead-scoring] Using rule-based fallback logic')
+      let fallbackScore = 10
+
+      if (record.buying_intent === 'high') fallbackScore += 30
+      else if (record.buying_intent === 'medium') fallbackScore += 15
+      else fallbackScore += 5
+
+      const val = record.deal_value || record.estimated_budget || 0
+      if (val >= 500000) fallbackScore += 25
+      else if (val >= 100000) fallbackScore += 15
+
+      if (record.source === 'referral') fallbackScore += 25
+      else if (record.source === 'website') fallbackScore += 15
+      else fallbackScore += 10
+
+      if (record.sentiment_score >= 0.3) fallbackScore += 10
+      else if (record.sentiment_score <= -0.3) fallbackScore -= 10
+
+      score = Math.max(0, Math.min(100, fallbackScore))
+    }
 
     // Update lead record
     await supabase

@@ -282,6 +282,11 @@ export function LeadsTable({ leads, onViewLead, onEditLead, onLeadsChanged, aiSc
                     <div>
                       <p className="font-medium text-sm">{lead.full_name}</p>
                       <p className="text-xs text-muted-foreground">{lead.company || lead.phone_number || lead.email || '—'}</p>
+                      {lead.source && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border/40 mt-1">
+                          {lead.source}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </TableCell>

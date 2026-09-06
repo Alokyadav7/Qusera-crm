@@ -70,6 +70,19 @@ export const POST = withTenantAuth(async (req: NextRequest, ctx) => {
       newValue: data as object,
     })
 
+    // Emit event for automations
+    const { emitEvent } = await import('@/lib/events/emit')
+    await emitEvent({
+      companyId: ctx.companyId,
+      actorId: ctx.userId,
+      actorType: 'user',
+      eventType: 'lead.created',
+      resourceType: 'lead',
+      resourceId: (data as any).id,
+      resourceLabel: (data as any).full_name,
+      metadata: data,
+    })
+
     return NextResponse.json({ data })
   } catch (err: any) {
     return NextResponse.json({ error: err.message, code: 'INTERNAL_ERROR' }, { status: 500 })

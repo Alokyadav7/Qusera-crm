@@ -1,6 +1,6 @@
 // proxy.ts — Klinq CRM Auth Middleware
-// Next.js middleware: session refresh + routing rules + rate limiting.
-// This is the ONLY middleware file — middleware.ts imports and re-exports this.
+// Next.js proxy: session refresh + routing rules + rate limiting.
+// This is the only request proxy file; keep middleware.ts absent for Next.js 16+.
 //
 
 import { createServerClient } from '@supabase/ssr'
